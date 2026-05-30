@@ -12,11 +12,16 @@ import {
   Zap,
   Lightbulb,
   Check,
+  X,
 } from 'lucide-react';
+import { AnimatePresence, motion } from 'framer-motion';
+import { toast } from 'sonner';
 import { useSearchStream } from '@/hooks/useSearchStream';
 import { Spinner } from '@/components/ui';
 import { WhatsAppComposer } from '@/components/dashboard/WhatsAppComposer';
 import { EmailComposer } from '@/components/dashboard/EmailComposer';
+import { BulkWhatsAppComposer } from '@/components/dashboard/BulkWhatsAppComposer';
+import { BulkEmailComposer } from '@/components/dashboard/BulkEmailComposer';
 import type { Lead } from '@/types';
 
 type LeadStatus = Lead['status'];
@@ -74,6 +79,10 @@ export default function DashboardPage() {
   const [scanningIds, setScanningIds] = useState<Set<string>>(new Set());
   const [whatsappComposer, setWhatsappComposer] = useState<{ isOpen: boolean; lead: Lead | null }>({ isOpen: false, lead: null });
   const [emailComposer, setEmailComposer] = useState<{ isOpen: boolean; lead: Lead | null }>({ isOpen: false, lead: null });
+  const [selectedLeads, setSelectedLeads] = useState<Set<string>>(new Set());
+  const [selectAll, setSelectAll] = useState(false);
+  const [bulkWhatsApp, setBulkWhatsApp] = useState(false);
+  const [bulkEmail, setBulkEmail] = useState(false);
 
   const { leads, isSearching, error, search, reset, updateLead } = useSearchStream({
     sessionId,
@@ -181,6 +190,35 @@ export default function DashboardPage() {
   const handleEmailSent = useCallback((placeId: string) => {
     updateLead(placeId, { status: 'contacted' });
   }, [updateLead]);
+
+  const toggleLead = useCallback((placeId: string) => {
+    setSelectedLeads((prev) => {
+      const next = new Set(prev);
+      if (next.has(placeId)) {
+        next.delete(placeId);
+      } else {
+        next.add(placeId);
+      }
+      return next;
+    });
+  }, []);
+
+  const handleSelectAll = useCallback(() => {
+    if (selectAll) {
+      setSelectedLeads(new Set());
+      setSelectAll(false);
+    } else {
+      setSelectedLeads(new Set(leads.map((l) => l.place_id)));
+      setSelectAll(true);
+    }
+  }, [selectAll, leads]);
+
+  useEffect(() => {
+    setSelectedLeads(new Set());
+    setSelectAll(false);
+  }, [leads]);
+
+  const selectedLeadObjects = leads.filter((l) => selectedLeads.has(l.place_id));
 
   const handleExportCsv = useCallback(async () => {
     if (leads.length === 0) return;
@@ -333,6 +371,14 @@ export default function DashboardPage() {
             <table className="w-full">
               <thead>
                 <tr className="border-b border-border">
+                  <th className="px-4 py-3 w-10">
+                    <input
+                      type="checkbox"
+                      checked={selectAll}
+                      onChange={handleSelectAll}
+                      className="w-4 h-4 rounded border-border bg-surface accent-primary cursor-pointer"
+                    />
+                  </th>
                   <th className="text-left py-3 px-4 text-xs font-medium text-muted uppercase tracking-wider w-10">
                     #
                   </th>
@@ -372,6 +418,14 @@ export default function DashboardPage() {
                       animationFillMode: 'both',
                     }}
                   >
+                    <td className="px-4 py-3">
+                      <input
+                        type="checkbox"
+                        checked={selectedLeads.has(lead.place_id)}
+                        onChange={() => toggleLead(lead.place_id)}
+                        className="w-4 h-4 rounded border-border bg-surface accent-primary cursor-pointer"
+                      />
+                    </td>
                     <td className="py-3 px-4 text-sm text-muted">{i + 1}</td>
                     <td className="py-3 px-4 text-sm font-medium text-text">
                       {lead.name}
@@ -537,6 +591,77 @@ export default function DashboardPage() {
         onClose={() => setEmailComposer({ isOpen: false, lead: null })}
         onSent={handleEmailSent}
       />
+
+      <BulkWhatsAppComposer
+        leads={selectedLeadObjects}
+        isOpen={bulkWhatsApp}
+        onClose={() => setBulkWhatsApp(false)}
+        onComplete={(count) => {
+          setBulkWhatsApp(false);
+          setSelectedLeads(new Set());
+          setSelectAll(false);
+          toast.success(`${count} WhatsApp messages queued`);
+        }}
+      />
+
+      <BulkEmailComposer
+        leads={selectedLeadObjects}
+        isOpen={bulkEmail}
+        onClose={() => setBulkEmail(false)}
+        onComplete={(count) => {
+          setBulkEmail(false);
+          setSelectedLeads(new Set());
+          setSelectAll(false);
+          toast.success(`${count} emails sent`);
+        }}
+      />
+
+      {/* Floating Bulk Action Bar */}
+      <AnimatePresence>
+        {selectedLeads.size > 0 && (
+          <motion.div
+            initial={{ y: 100, opacity: 0 }}
+            animate={{ y: 0, opacity: 1 }}
+            exit={{ y: 100, opacity: 0 }}
+            className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 flex items-center gap-3 px-5 py-3 rounded-2xl bg-surface border border-border shadow-2xl shadow-black/40 backdrop-blur-sm"
+          >
+            <span className="text-sm font-semibold text-text">
+              {selectedLeads.size} selected
+            </span>
+
+            <div className="w-px h-5 bg-border" />
+
+            <button
+              onClick={() => setBulkWhatsApp(true)}
+              className="flex items-center gap-2 px-4 py-2 rounded-xl bg-green-600 hover:bg-green-500 text-white text-sm font-medium transition-colors"
+            >
+              <MessageCircle size={15} />
+              WhatsApp All
+            </button>
+
+            <button
+              onClick={() => setBulkEmail(true)}
+              className="flex items-center gap-2 px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-sm font-medium transition-colors"
+            >
+              <Mail size={15} />
+              Email All
+            </button>
+
+            <div className="text-xs text-muted">
+              Uses <span className="text-yellow-400 font-semibold">{selectedLeads.size} credits</span>
+            </div>
+
+            <div className="w-px h-5 bg-border" />
+
+            <button
+              onClick={() => { setSelectedLeads(new Set()); setSelectAll(false); }}
+              className="text-muted hover:text-text transition-colors"
+            >
+              <X size={16} />
+            </button>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }
