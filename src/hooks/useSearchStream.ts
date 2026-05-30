@@ -76,8 +76,16 @@ export function useSearchStream({
           const lines = buffer.split('\n');
           buffer = lines.pop() || '';
 
+          let currentEvent = '';
+
           for (const line of lines) {
             const trimmed = line.trim();
+
+            if (trimmed.startsWith('event: ')) {
+              currentEvent = trimmed.slice(7);
+              continue;
+            }
+
             if (!trimmed.startsWith('data: ')) continue;
 
             const data = trimmed.slice(6);
@@ -86,14 +94,16 @@ export function useSearchStream({
             try {
               const parsed = JSON.parse(data);
 
-              if (parsed.type === 'email_found') {
+              if (currentEvent === 'email') {
                 setLeads((prev) =>
                   prev.map((lead) =>
-                    lead.id === parsed.lead_id
+                    lead.place_id === parsed.place_id
                       ? { ...lead, email: parsed.email }
                       : lead
                   )
                 );
+              } else if (currentEvent === 'lead') {
+                setLeads((prev) => [...prev, parsed as Lead]);
               } else if (parsed.type === 'error') {
                 setError(parsed.error);
               } else if (parsed.id) {

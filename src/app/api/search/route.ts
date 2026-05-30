@@ -8,7 +8,11 @@ import type { Lead } from '@/types';
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
-function sseMessage(data: unknown): Uint8Array {
+function sseEvent(event: string, data: unknown): Uint8Array {
+  return new TextEncoder().encode(`event: ${event}\ndata: ${JSON.stringify(data)}\n\n`);
+}
+
+function sseData(data: unknown): Uint8Array {
   return new TextEncoder().encode(`data: ${JSON.stringify(data)}\n\n`);
 }
 
@@ -150,16 +154,17 @@ export async function POST(request: NextRequest) {
           }
 
           allLeads.push(lead);
-          controller.enqueue(sseMessage(lead));
+          controller.enqueue(sseEvent('lead', lead));
 
           if (i < leads.length - 1) {
-            await delay(100);
+            await delay(80);
           }
         }
 
         if (!aborted && isPaid) {
-          for (const lead of allLeads) {
-            if (lead.website && !lead.email) {
+          const scrapePromises = allLeads
+            .filter((lead) => lead.website)
+            .map(async (lead) => {
               try {
                 const emailRes = await fetch(
                   `${process.env.NEXT_PUBLIC_APP_URL}/api/scrape-email`,
@@ -167,24 +172,31 @@ export async function POST(request: NextRequest) {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ url: lead.website }),
-                    signal: AbortSignal.timeout(5000),
+                    signal: AbortSignal.timeout(15000),
                   }
                 );
 
                 if (emailRes.ok) {
                   const { email } = await emailRes.json();
                   if (email) {
+                    await supabase
+                      .from('leads')
+                      .update({ email })
+                      .eq('place_id', lead.place_id)
+                      .eq('search_id', searchId);
+
                     lead.email = email;
                     controller.enqueue(
-                      sseMessage({ type: 'email_found', lead_id: lead.id, email })
+                      sseEvent('email', { place_id: lead.place_id, email })
                     );
                   }
                 }
-              } catch {
-                // Email scraping failed silently
+              } catch (err) {
+                console.error(`Email scrape failed for ${lead.website}:`, err);
               }
-            }
-          }
+            });
+
+          await Promise.allSettled(scrapePromises);
         }
 
         if (searchId && allLeads.length > 0) {
@@ -215,7 +227,7 @@ export async function POST(request: NextRequest) {
           const errorMessage =
             error instanceof Error ? error.message : 'Unknown error occurred';
           controller.enqueue(
-            sseMessage({ type: 'error', error: errorMessage })
+            sseData({ type: 'error', error: errorMessage })
           );
           controller.enqueue(sseDone());
         }
