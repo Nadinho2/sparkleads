@@ -1,0 +1,222 @@
+import { NextRequest } from 'next/server';
+import { searchBusinesses, enrichLeads } from '@/lib/google-places';
+import { createSupabaseAdmin } from '@/lib/supabase';
+import { checkRateLimit, SEARCH_RATE_LIMIT } from '@/lib/rate-limit';
+import { v4 as uuidv4 } from 'uuid';
+import type { Lead } from '@/types';
+
+export const runtime = 'nodejs';
+export const dynamic = 'force-dynamic';
+
+function sseMessage(data: unknown): Uint8Array {
+  return new TextEncoder().encode(`data: ${JSON.stringify(data)}\n\n`);
+}
+
+function sseDone(): Uint8Array {
+  return new TextEncoder().encode('data: [DONE]\n\n');
+}
+
+function delay(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+function sanitizeQuery(input: string): string {
+  return input
+    .trim()
+    .replace(/[<>]/g, '')
+    .replace(/\s+/g, ' ')
+    .slice(0, 200);
+}
+
+export async function POST(request: NextRequest) {
+  const ip =
+    request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ||
+    request.headers.get('x-real-ip') ||
+    'unknown';
+
+  const rateLimit = checkRateLimit(`search:${ip}`, SEARCH_RATE_LIMIT);
+  if (!rateLimit.allowed) {
+    return new Response(
+      JSON.stringify({ error: 'Rate limit exceeded. Try again later.' }),
+      { status: 429, headers: { 'Content-Type': 'application/json' } }
+    );
+  }
+
+  const body = await request.json();
+  const { query: rawQuery, sessionId, isPaid } = body as {
+    query: string;
+    sessionId: string;
+    isPaid: boolean;
+  };
+
+  const query = sanitizeQuery(rawQuery || '');
+
+  if (!query || !sessionId) {
+    return new Response(JSON.stringify({ error: 'query and sessionId are required' }), {
+      status: 400,
+      headers: { 'Content-Type': 'application/json' },
+    });
+  }
+
+  if (query.length < 5) {
+    return new Response(
+      JSON.stringify({ error: 'Search query must be at least 5 characters' }),
+      { status: 400, headers: { 'Content-Type': 'application/json' } }
+    );
+  }
+
+  const supabase = createSupabaseAdmin();
+
+  if (!isPaid && process.env.NEXT_PUBLIC_FREE_ACCESS !== 'true') {
+    const { data: trialRecord } = await supabase
+      .from('free_trial_searches')
+      .select('*')
+      .eq('session_id', sessionId)
+      .single();
+
+    if (trialRecord && trialRecord.count >= 2) {
+      return new Response(JSON.stringify({ error: 'free_limit_reached' }), {
+        status: 403,
+        headers: { 'Content-Type': 'application/json' },
+      });
+    }
+
+    if (!trialRecord) {
+      await supabase.from('free_trial_searches').insert({
+        id: uuidv4(),
+        session_id: sessionId,
+        ip_address: request.headers.get('x-forwarded-for') || request.headers.get('x-real-ip') || 'unknown',
+        count: 1,
+      });
+    } else {
+      await supabase
+        .from('free_trial_searches')
+        .update({ count: trialRecord.count + 1 })
+        .eq('session_id', sessionId);
+    }
+  }
+
+  const stream = new ReadableStream({
+    async start(controller) {
+      let searchId: string | null = null;
+      const allLeads: Lead[] = [];
+      let aborted = false;
+
+      const abortHandler = () => {
+        aborted = true;
+      };
+
+      request.signal.addEventListener('abort', abortHandler);
+
+      try {
+        const { data: searchData } = await supabase
+          .from('searches')
+          .insert({
+            id: uuidv4(),
+            user_token: sessionId,
+            query,
+            result_count: 0,
+          })
+          .select()
+          .single();
+
+        searchId = searchData?.id ?? null;
+
+        const places = await searchBusinesses(query);
+
+        const leads = await enrichLeads(places);
+
+        for (let i = 0; i < leads.length; i++) {
+          if (aborted) break;
+
+          const lead = { ...leads[i] };
+          if (searchId) {
+            lead.search_id = searchId;
+          }
+
+          allLeads.push(lead);
+          controller.enqueue(sseMessage(lead));
+
+          if (i < leads.length - 1) {
+            await delay(100);
+          }
+        }
+
+        if (!aborted && isPaid) {
+          for (const lead of allLeads) {
+            if (lead.website && !lead.email) {
+              try {
+                const emailRes = await fetch(
+                  `${process.env.NEXT_PUBLIC_APP_URL}/api/scrape-email`,
+                  {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ url: lead.website }),
+                    signal: AbortSignal.timeout(5000),
+                  }
+                );
+
+                if (emailRes.ok) {
+                  const { email } = await emailRes.json();
+                  if (email) {
+                    lead.email = email;
+                    controller.enqueue(
+                      sseMessage({ type: 'email_found', lead_id: lead.id, email })
+                    );
+                  }
+                }
+              } catch {
+                // Email scraping failed silently
+              }
+            }
+          }
+        }
+
+        if (searchId && allLeads.length > 0) {
+          const leadsToInsert = allLeads.map((lead) => ({
+            id: lead.id,
+            search_id: lead.search_id || searchId,
+            place_id: lead.place_id,
+            name: lead.name,
+            phone: lead.phone,
+            email: lead.email,
+            website: lead.website,
+            address: lead.address,
+            rating: lead.rating,
+            status: lead.status,
+          }));
+
+          await supabase.from('leads').insert(leadsToInsert);
+
+          await supabase
+            .from('searches')
+            .update({ result_count: allLeads.length })
+            .eq('id', searchId);
+        }
+
+        controller.enqueue(sseDone());
+      } catch (error) {
+        if (!aborted) {
+          const errorMessage =
+            error instanceof Error ? error.message : 'Unknown error occurred';
+          controller.enqueue(
+            sseMessage({ type: 'error', error: errorMessage })
+          );
+          controller.enqueue(sseDone());
+        }
+      } finally {
+        request.signal.removeEventListener('abort', abortHandler);
+        controller.close();
+      }
+    },
+  });
+
+  return new Response(stream, {
+    status: 200,
+    headers: {
+      'Content-Type': 'text/event-stream',
+      'Cache-Control': 'no-cache',
+      Connection: 'keep-alive',
+    },
+  });
+}
