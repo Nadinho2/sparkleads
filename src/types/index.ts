@@ -13,6 +13,8 @@ export interface Lead {
   status: 'new' | 'contacted' | 'interested' | 'closed' | 'not_interested';
   place_id: string;
   created_at: string;
+  hasReminder?: boolean;
+  note?: string | null;
 }
 
 export interface Search {

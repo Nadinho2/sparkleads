@@ -111,6 +111,28 @@ CREATE TABLE user_email_settings (
   updated_at TIMESTAMPTZ DEFAULT NOW()
 );
 
+-- 11. follow_up_reminders
+CREATE TABLE follow_up_reminders (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  user_token TEXT NOT NULL,
+  lead_id UUID REFERENCES leads(id) ON DELETE CASCADE,
+  due_date DATE NOT NULL,
+  note TEXT,
+  status TEXT CHECK (status IN ('pending', 'done', 'snoozed')) DEFAULT 'pending',
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- 12. lead_notes
+CREATE TABLE lead_notes (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  user_token TEXT NOT NULL,
+  lead_id UUID REFERENCES leads(id) ON DELETE CASCADE,
+  content TEXT NOT NULL,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
 -- =============================================================================
 -- INDEXES
 -- =============================================================================
@@ -126,6 +148,11 @@ CREATE INDEX idx_payout_requests_user_token ON payout_requests(user_token);
 CREATE INDEX idx_user_credits_user_token ON user_credits(user_token);
 CREATE INDEX idx_credit_transactions_user_token ON credit_transactions(user_token);
 CREATE INDEX idx_user_email_settings_user_token ON user_email_settings(user_token);
+CREATE INDEX idx_follow_up_reminders_user_token ON follow_up_reminders(user_token);
+CREATE INDEX idx_follow_up_reminders_due_date ON follow_up_reminders(due_date);
+CREATE INDEX idx_follow_up_reminders_status ON follow_up_reminders(status);
+CREATE INDEX idx_lead_notes_lead_id ON lead_notes(lead_id);
+CREATE INDEX idx_lead_notes_user_token ON lead_notes(user_token);
 
 -- =============================================================================
 -- ROW LEVEL SECURITY (RLS)
@@ -142,6 +169,8 @@ ALTER TABLE payout_requests ENABLE ROW LEVEL SECURITY;
 ALTER TABLE user_credits ENABLE ROW LEVEL SECURITY;
 ALTER TABLE credit_transactions ENABLE ROW LEVEL SECURITY;
 ALTER TABLE user_email_settings ENABLE ROW LEVEL SECURITY;
+ALTER TABLE follow_up_reminders ENABLE ROW LEVEL SECURITY;
+ALTER TABLE lead_notes ENABLE ROW LEVEL SECURITY;
 
 -- searches: Users can only access their own searches via user_token
 CREATE POLICY "Users can view own searches"
@@ -283,4 +312,46 @@ CREATE POLICY "Users can update own email settings"
 
 CREATE POLICY "Service role can manage email settings"
   ON user_email_settings FOR ALL
+  USING (auth.role() = 'service_role');
+
+-- follow_up_reminders: Users can manage their own reminders
+CREATE POLICY "Users can view own reminders"
+  ON follow_up_reminders FOR SELECT
+  USING (user_token = current_setting('app.current_user_token', true));
+
+CREATE POLICY "Users can insert own reminders"
+  ON follow_up_reminders FOR INSERT
+  WITH CHECK (user_token = current_setting('app.current_user_token', true));
+
+CREATE POLICY "Users can update own reminders"
+  ON follow_up_reminders FOR UPDATE
+  USING (user_token = current_setting('app.current_user_token', true));
+
+CREATE POLICY "Users can delete own reminders"
+  ON follow_up_reminders FOR DELETE
+  USING (user_token = current_setting('app.current_user_token', true));
+
+CREATE POLICY "Service role can manage reminders"
+  ON follow_up_reminders FOR ALL
+  USING (auth.role() = 'service_role');
+
+-- lead_notes: Users can manage their own notes
+CREATE POLICY "Users can view own notes"
+  ON lead_notes FOR SELECT
+  USING (user_token = current_setting('app.current_user_token', true));
+
+CREATE POLICY "Users can insert own notes"
+  ON lead_notes FOR INSERT
+  WITH CHECK (user_token = current_setting('app.current_user_token', true));
+
+CREATE POLICY "Users can update own notes"
+  ON lead_notes FOR UPDATE
+  USING (user_token = current_setting('app.current_user_token', true));
+
+CREATE POLICY "Users can delete own notes"
+  ON lead_notes FOR DELETE
+  USING (user_token = current_setting('app.current_user_token', true));
+
+CREATE POLICY "Service role can manage notes"
+  ON lead_notes FOR ALL
   USING (auth.role() = 'service_role');

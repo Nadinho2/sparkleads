@@ -10,8 +10,13 @@ import {
   ExternalLink,
   Check,
   Calendar,
+  StickyNote,
+  Plus,
 } from 'lucide-react';
 import { Spinner } from '@/components/ui';
+import { NotesPanel } from '@/components/dashboard/NotesPanel';
+import { WhatsAppComposer } from '@/components/dashboard/WhatsAppComposer';
+import { EmailComposer } from '@/components/dashboard/EmailComposer';
 import type { Lead, Search } from '@/types';
 
 type LeadStatus = Lead['status'];
@@ -35,6 +40,9 @@ export default function SearchDetailPage({
   const [leads, setLeads] = useState<Lead[]>([]);
   const [loading, setLoading] = useState(true);
   const [copiedId, setCopiedId] = useState<string | null>(null);
+  const [notesPanel, setNotesPanel] = useState<{ isOpen: boolean; lead: Lead | null }>({ isOpen: false, lead: null });
+  const [whatsappComposer, setWhatsappComposer] = useState<{ isOpen: boolean; lead: Lead | null }>({ isOpen: false, lead: null });
+  const [emailComposer, setEmailComposer] = useState<{ isOpen: boolean; lead: Lead | null }>({ isOpen: false, lead: null });
 
   useEffect(() => {
     async function fetchLeads() {
@@ -47,6 +55,23 @@ export default function SearchDetailPage({
         const data = await response.json();
         setSearch(data.search);
         setLeads(data.leads);
+
+        if (data.leads.length > 0) {
+          const noteRes = await fetch('/api/notes/bulk-get', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ lead_ids: data.leads.map((l: Lead) => l.id) }),
+          });
+          const { notes } = await noteRes.json();
+          if (notes) {
+            setLeads((prev) =>
+              prev.map((lead) => ({
+                ...lead,
+                note: notes[lead.id] || null,
+              }))
+            );
+          }
+        }
       } catch {
         router.push('/dashboard/history');
       } finally {
@@ -80,6 +105,26 @@ export default function SearchDetailPage({
     } catch {
       // Silent fail
     }
+  }, []);
+
+  const handleNoteSaved = useCallback((leadId: string, content: string) => {
+    setLeads((prev) =>
+      prev.map((l) => (l.id === leadId ? { ...l, note: content } : l))
+    );
+    setNotesPanel((prev) => ({
+      ...prev,
+      lead: prev.lead?.id === leadId ? { ...prev.lead, note: content } : prev.lead,
+    }));
+  }, []);
+
+  const handleNoteDeleted = useCallback((leadId: string) => {
+    setLeads((prev) =>
+      prev.map((l) => (l.id === leadId ? { ...l, note: null } : l))
+    );
+    setNotesPanel((prev) => ({
+      ...prev,
+      lead: prev.lead?.id === leadId ? { ...prev.lead, note: null } : prev.lead,
+    }));
   }, []);
 
   const handleExportCsv = useCallback(async () => {
@@ -201,6 +246,9 @@ export default function SearchDetailPage({
                     Status
                   </th>
                   <th className="text-left py-3 px-4 text-xs font-medium text-muted uppercase tracking-wider">
+                    Notes
+                  </th>
+                  <th className="text-left py-3 px-4 text-xs font-medium text-muted uppercase tracking-wider">
                     Actions
                   </th>
                 </tr>
@@ -267,6 +315,27 @@ export default function SearchDetailPage({
                       </select>
                     </td>
                     <td className="py-3 px-4">
+                      {lead.note ? (
+                        <button
+                          onClick={() => setNotesPanel({ isOpen: true, lead })}
+                          className="group flex items-start gap-2 text-left w-full max-w-[200px]"
+                        >
+                          <StickyNote size={14} className="text-yellow-400 mt-0.5 shrink-0" />
+                          <span className="text-xs text-muted group-hover:text-text transition-colors truncate">
+                            {lead.note}
+                          </span>
+                        </button>
+                      ) : (
+                        <button
+                          onClick={() => setNotesPanel({ isOpen: true, lead })}
+                          className="flex items-center gap-1 text-xs text-muted hover:text-primary transition-colors"
+                        >
+                          <Plus size={12} />
+                          Add note
+                        </button>
+                      )}
+                    </td>
+                    <td className="py-3 px-4">
                       <div className="flex items-center gap-1">
                         {lead.phone && cleanPhone(lead.phone) && (
                           <a
@@ -314,6 +383,29 @@ export default function SearchDetailPage({
           </div>
         </div>
       )}
+
+      <NotesPanel
+        lead={notesPanel.lead}
+        isOpen={notesPanel.isOpen}
+        onClose={() => setNotesPanel({ isOpen: false, lead: null })}
+        onNoteSaved={handleNoteSaved}
+        onNoteDeleted={handleNoteDeleted}
+        onMarkContacted={(leadId) => handleStatusChange(leadId, 'contacted')}
+      />
+
+      <WhatsAppComposer
+        lead={whatsappComposer.lead}
+        isOpen={whatsappComposer.isOpen}
+        onClose={() => setWhatsappComposer({ isOpen: false, lead: null })}
+        onSent={() => {}}
+      />
+
+      <EmailComposer
+        lead={emailComposer.lead}
+        isOpen={emailComposer.isOpen}
+        onClose={() => setEmailComposer({ isOpen: false, lead: null })}
+        onSent={() => {}}
+      />
     </div>
   );
 }

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import {
   Search,
   Download,
@@ -13,6 +13,9 @@ import {
   Lightbulb,
   Check,
   X,
+  Bell,
+  StickyNote,
+  Plus,
 } from 'lucide-react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { toast } from 'sonner';
@@ -22,7 +25,18 @@ import { WhatsAppComposer } from '@/components/dashboard/WhatsAppComposer';
 import { EmailComposer } from '@/components/dashboard/EmailComposer';
 import { BulkWhatsAppComposer } from '@/components/dashboard/BulkWhatsAppComposer';
 import { BulkEmailComposer } from '@/components/dashboard/BulkEmailComposer';
+import { FollowUpModal } from '@/components/dashboard/FollowUpModal';
+import { NotesPanel } from '@/components/dashboard/NotesPanel';
 import type { Lead } from '@/types';
+
+interface DueReminder {
+  id: string;
+  lead_id: string;
+  due_date: string;
+  note: string | null;
+  status: string;
+  lead: Lead | null;
+}
 
 type LeadStatus = Lead['status'];
 
@@ -83,11 +97,80 @@ export default function DashboardPage() {
   const [selectAll, setSelectAll] = useState(false);
   const [bulkWhatsApp, setBulkWhatsApp] = useState(false);
   const [bulkEmail, setBulkEmail] = useState(false);
+  const [followUpModal, setFollowUpModal] = useState<{ isOpen: boolean; lead: Lead | null }>({ isOpen: false, lead: null });
+  const [dueReminders, setDueReminders] = useState<DueReminder[]>([]);
+  const [showReminders, setShowReminders] = useState(true);
+  const lastCheckedCountRef = useRef(0);
+  const [notesPanel, setNotesPanel] = useState<{ isOpen: boolean; lead: Lead | null }>({ isOpen: false, lead: null });
+  const [filterHasNotes, setFilterHasNotes] = useState(false);
 
   const { leads, isSearching, error, search, reset, updateLead } = useSearchStream({
     sessionId,
     isPaid: true,
   });
+
+  useEffect(() => {
+    fetch('/api/reminders/list?status=pending&date=today')
+      .then((r) => r.json())
+      .then((data) => setDueReminders(data.reminders || []))
+      .catch(() => {});
+  }, []);
+
+  const markReminderDone = async (reminderId: string) => {
+    await fetch('/api/reminders/update', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ id: reminderId, status: 'done' }),
+    });
+    setDueReminders((prev) => prev.filter((r) => r.id !== reminderId));
+    toast.success('Follow-up marked as done');
+  };
+
+  const handleReminderSaved = (placeId: string) => {
+    updateLead(placeId, { hasReminder: true });
+  };
+
+  const openNotesPanel = (lead: Lead) => {
+    setNotesPanel({ isOpen: true, lead });
+  };
+
+  const handleNoteSaved = (leadId: string, content: string) => {
+    updateLead(leads.find((l) => l.id === leadId)?.place_id || '', { note: content });
+    setNotesPanel((prev) => ({
+      ...prev,
+      lead: prev.lead?.id === leadId ? { ...prev.lead, note: content } : prev.lead,
+    }));
+  };
+
+  const handleNoteDeleted = (leadId: string) => {
+    updateLead(leads.find((l) => l.id === leadId)?.place_id || '', { note: null });
+    setNotesPanel((prev) => ({
+      ...prev,
+      lead: prev.lead?.id === leadId ? { ...prev.lead, note: null } : prev.lead,
+    }));
+  };
+
+  const loadNotesForResults = useCallback(async (leadsToLoad: Lead[]) => {
+    if (leadsToLoad.length === 0) return;
+    try {
+      const res = await fetch('/api/notes/bulk-get', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ lead_ids: leadsToLoad.map((l) => l.id) }),
+      });
+      const { notes } = await res.json();
+      if (notes) {
+        leadsToLoad.forEach((lead) => {
+          const noteContent = notes[lead.id];
+          if (noteContent !== undefined) {
+            updateLead(lead.place_id, { note: noteContent });
+          }
+        });
+      }
+    } catch {
+      // Silent fail
+    }
+  }, [updateLead]);
 
   useEffect(() => {
     let id = localStorage.getItem('sparkleads_session_id');
@@ -216,7 +299,32 @@ export default function DashboardPage() {
   useEffect(() => {
     setSelectedLeads(new Set());
     setSelectAll(false);
-  }, [leads]);
+    lastCheckedCountRef.current = 0;
+  }, [leads.length]);
+
+  useEffect(() => {
+    if (!isSearching && leads.length > 0 && lastCheckedCountRef.current !== leads.length) {
+      lastCheckedCountRef.current = leads.length;
+      const leadIds = leads.map((l) => l.id);
+      fetch('/api/reminders/check', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ lead_ids: leadIds }),
+      })
+        .then((r) => r.json())
+        .then((data) => {
+          const ids: string[] = data.lead_ids_with_reminders || [];
+          ids.forEach((id) => {
+            const lead = leads.find((l) => l.id === id);
+            if (lead) {
+              updateLead(lead.place_id, { hasReminder: true });
+            }
+          });
+        })
+        .catch(() => {});
+      loadNotesForResults(leads);
+    }
+  }, [isSearching, leads, updateLead, loadNotesForResults]);
 
   const selectedLeadObjects = leads.filter((l) => selectedLeads.has(l.place_id));
 
@@ -248,6 +356,60 @@ export default function DashboardPage() {
 
   return (
     <div className="space-y-6">
+      {/* Due Today Banner */}
+      {dueReminders.length > 0 && showReminders && (
+        <div className="rounded-xl border border-yellow-500/30 bg-yellow-500/10 p-4 mb-6">
+          <div className="flex items-center justify-between mb-3">
+            <div className="flex items-center gap-2">
+              <Bell size={16} className="text-yellow-400" />
+              <span className="font-semibold text-yellow-400">
+                {dueReminders.length} follow-up{dueReminders.length > 1 ? 's' : ''} due today
+              </span>
+            </div>
+            <button
+              onClick={() => setShowReminders(false)}
+              className="text-muted hover:text-text"
+            >
+              <X size={16} />
+            </button>
+          </div>
+
+          <div className="space-y-2">
+            {dueReminders.map((reminder) => (
+              <div
+                key={reminder.id}
+                className="flex items-center justify-between bg-surface rounded-lg px-4 py-3"
+              >
+                <div>
+                  <p className="font-medium text-text text-sm">
+                    {reminder.lead?.name}
+                  </p>
+                  {reminder.note && (
+                    <p className="text-xs text-muted mt-0.5">{reminder.note}</p>
+                  )}
+                </div>
+                <div className="flex items-center gap-2">
+                  {reminder.lead?.phone && (
+                    <button
+                      onClick={() => setWhatsappComposer({ isOpen: true, lead: reminder.lead as Lead })}
+                      className="text-xs px-3 py-1.5 rounded-lg bg-green-600 hover:bg-green-500 text-white font-medium"
+                    >
+                      WhatsApp
+                    </button>
+                  )}
+                  <button
+                    onClick={() => markReminderDone(reminder.id)}
+                    className="text-xs px-3 py-1.5 rounded-lg bg-surface2 hover:bg-surface text-muted hover:text-text"
+                  >
+                    Mark done
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
       {/* Search Bar */}
       <div className="flex gap-3">
         <div className="flex-1 relative">
@@ -291,6 +453,18 @@ export default function DashboardPage() {
             {isSearching && <Spinner size="sm" className="text-primary" />}
           </div>
           <div className="flex items-center gap-2">
+            <button
+              onClick={() => setFilterHasNotes(!filterHasNotes)}
+              className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm transition-colors ${
+                filterHasNotes
+                  ? 'bg-yellow-500/20 text-yellow-400'
+                  : 'bg-surface text-muted hover:text-text'
+              }`}
+            >
+              <StickyNote size={14} />
+              Has notes
+              {filterHasNotes && <X size={12} />}
+            </button>
             <button
               onClick={handleExportCsv}
               className="flex items-center gap-2 px-4 py-2 rounded-lg border border-border bg-surface text-sm text-muted hover:text-text hover:border-primary/50 transition-colors"
@@ -404,12 +578,15 @@ export default function DashboardPage() {
                     Status
                   </th>
                   <th className="text-left py-3 px-4 text-xs font-medium text-muted uppercase tracking-wider">
+                    Notes
+                  </th>
+                  <th className="text-left py-3 px-4 text-xs font-medium text-muted uppercase tracking-wider">
                     Actions
                   </th>
                 </tr>
               </thead>
               <tbody>
-                {leads.map((lead, i) => (
+                {leads.filter((l) => !filterHasNotes || l.note).map((lead, i) => (
                   <tr
                     key={lead.id}
                     className="border-b border-border/50 hover:bg-surface2/50 transition-colors animate-fade-in-up"
@@ -515,6 +692,27 @@ export default function DashboardPage() {
                       </select>
                     </td>
                     <td className="py-3 px-4">
+                      {lead.note ? (
+                        <button
+                          onClick={() => openNotesPanel(lead)}
+                          className="group flex items-start gap-2 text-left w-full max-w-[200px]"
+                        >
+                          <StickyNote size={14} className="text-yellow-400 mt-0.5 shrink-0" />
+                          <span className="text-xs text-muted group-hover:text-text transition-colors truncate">
+                            {lead.note}
+                          </span>
+                        </button>
+                      ) : (
+                        <button
+                          onClick={() => openNotesPanel(lead)}
+                          className="flex items-center gap-1 text-xs text-muted hover:text-primary transition-colors"
+                        >
+                          <Plus size={12} />
+                          Add note
+                        </button>
+                      )}
+                    </td>
+                    <td className="py-3 px-4">
                       <div className="flex items-center gap-1.5">
                         {lead.phone && (
                           <button
@@ -536,6 +734,18 @@ export default function DashboardPage() {
                             <span className="hidden xl:inline">Email</span>
                           </button>
                         )}
+                        <button
+                          onClick={() => setFollowUpModal({ isOpen: true, lead })}
+                          className={`flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-medium transition-colors ${
+                            lead.hasReminder
+                              ? 'bg-yellow-500/20 text-yellow-400 hover:bg-yellow-500/30'
+                              : 'bg-surface2 text-muted hover:text-text hover:bg-surface'
+                          }`}
+                          title={lead.hasReminder ? 'Reminder set' : 'Set follow-up reminder'}
+                        >
+                          <Bell size={12} />
+                          <span className="hidden xl:inline">{lead.hasReminder ? 'Reminder set' : 'Remind me'}</span>
+                        </button>
                         {lead.phone && (
                           <button
                             onClick={() => handleCopyPhone(lead.phone!, lead.id)}
@@ -590,6 +800,26 @@ export default function DashboardPage() {
         isOpen={emailComposer.isOpen}
         onClose={() => setEmailComposer({ isOpen: false, lead: null })}
         onSent={handleEmailSent}
+      />
+
+      <FollowUpModal
+        lead={followUpModal.lead}
+        isOpen={followUpModal.isOpen}
+        onClose={() => setFollowUpModal({ isOpen: false, lead: null })}
+        onSaved={handleReminderSaved}
+      />
+
+      <NotesPanel
+        lead={notesPanel.lead}
+        isOpen={notesPanel.isOpen}
+        onClose={() => setNotesPanel({ isOpen: false, lead: null })}
+        onNoteSaved={handleNoteSaved}
+        onNoteDeleted={handleNoteDeleted}
+        onOpenFollowUp={(lead) => {
+          setNotesPanel({ isOpen: false, lead: null });
+          setFollowUpModal({ isOpen: true, lead });
+        }}
+        onMarkContacted={(leadId) => handleStatusChange(leadId, 'contacted')}
       />
 
       <BulkWhatsAppComposer

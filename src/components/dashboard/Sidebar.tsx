@@ -3,12 +3,13 @@
 import { useState, useEffect } from 'react';
 import { usePathname } from 'next/navigation';
 import Link from 'next/link';
-import { Zap, Search, History, BarChart3, Users, Settings, LogOut } from 'lucide-react';
+import { Zap, Search, History, BarChart3, Users, Settings, LogOut, Bell } from 'lucide-react';
 
 const navItems = [
   { label: 'New Search', href: '/dashboard', icon: Search },
   { label: 'Search History', href: '/dashboard/history', icon: History },
   { label: 'My Leads', href: '/dashboard/leads', icon: BarChart3 },
+  { label: 'Reminders', href: '/dashboard/reminders', icon: Bell },
   { label: 'Credits', href: '/dashboard/credits', icon: Zap },
   { label: 'Affiliate', href: '/dashboard/affiliate', icon: Users },
   { label: 'Settings', href: '/dashboard/settings', icon: Settings },
@@ -21,12 +22,25 @@ interface SidebarProps {
 export function Sidebar({ userToken }: SidebarProps) {
   const pathname = usePathname();
   const [balance, setBalance] = useState<number | null>(null);
+  const [reminderCount, setReminderCount] = useState(0);
 
   useEffect(() => {
     fetch('/api/credits/ensure')
       .then((res) => res.json())
       .then((data) => setBalance(data.balance ?? 0))
       .catch(() => setBalance(0));
+
+    fetch('/api/reminders/list?status=pending')
+      .then((res) => res.json())
+      .then((data) => {
+        const today = new Date().toISOString().split('T')[0];
+        const due = (data.reminders || []).filter(
+          (r: { due_date: string; status: string }) =>
+            r.status === 'pending' && r.due_date <= today
+        );
+        setReminderCount(due.length);
+      })
+      .catch(() => setReminderCount(0));
   }, []);
 
   function handleLogout() {
@@ -75,6 +89,11 @@ export function Sidebar({ userToken }: SidebarProps) {
                       : 'bg-green-500/20 text-green-400'
                 }`}>
                   {balance}
+                </span>
+              )}
+              {item.href === '/dashboard/reminders' && reminderCount > 0 && (
+                <span className="text-xs font-bold px-2 py-0.5 rounded-full bg-yellow-500/20 text-yellow-400">
+                  {reminderCount}
                 </span>
               )}
             </Link>
