@@ -44,6 +44,7 @@ CREATE TABLE activations (
   email TEXT NOT NULL,
   used BOOLEAN DEFAULT FALSE,
   affiliate_ref TEXT,
+  user_token TEXT,
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
@@ -117,6 +118,7 @@ CREATE TABLE user_email_settings (
 CREATE INDEX idx_searches_user_token ON searches(user_token);
 CREATE INDEX idx_leads_search_id ON leads(search_id);
 CREATE INDEX idx_activations_token ON activations(token);
+CREATE INDEX idx_activations_email ON activations(email);
 CREATE INDEX idx_affiliates_referral_code ON affiliates(referral_code);
 CREATE INDEX idx_free_trial_searches_ip ON free_trial_searches(ip_address);
 CREATE INDEX idx_free_trial_searches_session ON free_trial_searches(session_id);
