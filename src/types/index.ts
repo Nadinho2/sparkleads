@@ -7,6 +7,9 @@ export interface Lead {
   website: string | null;
   address: string | null;
   rating: number | null;
+  reviews: number | null;
+  type: string | null;
+  thumbnail: string | null;
   status: 'new' | 'contacted' | 'interested' | 'closed' | 'not_interested';
   place_id: string;
   created_at: string;

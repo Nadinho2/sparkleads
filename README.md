@@ -1,6 +1,6 @@
 # Pre-Deploy Checklist
 
-- [ ] Google Places API key added to Vercel env
+- [ ] SerpAPI key added to Vercel env
 - [ ] Paystack keys added to Vercel env
 - [ ] Supabase URL + keys added to Vercel env
 - [ ] NEXT_PUBLIC_APP_URL set to production domain
@@ -16,14 +16,14 @@
 
 # SparkLeads
 
-A SaaS lead generation tool that finds 200+ business leads in 60 seconds using the Google Places API. Search any business type in any city worldwide and get real phone numbers, emails, addresses, and Google ratings — then export to CSV and start outreach immediately.
+A SaaS lead generation tool that finds 200+ business leads in 60 seconds using SerpAPI's Google Maps engine. Search any business type in any city worldwide and get real phone numbers, emails, addresses, and Google ratings — then export to CSV and start outreach immediately.
 
 ## Tech Stack
 
 - **Framework**: Next.js 14 (App Router, TypeScript strict mode)
 - **Styling**: Tailwind CSS (dark theme design system)
 - **Database**: Supabase (PostgreSQL)
-- **API**: Google Places (Text Search + Details)
+- **API**: SerpAPI (Google Maps engine)
 - **Payments**: Paystack
 - **Hosting**: Vercel
 
@@ -102,7 +102,7 @@ ANALYZE=true npm run build
 
 | Variable | Description | Required |
 |---|---|---|
-| `NEXT_PUBLIC_GOOGLE_PLACES_API_KEY` | Google Places API key for searching businesses | Yes |
+| `SERPAPI_KEY` | SerpAPI key for searching businesses via Google Maps engine | Yes |
 | `NEXT_PUBLIC_PAYSTACK_PUBLIC_KEY` | Paystack public key for payment checkout | Yes |
 | `PAYSTACK_SECRET_KEY` | Paystack secret key for server-side payment verification | Yes |
 | `NEXT_PUBLIC_SUPABASE_URL` | Your Supabase project URL | Yes |
@@ -113,15 +113,12 @@ ANALYZE=true npm run build
 
 ## Where to Get API Keys
 
-### Google Places API
+### SerpAPI
 
-1. Go to [Google Cloud Console](https://console.cloud.google.com/)
-2. Create a new project or select an existing one
-3. Enable the **Places API** (under APIs & Services > Library)
-4. Go to APIs & Services > Credentials
-5. Click **Create Credentials** > **API Key**
-6. Restrict the key to **Places API** only
-7. Set the key as `NEXT_PUBLIC_GOOGLE_PLACES_API_KEY`
+1. Go to [SerpAPI](https://serpapi.com/)
+2. Create an account
+3. Go to **Dashboard** and copy your **API Key**
+4. Set the key as `SERPAPI_KEY`
 
 ### Paystack
 
@@ -211,7 +208,7 @@ sparkleads/
 │   ├── lib/
 │   │   ├── auth.ts              # Auth utilities
 │   │   ├── cache.ts             # In-memory cache (5-min TTL)
-│   │   ├── google-places.ts     # Google Places API integration
+│   │   ├── serpapi.ts            # SerpAPI Google Maps integration
 │   │   ├── rate-limit.ts        # In-memory rate limiting
 │   │   └── supabase.ts          # Supabase clients
 │   ├── types/                   # TypeScript types

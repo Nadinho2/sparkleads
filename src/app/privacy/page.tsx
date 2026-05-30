@@ -65,7 +65,7 @@ export default function PrivacyPage() {
             </p>
             <h3 className="text-base font-semibold text-text mb-2 mt-4">Business Data</h3>
             <p className="text-sm">
-              SparkLeads retrieves publicly available business information from Google Places API, including business names, phone numbers, addresses, websites, and ratings. This data is sourced from public business listings and is not personal user data.
+              SparkLeads retrieves publicly available business information from Google Maps via SerpAPI, including business names, phone numbers, addresses, websites, and ratings. This data is sourced from public business listings and is not personal user data.
             </p>
             <h3 className="text-base font-semibold text-text mb-2 mt-4">Cookies</h3>
             <p className="text-sm">
@@ -94,7 +94,7 @@ export default function PrivacyPage() {
             <ul className="text-sm space-y-2 list-disc pl-5 mt-2">
               <li><strong className="text-text">Paystack:</strong> For payment processing. Paystack handles all card data securely.</li>
               <li><strong className="text-text">Supabase:</strong> For database hosting. Your account and lead data is stored securely in Supabase.</li>
-              <li><strong className="text-text">Google Places API:</strong> For retrieving publicly available business data.</li>
+              <li><strong className="text-text">SerpAPI:</strong> For retrieving publicly available business data from Google Maps.</li>
               <li><strong className="text-text">Legal Requirements:</strong> If required by law or in response to valid legal requests.</li>
             </ul>
           </section>

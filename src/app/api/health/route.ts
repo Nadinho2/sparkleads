@@ -5,7 +5,7 @@ export const dynamic = 'force-dynamic';
 
 export async function GET() {
   const envCheck = {
-    google: !!process.env.NEXT_PUBLIC_GOOGLE_PLACES_API_KEY,
+    serpapi: !!process.env.SERPAPI_KEY,
     paystack: !!process.env.PAYSTACK_SECRET_KEY,
     supabase:
       !!process.env.NEXT_PUBLIC_SUPABASE_URL &&

@@ -90,7 +90,7 @@ const faqSections = [
       },
       {
         q: 'How fresh is the data?',
-        a: 'We pull data from Google Places in real-time when you search. The results reflect the latest available information on Google.',
+        a: 'We pull data from Google Maps via SerpAPI in real-time when you search. The results reflect the latest available information on Google.',
       },
     ],
   },

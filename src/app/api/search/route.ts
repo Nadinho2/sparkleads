@@ -1,5 +1,5 @@
 import { NextRequest } from 'next/server';
-import { searchBusinesses, enrichLeads } from '@/lib/google-places';
+import { searchBusinesses } from '@/lib/serpapi';
 import { createSupabaseAdmin } from '@/lib/supabase';
 import { checkRateLimit, SEARCH_RATE_LIMIT } from '@/lib/rate-limit';
 import { v4 as uuidv4 } from 'uuid';
@@ -122,9 +122,24 @@ export async function POST(request: NextRequest) {
 
         searchId = searchData?.id ?? null;
 
-        const places = await searchBusinesses(query);
+        const serpResults = await searchBusinesses(query);
 
-        const leads = await enrichLeads(places);
+        const leads: Lead[] = serpResults.map((item) => ({
+          id: uuidv4(),
+          search_id: searchId || '',
+          name: item.name,
+          phone: item.phone,
+          email: null,
+          website: item.website,
+          address: item.address,
+          rating: item.rating,
+          reviews: item.reviews,
+          type: item.type,
+          thumbnail: item.thumbnail,
+          status: 'new' as const,
+          place_id: item.place_id,
+          created_at: new Date().toISOString(),
+        }));
 
         for (let i = 0; i < leads.length; i++) {
           if (aborted) break;

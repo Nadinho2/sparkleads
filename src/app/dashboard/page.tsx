@@ -309,6 +309,9 @@ export default function DashboardPage() {
                     Rating
                   </th>
                   <th className="text-left py-3 px-4 text-xs font-medium text-muted uppercase tracking-wider">
+                    Reviews
+                  </th>
+                  <th className="text-left py-3 px-4 text-xs font-medium text-muted uppercase tracking-wider">
                     Status
                   </th>
                   <th className="text-left py-3 px-4 text-xs font-medium text-muted uppercase tracking-wider">
@@ -358,6 +361,9 @@ export default function DashboardPage() {
                       ) : (
                         <span className="text-muted">—</span>
                       )}
+                    </td>
+                    <td className="py-3 px-4 text-sm text-muted">
+                      {lead.reviews ? `${lead.reviews} reviews` : '—'}
                     </td>
                     <td className="py-3 px-4">
                       <select

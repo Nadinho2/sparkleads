@@ -162,7 +162,7 @@ const faqItems = [
   },
   {
     question: 'Where does the data come from?',
-    answer: 'We pull business data from publicly available sources including Google Places, business directories, and company websites. All data is publicly accessible information.',
+    answer: 'We pull business data from publicly available sources including Google Maps, business directories, and company websites. All data is publicly accessible information.',
   },
   {
     question: 'Can I export the leads?',

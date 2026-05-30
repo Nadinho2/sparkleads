@@ -21,7 +21,7 @@ export const metadata: Metadata = {
   keywords: [
     'business leads',
     'lead generation',
-    'Google Places scraper',
+    'business lead scraper',
     'business directory',
     'email finder',
     'phone number finder',
