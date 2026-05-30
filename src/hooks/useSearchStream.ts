@@ -73,28 +73,32 @@ export function useSearchStream({
           if (done) break;
 
           buffer += decoder.decode(value, { stream: true });
-          const lines = buffer.split('\n');
-          buffer = lines.pop() || '';
+          const parts = buffer.split('\n\n');
+          buffer = parts.pop() || '';
 
-          let currentEvent = '';
+          for (const part of parts) {
+            const lines = part.split('\n');
+            let eventType = '';
+            let eventData = '';
 
-          for (const line of lines) {
-            const trimmed = line.trim();
-
-            if (trimmed.startsWith('event: ')) {
-              currentEvent = trimmed.slice(7);
-              continue;
+            for (const line of lines) {
+              if (line.startsWith('event: ')) {
+                eventType = line.slice(7).trim();
+              } else if (line.startsWith('data: ')) {
+                eventData = line.slice(6);
+              }
             }
 
-            if (!trimmed.startsWith('data: ')) continue;
+            if (eventType === 'done') {
+              break;
+            }
 
-            const data = trimmed.slice(6);
-            if (data === '[DONE]') break;
+            if (!eventData) continue;
 
             try {
-              const parsed = JSON.parse(data);
+              const parsed = JSON.parse(eventData);
 
-              if (currentEvent === 'email') {
+              if (eventType === 'email' && parsed.place_id && parsed.email) {
                 setLeads((prev) =>
                   prev.map((lead) =>
                     lead.place_id === parsed.place_id
@@ -102,7 +106,7 @@ export function useSearchStream({
                       : lead
                   )
                 );
-              } else if (currentEvent === 'lead') {
+              } else if (eventType === 'lead' && parsed.id) {
                 setLeads((prev) => [...prev, parsed as Lead]);
               } else if (parsed.type === 'error') {
                 setError(parsed.error);

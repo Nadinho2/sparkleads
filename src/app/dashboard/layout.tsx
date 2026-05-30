@@ -2,6 +2,7 @@ import { cookies } from 'next/headers';
 import { redirect } from 'next/navigation';
 import { Bell, Search } from 'lucide-react';
 import { Sidebar, BottomNav } from '@/components/dashboard/Sidebar';
+import { CreditsBadge } from '@/components/dashboard/CreditsBadge';
 
 export default async function DashboardLayout({
   children,
@@ -44,6 +45,8 @@ async function TopBar({ token }: { token: string }) {
       <h1 className="text-lg font-semibold text-text">Dashboard</h1>
 
       <div className="flex items-center gap-4">
+        <CreditsBadge />
+
         <div className="hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-full bg-surface2 text-sm text-muted">
           <Search className="w-4 h-4" />
           <span>{count ?? 0} searches run</span>

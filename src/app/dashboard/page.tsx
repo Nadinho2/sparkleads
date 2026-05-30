@@ -66,6 +66,7 @@ export default function DashboardPage() {
   const [query, setQuery] = useState('');
   const [currentQuery, setCurrentQuery] = useState('');
   const [copiedId, setCopiedId] = useState<string | null>(null);
+  const [copiedEmailId, setCopiedEmailId] = useState<string | null>(null);
   const [suggestions, setSuggestions] = useState<string[]>([]);
 
   const { leads, isSearching, error, search, reset } = useSearchStream({
@@ -129,6 +130,16 @@ export default function DashboardPage() {
       await navigator.clipboard.writeText(phone);
       setCopiedId(leadId);
       setTimeout(() => setCopiedId(null), 2000);
+    } catch {
+      // Silent fail
+    }
+  }, []);
+
+  const handleCopyEmail = useCallback(async (email: string, leadId: string) => {
+    try {
+      await navigator.clipboard.writeText(email);
+      setCopiedEmailId(leadId);
+      setTimeout(() => setCopiedEmailId(null), 2000);
     } catch {
       // Silent fail
     }
@@ -336,8 +347,30 @@ export default function DashboardPage() {
                     <td className="py-3 px-4 text-sm text-muted">
                       {lead.phone || '—'}
                     </td>
-                    <td className="py-3 px-4 text-sm text-muted">
-                      {lead.email || '—'}
+                    <td className="py-3 px-4 text-sm">
+                      {lead.email ? (
+                        <div className="flex items-center gap-2">
+                          <span className="text-text">{lead.email}</span>
+                          <button
+                            onClick={() => handleCopyEmail(lead.email!, lead.id)}
+                            className="text-muted hover:text-primary"
+                            title="Copy email"
+                          >
+                            {copiedEmailId === lead.id ? (
+                              <Check size={14} className="text-success" />
+                            ) : (
+                              <Copy size={14} />
+                            )}
+                          </button>
+                        </div>
+                      ) : lead.website ? (
+                        <div className="flex items-center gap-2 text-muted">
+                          <div className="w-3 h-3 rounded-full border-2 border-primary border-t-transparent animate-spin" />
+                          <span className="text-xs">Scanning...</span>
+                        </div>
+                      ) : (
+                        <span className="text-xs text-muted">No website</span>
+                      )}
                     </td>
                     <td className="py-3 px-4 text-sm">
                       {lead.website ? (

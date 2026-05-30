@@ -17,7 +17,7 @@ function sseData(data: unknown): Uint8Array {
 }
 
 function sseDone(): Uint8Array {
-  return new TextEncoder().encode('data: [DONE]\n\n');
+  return new TextEncoder().encode('event: done\ndata: {}\n\n');
 }
 
 function delay(ms: number): Promise<void> {
@@ -127,6 +127,10 @@ export async function POST(request: NextRequest) {
         searchId = searchData?.id ?? null;
 
         const serpResults = await searchBusinesses(query);
+
+        console.log('SerpAPI leads sample:', JSON.stringify(serpResults.slice(0, 3), null, 2));
+        console.log('Leads with websites:', serpResults.filter((l) => l.website).length);
+        console.log('Leads without websites:', serpResults.filter((l) => !l.website).length);
 
         const leads: Lead[] = serpResults.map((item) => ({
           id: uuidv4(),
@@ -244,6 +248,7 @@ export async function POST(request: NextRequest) {
       'Content-Type': 'text/event-stream',
       'Cache-Control': 'no-cache',
       Connection: 'keep-alive',
+      'X-Accel-Buffering': 'no',
     },
   });
 }
