@@ -8,7 +8,7 @@ const navItems = [
   { label: 'New Search', href: '/dashboard', icon: Search },
   { label: 'Search History', href: '/dashboard/history', icon: History },
   { label: 'My Leads', href: '/dashboard/leads', icon: BarChart3 },
-  { label: 'Affiliate', href: '/affiliate', icon: Users },
+  { label: 'Affiliate', href: '/dashboard/affiliate', icon: Users },
   { label: 'Settings', href: '/dashboard/settings', icon: Settings },
 ];
 
@@ -27,7 +27,7 @@ export function Sidebar({ userToken }: SidebarProps) {
   return (
     <aside className="hidden lg:flex lg:flex-col lg:w-60 lg:fixed lg:inset-y-0 bg-surface border-r border-border">
       <div className="flex items-center gap-2.5 px-5 h-16 border-b border-border">
-        <Link href="/dashboard" className="flex items-center gap-2.5">
+        <Link href="/" className="flex items-center gap-2.5">
           <div className="w-8 h-8 rounded-lg bg-primary flex items-center justify-center">
             <Zap className="w-5 h-5 text-white" />
           </div>

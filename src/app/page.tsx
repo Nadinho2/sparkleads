@@ -405,19 +405,31 @@ export default function Home() {
           </p>
 
           <div className="flex flex-col sm:flex-row items-center justify-center gap-3 sm:gap-4 mb-12 sm:mb-16 animate-fade-in-up" style={{ animationDelay: '0.3s' }}>
-            <a
-              href="#pricing"
-              className="px-8 py-3.5 text-base font-medium text-white bg-primary rounded-xl hover:bg-primary/90 transition-all hover:shadow-lg hover:shadow-primary/25 flex items-center gap-2"
-            >
-              Try it free
-              <ArrowRight className="w-5 h-5" />
-            </a>
-            <a
-              href="#how-it-works"
-              className="px-8 py-3.5 text-base font-medium text-muted hover:text-text border border-border rounded-xl hover:bg-surface2 transition-colors"
-            >
-              See how it works
-            </a>
+            {isAuthenticated ? (
+              <Link
+                href="/dashboard"
+                className="px-8 py-3.5 text-base font-medium text-white bg-primary rounded-xl hover:bg-primary/90 transition-all hover:shadow-lg hover:shadow-primary/25 flex items-center gap-2"
+              >
+                Go to Dashboard
+                <ArrowRight className="w-5 h-5" />
+              </Link>
+            ) : (
+              <>
+                <a
+                  href="#pricing"
+                  className="px-8 py-3.5 text-base font-medium text-white bg-primary rounded-xl hover:bg-primary/90 transition-all hover:shadow-lg hover:shadow-primary/25 flex items-center gap-2"
+                >
+                  Try it free
+                  <ArrowRight className="w-5 h-5" />
+                </a>
+                <a
+                  href="#how-it-works"
+                  className="px-8 py-3.5 text-base font-medium text-muted hover:text-text border border-border rounded-xl hover:bg-surface2 transition-colors"
+                >
+                  See how it works
+                </a>
+              </>
+            )}
           </div>
 
           <div className="grid grid-cols-2 md:grid-cols-4 gap-6 max-w-3xl mx-auto animate-fade-in-up" style={{ animationDelay: '0.4s' }}>
@@ -477,14 +489,16 @@ export default function Home() {
 
             <div className="absolute inset-0 flex items-center justify-center bg-background/40 backdrop-blur-[2px]">
               <div className="text-center">
-                <p className="text-lg font-medium text-text mb-2">Try the live version below →</p>
-                <a
-                  href="#pricing"
+                <p className="text-lg font-medium text-text mb-2">
+                  {isAuthenticated ? 'Search live from your dashboard →' : 'Try the live version below →'}
+                </p>
+                <Link
+                  href={isAuthenticated ? '/dashboard' : '#pricing'}
                   className="inline-flex items-center gap-2 px-6 py-3 text-sm font-medium text-white bg-primary rounded-xl hover:bg-primary/90 transition-colors"
                 >
-                  Get Full Access
+                  {isAuthenticated ? 'Go to Dashboard' : 'Get Full Access'}
                   <ArrowRight className="w-4 h-4" />
-                </a>
+                </Link>
               </div>
             </div>
           </div>
@@ -611,62 +625,85 @@ export default function Home() {
       {/* ==================== PRICING ==================== */}
       <section id="pricing" className="py-20 fade-in-section">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center mb-16">
-            <h2 className="text-3xl sm:text-4xl font-bold text-text mb-4">Simple, Transparent Pricing</h2>
-            <p className="text-lg text-muted max-w-xl mx-auto">
-              No subscriptions. No hidden fees. Pay once, use forever.
-            </p>
-          </div>
-
-          <div className="max-w-lg mx-auto">
-            <div className="relative p-8 rounded-2xl border-2 border-primary bg-surface animate-pulse-glow">
-              <div className="absolute -top-4 left-1/2 -translate-x-1/2 px-4 py-1 bg-primary text-white text-sm font-bold rounded-full">
-                LIFETIME ACCESS
-              </div>
-
-              <div className="text-center mt-4 mb-8">
-                <div className="flex items-center justify-center gap-3 mb-2">
-                  <span className="text-2xl text-muted line-through">$45</span>
-                  <span className="text-5xl font-bold text-text">$15</span>
+          {isAuthenticated ? (
+            <div className="max-w-lg mx-auto text-center">
+              <div className="p-8 rounded-2xl border-2 border-primary bg-surface">
+                <div className="w-16 h-16 rounded-2xl bg-primary/10 flex items-center justify-center mx-auto mb-6">
+                  <Zap className="w-8 h-8 text-primary" />
                 </div>
-                <p className="text-sm text-muted">One-time payment • Lifetime access</p>
-              </div>
-
-              <ul className="space-y-4 mb-8">
-                {pricingFeatures.map((feature, i) => (
-                  <li key={i} className="flex items-center gap-3">
-                    <Check className="w-5 h-5 text-success flex-shrink-0" />
-                    <span className="text-sm text-text">{feature}</span>
-                  </li>
-                ))}
-              </ul>
-
-              <Link
-                href="/checkout"
-                className="block w-full text-center px-6 py-4 text-lg font-semibold text-white bg-primary rounded-xl hover:bg-primary/90 transition-all hover:shadow-lg hover:shadow-primary/25 mb-4"
-              >
-                Pay with Card — $15
-              </Link>
-
-              <p className="text-center text-sm text-muted">
-                <a href="#" className="text-primary hover:underline">
-                  Pay via bank transfer (Nigeria)
-                </a>
-              </p>
-
-              <div className="flex items-center justify-center gap-2 mt-6 text-sm text-muted">
-                <Shield className="w-4 h-4 text-success" />
-                <span>7-day money-back guarantee</span>
-              </div>
-
-              <div className="mt-4 text-center">
-                <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-danger/10 text-danger text-sm font-medium">
-                  <Clock className="w-4 h-4" />
-                  Only 20 slots remaining
-                </span>
+                <h2 className="text-2xl font-bold text-text mb-3">Welcome back!</h2>
+                <p className="text-muted mb-6">
+                  You already have full access to SparkLeads. Start searching for leads now.
+                </p>
+                <Link
+                  href="/dashboard"
+                  className="inline-flex items-center gap-2 px-8 py-3.5 text-lg font-semibold text-white bg-primary rounded-xl hover:bg-primary/90 transition-all hover:shadow-lg hover:shadow-primary/25"
+                >
+                  Go to Dashboard
+                  <ArrowRight className="w-5 h-5" />
+                </Link>
               </div>
             </div>
-          </div>
+          ) : (
+            <>
+              <div className="text-center mb-16">
+                <h2 className="text-3xl sm:text-4xl font-bold text-text mb-4">Simple, Transparent Pricing</h2>
+                <p className="text-lg text-muted max-w-xl mx-auto">
+                  No subscriptions. No hidden fees. Pay once, use forever.
+                </p>
+              </div>
+
+              <div className="max-w-lg mx-auto">
+                <div className="relative p-8 rounded-2xl border-2 border-primary bg-surface animate-pulse-glow">
+                  <div className="absolute -top-4 left-1/2 -translate-x-1/2 px-4 py-1 bg-primary text-white text-sm font-bold rounded-full">
+                    LIFETIME ACCESS
+                  </div>
+
+                  <div className="text-center mt-4 mb-8">
+                    <div className="flex items-center justify-center gap-3 mb-2">
+                      <span className="text-2xl text-muted line-through">$45</span>
+                      <span className="text-5xl font-bold text-text">$15</span>
+                    </div>
+                    <p className="text-sm text-muted">One-time payment &bull; Lifetime access</p>
+                  </div>
+
+                  <ul className="space-y-4 mb-8">
+                    {pricingFeatures.map((feature, i) => (
+                      <li key={i} className="flex items-center gap-3">
+                        <Check className="w-5 h-5 text-success flex-shrink-0" />
+                        <span className="text-sm text-text">{feature}</span>
+                      </li>
+                    ))}
+                  </ul>
+
+                  <Link
+                    href="/checkout"
+                    className="block w-full text-center px-6 py-4 text-lg font-semibold text-white bg-primary rounded-xl hover:bg-primary/90 transition-all hover:shadow-lg hover:shadow-primary/25 mb-4"
+                  >
+                    Pay with Card — $15
+                  </Link>
+
+                  <p className="text-center text-sm text-muted">
+                    <a href="#" className="text-primary hover:underline">
+                      Pay via bank transfer (Nigeria)
+                    </a>
+                  </p>
+
+                  <div className="flex items-center justify-center gap-2 mt-6 text-sm text-muted">
+                    <Shield className="w-4 h-4 text-success" />
+                    <span>7-day money-back guarantee</span>
+                  </div>
+
+                  <div className="mt-4 text-center">
+                    <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-danger/10 text-danger text-sm font-medium">
+                      <Clock className="w-4 h-4" />
+                      Only 20 slots remaining
+                    </span>
+                  </div>
+                </div>
+              </div>
+            </>
+          )}
         </div>
       </section>
 
@@ -765,19 +802,31 @@ export default function Home() {
               Join thousands of businesses using SparkLeads to find leads and grow revenue.
             </p>
             <div className="flex flex-col sm:flex-row items-center justify-center gap-3 sm:gap-4">
-              <a
-                href="#pricing"
-                className="w-full sm:w-auto px-8 py-3.5 text-base font-medium text-white bg-primary rounded-xl hover:bg-primary/90 transition-all hover:shadow-lg hover:shadow-primary/25 flex items-center justify-center gap-2"
-              >
-                Get Started Now
-                <ArrowRight className="w-5 h-5" />
-              </a>
-              <a
-                href="#how-it-works"
-                className="w-full sm:w-auto px-8 py-3.5 text-base font-medium text-muted hover:text-text border border-border rounded-xl hover:bg-surface2 transition-colors text-center"
-              >
-                Learn More
-              </a>
+              {isAuthenticated ? (
+                <Link
+                  href="/dashboard"
+                  className="w-full sm:w-auto px-8 py-3.5 text-base font-medium text-white bg-primary rounded-xl hover:bg-primary/90 transition-all hover:shadow-lg hover:shadow-primary/25 flex items-center justify-center gap-2"
+                >
+                  Go to Dashboard
+                  <ArrowRight className="w-5 h-5" />
+                </Link>
+              ) : (
+                <>
+                  <a
+                    href="#pricing"
+                    className="w-full sm:w-auto px-8 py-3.5 text-base font-medium text-white bg-primary rounded-xl hover:bg-primary/90 transition-all hover:shadow-lg hover:shadow-primary/25 flex items-center justify-center gap-2"
+                  >
+                    Get Started Now
+                    <ArrowRight className="w-5 h-5" />
+                  </a>
+                  <a
+                    href="#how-it-works"
+                    className="w-full sm:w-auto px-8 py-3.5 text-base font-medium text-muted hover:text-text border border-border rounded-xl hover:bg-surface2 transition-colors text-center"
+                  >
+                    Learn More
+                  </a>
+                </>
+              )}
             </div>
           </div>
 
