@@ -213,7 +213,15 @@ export default function Home() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
   const [openFaq, setOpenFaq] = useState<number | null>(null);
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
   const containerRef = useInView();
+
+  useEffect(() => {
+    fetch('/api/auth/check')
+      .then((res) => res.json())
+      .then((data) => setIsAuthenticated(data.authenticated))
+      .catch(() => {});
+  }, []);
 
   useEffect(() => {
     const handleScroll = () => {
@@ -295,18 +303,29 @@ export default function Home() {
             </div>
 
             <div className="hidden md:flex items-center gap-3">
-              <a
-                href="#pricing"
-                className="px-4 py-2 text-sm text-muted hover:text-text transition-colors rounded-lg hover:bg-surface2"
-              >
-                Try Free
-              </a>
-              <a
-                href="#pricing"
-                className="px-4 py-2 text-sm font-medium text-white bg-primary rounded-lg hover:bg-primary/90 transition-colors"
-              >
-                Get Access $15
-              </a>
+              {isAuthenticated ? (
+                <Link
+                  href="/dashboard"
+                  className="px-5 py-2 text-sm font-medium text-white bg-primary rounded-lg hover:bg-primary/90 transition-colors"
+                >
+                  Dashboard
+                </Link>
+              ) : (
+                <>
+                  <a
+                    href="#pricing"
+                    className="px-4 py-2 text-sm text-muted hover:text-text transition-colors rounded-lg hover:bg-surface2"
+                  >
+                    Try Free
+                  </a>
+                  <a
+                    href="#pricing"
+                    className="px-4 py-2 text-sm font-medium text-white bg-primary rounded-lg hover:bg-primary/90 transition-colors"
+                  >
+                    Get Access $15
+                  </a>
+                </>
+              )}
             </div>
 
             <button
@@ -332,20 +351,32 @@ export default function Home() {
                 </a>
               ))}
               <div className="pt-3 border-t border-border space-y-2">
-                <a
-                  href="#pricing"
-                  className="block w-full text-center px-4 py-2 text-sm text-muted hover:text-text rounded-lg hover:bg-surface2"
-                  onClick={() => setMobileMenuOpen(false)}
-                >
-                  Try Free
-                </a>
-                <a
-                  href="#pricing"
-                  className="block w-full text-center px-4 py-2 text-sm font-medium text-white bg-primary rounded-lg hover:bg-primary/90"
-                  onClick={() => setMobileMenuOpen(false)}
-                >
-                  Get Access $15
-                </a>
+                {isAuthenticated ? (
+                  <Link
+                    href="/dashboard"
+                    className="block w-full text-center px-4 py-2 text-sm font-medium text-white bg-primary rounded-lg hover:bg-primary/90"
+                    onClick={() => setMobileMenuOpen(false)}
+                  >
+                    Dashboard
+                  </Link>
+                ) : (
+                  <>
+                    <a
+                      href="#pricing"
+                      className="block w-full text-center px-4 py-2 text-sm text-muted hover:text-text rounded-lg hover:bg-surface2"
+                      onClick={() => setMobileMenuOpen(false)}
+                    >
+                      Try Free
+                    </a>
+                    <a
+                      href="#pricing"
+                      className="block w-full text-center px-4 py-2 text-sm font-medium text-white bg-primary rounded-lg hover:bg-primary/90"
+                      onClick={() => setMobileMenuOpen(false)}
+                    >
+                      Get Access $15
+                    </a>
+                  </>
+                )}
               </div>
             </div>
           </div>

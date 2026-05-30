@@ -11,7 +11,6 @@ import {
   History,
 } from 'lucide-react';
 import { Spinner } from '@/components/ui';
-import { createSupabaseClient } from '@/lib/supabase';
 import type { Search as SearchType } from '@/types';
 
 export default function HistoryPage() {
@@ -21,24 +20,21 @@ export default function HistoryPage() {
   const [deletingId, setDeletingId] = useState<string | null>(null);
 
   const fetchSearches = useCallback(async () => {
-    const supabase = createSupabaseClient();
-
     const sessionId = localStorage.getItem('sparkleads_session_id');
     if (!sessionId) {
       setLoading(false);
       return;
     }
 
-    const { data, error } = await supabase
-      .from('searches')
-      .select('*')
-      .eq('user_token', sessionId)
-      .order('created_at', { ascending: false });
-
-    if (!error && data) {
-      setSearches(data);
+    try {
+      const res = await fetch(`/api/searches?user_token=${encodeURIComponent(sessionId)}`);
+      const data = await res.json();
+      setSearches(data.searches || []);
+    } catch (err) {
+      console.error('Failed to load searches:', err);
+    } finally {
+      setLoading(false);
     }
-    setLoading(false);
   }, []);
 
   useEffect(() => {

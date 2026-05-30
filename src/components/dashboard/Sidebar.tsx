@@ -27,10 +27,12 @@ export function Sidebar({ userToken }: SidebarProps) {
   return (
     <aside className="hidden lg:flex lg:flex-col lg:w-60 lg:fixed lg:inset-y-0 bg-surface border-r border-border">
       <div className="flex items-center gap-2.5 px-5 h-16 border-b border-border">
-        <div className="w-8 h-8 rounded-lg bg-primary flex items-center justify-center">
-          <Zap className="w-5 h-5 text-white" />
-        </div>
-        <span className="text-lg font-bold text-text">SparkLeads</span>
+        <Link href="/dashboard" className="flex items-center gap-2.5">
+          <div className="w-8 h-8 rounded-lg bg-primary flex items-center justify-center">
+            <Zap className="w-5 h-5 text-white" />
+          </div>
+          <span className="text-lg font-bold text-text">SparkLeads</span>
+        </Link>
       </div>
 
       <nav className="flex-1 px-3 py-4 space-y-1 overflow-y-auto">
