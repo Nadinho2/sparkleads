@@ -1,5 +1,6 @@
 import { NextRequest } from 'next/server';
 import { searchBusinesses } from '@/lib/serpapi';
+import { scrapeEmail } from '@/lib/scrape-email';
 import { createSupabaseAdmin } from '@/lib/supabase';
 import { checkRateLimit, SEARCH_RATE_LIMIT } from '@/lib/rate-limit';
 import { v4 as uuidv4 } from 'uuid';
@@ -166,34 +167,29 @@ export async function POST(request: NextRequest) {
         }
 
         if (!aborted && isPaid) {
-          const scrapePromises = allLeads
-            .filter((lead) => lead.website)
+          const leadsWithWebsites = allLeads.filter((lead) => lead.website);
+          console.log(`Scraping emails for ${leadsWithWebsites.length} leads with websites...`);
+
+          const scrapePromises = leadsWithWebsites
             .map(async (lead) => {
               try {
-                const emailRes = await fetch(
-                  `${process.env.NEXT_PUBLIC_APP_URL}/api/scrape-email`,
-                  {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ url: lead.website }),
-                    signal: AbortSignal.timeout(15000),
-                  }
-                );
+                console.log(`Scraping: ${lead.website}`);
+                const email = await scrapeEmail(lead.website!);
 
-                if (emailRes.ok) {
-                  const { email } = await emailRes.json();
-                  if (email) {
-                    await supabase
-                      .from('leads')
-                      .update({ email })
-                      .eq('place_id', lead.place_id)
-                      .eq('search_id', searchId);
+                if (email) {
+                  console.log(`Found email for ${lead.name}: ${email}`);
+                  await supabase
+                    .from('leads')
+                    .update({ email })
+                    .eq('place_id', lead.place_id)
+                    .eq('search_id', searchId);
 
-                    lead.email = email;
-                    controller.enqueue(
-                      sseEvent('email', { place_id: lead.place_id, email })
-                    );
-                  }
+                  lead.email = email;
+                  controller.enqueue(
+                    sseEvent('email', { place_id: lead.place_id, email })
+                  );
+                } else {
+                  console.log(`No email found for ${lead.name} (${lead.website})`);
                 }
               } catch (err) {
                 console.error(`Email scrape failed for ${lead.website}:`, err);
