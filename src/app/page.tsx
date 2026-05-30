@@ -725,13 +725,13 @@ export default function Home() {
                 <p className="text-lg text-muted mb-6">
                   Share SparkLeads with your audience and earn $7.50 for every sale. It&apos;s that simple.
                 </p>
-                <a
-                  href="#"
+                <Link
+                  href={isAuthenticated ? '/dashboard/affiliate' : '#pricing'}
                   className="inline-flex items-center gap-2 px-6 py-3 text-base font-medium text-white bg-primary rounded-xl hover:bg-primary/90 transition-colors"
                 >
-                  Join Affiliate Program
+                  {isAuthenticated ? 'Open Affiliate Dashboard' : 'Join Affiliate Program'}
                   <ArrowRight className="w-5 h-5" />
-                </a>
+                </Link>
               </div>
 
               <div className="grid grid-cols-2 gap-3 sm:gap-4">

@@ -12,12 +12,16 @@ import {
   Trash2,
   AlertTriangle,
   X,
+  LogOut,
 } from 'lucide-react';
+import { useRouter } from 'next/navigation';
 import { Spinner } from '@/components/ui';
 
 export default function SettingsPage() {
+  const router = useRouter();
   const [userToken, setUserToken] = useState('');
   const [copied, setCopied] = useState(false);
+  const [loggingOut, setLoggingOut] = useState(false);
   const [showClearModal, setShowClearModal] = useState(false);
   const [clearLoading, setClearLoading] = useState(false);
   const [clearResult, setClearResult] = useState<number | null>(null);
@@ -52,6 +56,20 @@ export default function SettingsPage() {
       // Silent fail
     }
   }, [userToken]);
+
+  const handleLogout = useCallback(async () => {
+    setLoggingOut(true);
+    try {
+      await fetch('/api/auth/logout', { method: 'POST' });
+      localStorage.removeItem('sparkleads_session_id');
+      router.push('/');
+    } catch {
+      localStorage.removeItem('sparkleads_session_id');
+      router.push('/');
+    } finally {
+      setLoggingOut(false);
+    }
+  }, [router]);
 
   const handleClearHistory = useCallback(async () => {
     setClearLoading(true);
@@ -172,6 +190,19 @@ export default function SettingsPage() {
               Lifetime Access ✓
             </span>
           </div>
+
+          <button
+            onClick={handleLogout}
+            disabled={loggingOut}
+            className="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg border border-border text-muted text-sm font-medium hover:text-text hover:bg-surface2 transition-colors disabled:opacity-50"
+          >
+            {loggingOut ? (
+              <Spinner size="sm" />
+            ) : (
+              <LogOut className="w-4 h-4" />
+            )}
+            Log out
+          </button>
         </div>
       </div>
 
