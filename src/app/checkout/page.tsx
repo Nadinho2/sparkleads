@@ -54,12 +54,35 @@ export default function CheckoutPage() {
   const [scriptLoaded, setScriptLoaded] = useState(false);
   const referenceRef = useRef('');
 
-  useEffect(() => {
-    if (isFreeAccess) {
-      fetch('/api/activate-free')
-        .then(() => router.push('/dashboard'));
+  const [activating, setActivating] = useState(false);
+
+  const handleFreeActivation = async () => {
+    if (!email.trim() || !email.includes('@')) {
+      toast.error('Please enter a valid email address');
+      return;
     }
-  }, [router]);
+
+    setActivating(true);
+    try {
+      const res = await fetch('/api/activate-free', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: email.trim().toLowerCase() }),
+      });
+
+      if (res.ok) {
+        toast.success('Welcome to SparkLeads!');
+        router.push('/dashboard');
+      } else {
+        const data = await res.json();
+        toast.error(data.error || 'Activation failed');
+      }
+    } catch {
+      toast.error('Something went wrong. Please try again.');
+    } finally {
+      setActivating(false);
+    }
+  };
 
   useEffect(() => {
     if (document.getElementById('paystack-inline-js')) {
@@ -179,13 +202,62 @@ export default function CheckoutPage() {
 
   if (isFreeAccess) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-background">
-        <div className="text-center space-y-4">
-          <div className="text-5xl">⚡</div>
-          <h1 className="text-2xl font-bold text-text">Activating SparkLeads...</h1>
-          <p className="text-muted text-sm">Setting up your personal access</p>
+      <main className="min-h-screen bg-background flex items-center justify-center px-4">
+        <div className="w-full max-w-md text-center">
+          <Link href="/" className="inline-flex items-center gap-2 mb-8">
+            <div className="w-10 h-10 rounded-lg bg-primary flex items-center justify-center">
+              <Zap className="w-6 h-6 text-white" />
+            </div>
+            <span className="text-2xl font-bold text-text">SparkLeads</span>
+          </Link>
+          <div className="text-5xl mb-6">⚡</div>
+          <h1 className="text-2xl font-bold text-text mb-2">Get Free Access to SparkLeads</h1>
+          <p className="text-muted mb-8">Enter your email to activate your account. You&apos;ll use this to log in on any device.</p>
+
+          <div className="space-y-4 text-left">
+            <div>
+              <label htmlFor="free-email" className="block text-sm font-medium text-text mb-1.5">
+                Email address
+              </label>
+              <div className="relative">
+                <Mail className="absolute left-3.5 top-1/2 -translate-y-1/2 w-5 h-5 text-muted" />
+                <input
+                  id="free-email"
+                  type="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  onKeyDown={(e) => e.key === 'Enter' && handleFreeActivation()}
+                  placeholder="you@example.com"
+                  className="w-full pl-11 pr-4 py-3 rounded-xl border border-border bg-surface text-text placeholder:text-muted focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition-colors"
+                  disabled={activating}
+                  autoFocus
+                />
+              </div>
+              <p className="text-xs text-muted mt-2">
+                Use a real email — you&apos;ll need it to log in later
+              </p>
+            </div>
+
+            <button
+              onClick={handleFreeActivation}
+              disabled={activating || !email.trim()}
+              className="w-full flex items-center justify-center gap-2 px-6 py-3.5 rounded-xl bg-primary text-white font-medium hover:bg-primary/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {activating ? (
+                <>
+                  <Loader2 className="w-5 h-5 animate-spin" />
+                  Activating...
+                </>
+              ) : (
+                <>
+                  Activate My Account
+                  <ArrowRight className="w-5 h-5" />
+                </>
+              )}
+            </button>
+          </div>
         </div>
-      </div>
+      </main>
     );
   }
 
