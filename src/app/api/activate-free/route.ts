@@ -18,6 +18,7 @@ export async function GET() {
     token: userToken,
     email: 'personal@sparkleads.dev',
     used: true,
+    user_token: userToken,
   });
 
   await supabase.from('affiliates').insert({

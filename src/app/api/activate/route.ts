@@ -31,7 +31,7 @@ export async function GET(request: NextRequest) {
 
   const { error: updateError } = await supabase
     .from('activations')
-    .update({ used: true })
+    .update({ used: true, user_token: userToken })
     .eq('token', token);
 
   if (updateError) {

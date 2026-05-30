@@ -312,12 +312,12 @@ export default function Home() {
                 </Link>
               ) : (
                 <>
-                  <a
-                    href="#pricing"
+                  <Link
+                    href="/login"
                     className="px-4 py-2 text-sm text-muted hover:text-text transition-colors rounded-lg hover:bg-surface2"
                   >
-                    Try Free
-                  </a>
+                    Log in
+                  </Link>
                   <a
                     href="#pricing"
                     className="px-4 py-2 text-sm font-medium text-white bg-primary rounded-lg hover:bg-primary/90 transition-colors"
@@ -361,13 +361,13 @@ export default function Home() {
                   </Link>
                 ) : (
                   <>
-                    <a
-                      href="#pricing"
+                    <Link
+                      href="/login"
                       className="block w-full text-center px-4 py-2 text-sm text-muted hover:text-text rounded-lg hover:bg-surface2"
                       onClick={() => setMobileMenuOpen(false)}
                     >
-                      Try Free
-                    </a>
+                      Log in
+                    </Link>
                     <a
                       href="#pricing"
                       className="block w-full text-center px-4 py-2 text-sm font-medium text-white bg-primary rounded-lg hover:bg-primary/90"
