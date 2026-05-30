@@ -28,6 +28,20 @@ export async function GET() {
     total_earnings: 0,
   });
 
+  await supabase.from('user_credits').insert({
+    user_token: userToken,
+    balance: 20,
+    total_purchased: 0,
+  });
+
+  await supabase.from('credit_transactions').insert({
+    user_token: userToken,
+    type: 'bonus',
+    amount: 20,
+    description: 'Welcome bonus — 20 free outreach credits',
+    balance_after: 20,
+  });
+
   const response = NextResponse.json({ success: true });
   response.cookies.set('sparkleads_token', userToken, {
     httpOnly: true,

@@ -78,6 +78,38 @@ CREATE TABLE payout_requests (
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
+-- 8. user_credits
+CREATE TABLE user_credits (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  user_token TEXT UNIQUE NOT NULL,
+  balance INTEGER DEFAULT 0,
+  total_purchased INTEGER DEFAULT 0,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- 9. credit_transactions
+CREATE TABLE credit_transactions (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  user_token TEXT NOT NULL,
+  type TEXT NOT NULL CHECK (type IN ('purchase', 'usage', 'bonus', 'refund')),
+  amount INTEGER NOT NULL,
+  description TEXT,
+  balance_after INTEGER,
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- 10. user_email_settings
+CREATE TABLE user_email_settings (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  user_token TEXT UNIQUE NOT NULL,
+  sender_name TEXT,
+  sender_email TEXT,
+  sender_password TEXT,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
 -- =============================================================================
 -- INDEXES
 -- =============================================================================
@@ -89,6 +121,9 @@ CREATE INDEX idx_affiliates_referral_code ON affiliates(referral_code);
 CREATE INDEX idx_free_trial_searches_ip ON free_trial_searches(ip_address);
 CREATE INDEX idx_free_trial_searches_session ON free_trial_searches(session_id);
 CREATE INDEX idx_payout_requests_user_token ON payout_requests(user_token);
+CREATE INDEX idx_user_credits_user_token ON user_credits(user_token);
+CREATE INDEX idx_credit_transactions_user_token ON credit_transactions(user_token);
+CREATE INDEX idx_user_email_settings_user_token ON user_email_settings(user_token);
 
 -- =============================================================================
 -- ROW LEVEL SECURITY (RLS)
@@ -102,6 +137,9 @@ ALTER TABLE activations ENABLE ROW LEVEL SECURITY;
 ALTER TABLE affiliates ENABLE ROW LEVEL SECURITY;
 ALTER TABLE free_trial_searches ENABLE ROW LEVEL SECURITY;
 ALTER TABLE payout_requests ENABLE ROW LEVEL SECURITY;
+ALTER TABLE user_credits ENABLE ROW LEVEL SECURITY;
+ALTER TABLE credit_transactions ENABLE ROW LEVEL SECURITY;
+ALTER TABLE user_email_settings ENABLE ROW LEVEL SECURITY;
 
 -- searches: Users can only access their own searches via user_token
 CREATE POLICY "Users can view own searches"
@@ -208,4 +246,39 @@ CREATE POLICY "Users can insert own payout requests"
 
 CREATE POLICY "Service role can manage payout requests"
   ON payout_requests FOR ALL
+  USING (auth.role() = 'service_role');
+
+-- user_credits: Users can view and update their own credits
+CREATE POLICY "Users can view own credits"
+  ON user_credits FOR SELECT
+  USING (user_token = current_setting('app.current_user_token', true));
+
+CREATE POLICY "Users can update own credits"
+  ON user_credits FOR UPDATE
+  USING (user_token = current_setting('app.current_user_token', true));
+
+CREATE POLICY "Service role can manage user credits"
+  ON user_credits FOR ALL
+  USING (auth.role() = 'service_role');
+
+-- credit_transactions: Users can view their own transactions
+CREATE POLICY "Users can view own credit transactions"
+  ON credit_transactions FOR SELECT
+  USING (user_token = current_setting('app.current_user_token', true));
+
+CREATE POLICY "Service role can manage credit transactions"
+  ON credit_transactions FOR ALL
+  USING (auth.role() = 'service_role');
+
+-- user_email_settings: Users can view and update their own email settings
+CREATE POLICY "Users can view own email settings"
+  ON user_email_settings FOR SELECT
+  USING (user_token = current_setting('app.current_user_token', true));
+
+CREATE POLICY "Users can update own email settings"
+  ON user_email_settings FOR UPDATE
+  USING (user_token = current_setting('app.current_user_token', true));
+
+CREATE POLICY "Service role can manage email settings"
+  ON user_email_settings FOR ALL
   USING (auth.role() = 'service_role');

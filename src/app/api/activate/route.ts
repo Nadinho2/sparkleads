@@ -50,6 +50,28 @@ export async function GET(request: NextRequest) {
     console.error('Failed to create affiliate record:', affiliateError);
   }
 
+  const { data: existingCredits } = await supabase
+    .from('user_credits')
+    .select('id')
+    .eq('user_token', userToken)
+    .single();
+
+  if (!existingCredits) {
+    await supabase.from('user_credits').insert({
+      user_token: userToken,
+      balance: 20,
+      total_purchased: 0,
+    });
+
+    await supabase.from('credit_transactions').insert({
+      user_token: userToken,
+      type: 'bonus',
+      amount: 20,
+      description: 'Welcome bonus — 20 free outreach credits',
+      balance_after: 20,
+    });
+  }
+
   const response = NextResponse.json({ success: true });
   const cookie = setTokenCookie(userToken);
   response.cookies.set(cookie.name, cookie.value, {
