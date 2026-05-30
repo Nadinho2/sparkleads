@@ -6,6 +6,7 @@ import {
   Download,
   Trash2,
   MessageCircle,
+  Mail,
   Copy,
   ExternalLink,
   Zap,
@@ -14,6 +15,8 @@ import {
 } from 'lucide-react';
 import { useSearchStream } from '@/hooks/useSearchStream';
 import { Spinner } from '@/components/ui';
+import { WhatsAppComposer } from '@/components/dashboard/WhatsAppComposer';
+import { EmailComposer } from '@/components/dashboard/EmailComposer';
 import type { Lead } from '@/types';
 
 type LeadStatus = Lead['status'];
@@ -68,8 +71,11 @@ export default function DashboardPage() {
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const [copiedEmailId, setCopiedEmailId] = useState<string | null>(null);
   const [suggestions, setSuggestions] = useState<string[]>([]);
+  const [scanningIds, setScanningIds] = useState<Set<string>>(new Set());
+  const [whatsappComposer, setWhatsappComposer] = useState<{ isOpen: boolean; lead: Lead | null }>({ isOpen: false, lead: null });
+  const [emailComposer, setEmailComposer] = useState<{ isOpen: boolean; lead: Lead | null }>({ isOpen: false, lead: null });
 
-  const { leads, isSearching, error, search, reset } = useSearchStream({
+  const { leads, isSearching, error, search, reset, updateLead } = useSearchStream({
     sessionId,
     isPaid: true,
   });
@@ -145,6 +151,37 @@ export default function DashboardPage() {
     }
   }, []);
 
+  const manualScrapeEmail = useCallback(async (lead: Lead) => {
+    setScanningIds((prev) => new Set(prev).add(lead.place_id));
+    try {
+      const res = await fetch('/api/scrape-email', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ url: lead.website }),
+      });
+      const { email } = await res.json();
+      if (email) {
+        updateLead(lead.place_id, { email });
+      }
+    } catch {
+      // Silent fail
+    } finally {
+      setScanningIds((prev) => {
+        const next = new Set(prev);
+        next.delete(lead.place_id);
+        return next;
+      });
+    }
+  }, [updateLead]);
+
+  const handleWhatsAppSent = useCallback((placeId: string) => {
+    updateLead(placeId, { status: 'contacted' });
+  }, [updateLead]);
+
+  const handleEmailSent = useCallback((placeId: string) => {
+    updateLead(placeId, { status: 'contacted' });
+  }, [updateLead]);
+
   const handleExportCsv = useCallback(async () => {
     if (leads.length === 0) return;
 
@@ -170,11 +207,6 @@ export default function DashboardPage() {
       // Silent fail
     }
   }, [leads, currentQuery]);
-
-  const cleanPhone = (phone: string | null): string | null => {
-    if (!phone) return null;
-    return phone.replace(/[^+\d]/g, '');
-  };
 
   return (
     <div className="space-y-6">
@@ -363,13 +395,21 @@ export default function DashboardPage() {
                             )}
                           </button>
                         </div>
-                      ) : lead.website ? (
+                      ) : scanningIds.has(lead.place_id) ? (
                         <div className="flex items-center gap-2 text-muted">
                           <div className="w-3 h-3 rounded-full border-2 border-primary border-t-transparent animate-spin" />
                           <span className="text-xs">Scanning...</span>
                         </div>
+                      ) : lead.website ? (
+                        <button
+                          onClick={() => manualScrapeEmail(lead)}
+                          className="flex items-center gap-1 text-xs text-primary hover:underline"
+                        >
+                          <Search size={12} />
+                          Find email
+                        </button>
                       ) : (
-                        <span className="text-xs text-muted">No website</span>
+                        <span className="text-xs text-muted">—</span>
                       )}
                     </td>
                     <td className="py-3 px-4 text-sm">
@@ -421,30 +461,37 @@ export default function DashboardPage() {
                       </select>
                     </td>
                     <td className="py-3 px-4">
-                      <div className="flex items-center gap-1">
-                        {lead.phone && cleanPhone(lead.phone) && (
-                          <a
-                            href={`https://wa.me/${cleanPhone(lead.phone)}`}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="p-1.5 rounded-lg text-muted hover:text-success hover:bg-success/10 transition-colors"
-                            title="WhatsApp"
+                      <div className="flex items-center gap-1.5">
+                        {lead.phone && (
+                          <button
+                            onClick={() => setWhatsappComposer({ isOpen: true, lead })}
+                            className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-green-600 hover:bg-green-500 text-white text-xs font-medium transition-colors"
+                            title="Send WhatsApp"
                           >
-                            <MessageCircle className="w-4 h-4" />
-                          </a>
+                            <MessageCircle size={12} />
+                            <span className="hidden xl:inline">WhatsApp</span>
+                          </button>
+                        )}
+                        {lead.email && (
+                          <button
+                            onClick={() => setEmailComposer({ isOpen: true, lead })}
+                            className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-500 text-white text-xs font-medium transition-colors"
+                            title="Send email"
+                          >
+                            <Mail size={12} />
+                            <span className="hidden xl:inline">Email</span>
+                          </button>
                         )}
                         {lead.phone && (
                           <button
-                            onClick={() =>
-                              handleCopyPhone(lead.phone!, lead.id)
-                            }
+                            onClick={() => handleCopyPhone(lead.phone!, lead.id)}
                             className="p-1.5 rounded-lg text-muted hover:text-primary hover:bg-primary/10 transition-colors"
                             title="Copy phone"
                           >
                             {copiedId === lead.id ? (
-                              <Check className="w-4 h-4 text-success" />
+                              <Check className="w-3.5 h-3.5 text-success" />
                             ) : (
-                              <Copy className="w-4 h-4" />
+                              <Copy className="w-3.5 h-3.5" />
                             )}
                           </button>
                         )}
@@ -456,7 +503,7 @@ export default function DashboardPage() {
                             className="p-1.5 rounded-lg text-muted hover:text-primary hover:bg-primary/10 transition-colors"
                             title="Visit website"
                           >
-                            <ExternalLink className="w-4 h-4" />
+                            <ExternalLink className="w-3.5 h-3.5" />
                           </a>
                         )}
                       </div>
@@ -475,6 +522,21 @@ export default function DashboardPage() {
           <p className="text-danger">{error}</p>
         </div>
       )}
+
+      {/* Composer Modals */}
+      <WhatsAppComposer
+        lead={whatsappComposer.lead}
+        isOpen={whatsappComposer.isOpen}
+        onClose={() => setWhatsappComposer({ isOpen: false, lead: null })}
+        onSent={handleWhatsAppSent}
+      />
+
+      <EmailComposer
+        lead={emailComposer.lead}
+        isOpen={emailComposer.isOpen}
+        onClose={() => setEmailComposer({ isOpen: false, lead: null })}
+        onSent={handleEmailSent}
+      />
     </div>
   );
 }

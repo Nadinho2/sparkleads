@@ -14,6 +14,7 @@ interface UseSearchStreamReturn {
   error: string | null;
   search: (query: string) => Promise<void>;
   reset: () => void;
+  updateLead: (placeId: string, updates: Partial<Lead>) => void;
 }
 
 export function useSearchStream({
@@ -29,6 +30,14 @@ export function useSearchStream({
     setLeads([]);
     setError(null);
     setIsSearching(false);
+  }, []);
+
+  const updateLead = useCallback((placeId: string, updates: Partial<Lead>) => {
+    setLeads((prev) =>
+      prev.map((lead) =>
+        lead.place_id === placeId ? { ...lead, ...updates } : lead
+      )
+    );
   }, []);
 
   const search = useCallback(
@@ -99,6 +108,7 @@ export function useSearchStream({
               const parsed = JSON.parse(eventData);
 
               if (eventType === 'email' && parsed.place_id && parsed.email) {
+                console.log('Email event received:', parsed);
                 setLeads((prev) =>
                   prev.map((lead) =>
                     lead.place_id === parsed.place_id
@@ -128,5 +138,5 @@ export function useSearchStream({
     [sessionId, isPaid]
   );
 
-  return { leads, isSearching, error, search, reset };
+  return { leads, isSearching, error, search, reset, updateLead };
 }

@@ -16,14 +16,24 @@ export function CreditsBadge() {
 
   if (balance === null) return null;
 
+  const isLow = balance < 5;
+
   return (
     <Link
       href="/dashboard/credits"
-      className="hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-full bg-primary/10 text-sm text-primary hover:bg-primary/20 transition-colors"
+      className={`hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-lg transition-colors ${
+        isLow
+          ? 'bg-red-500/10 hover:bg-red-500/20'
+          : 'bg-primary/10 hover:bg-primary/20'
+      }`}
     >
-      <Zap className="w-4 h-4" />
-      <span className="font-medium">{balance}</span>
-      <span className="text-primary/70">credits</span>
+      <Zap className={`w-4 h-4 ${isLow ? 'text-red-400' : 'text-primary'}`} />
+      <span className={`text-sm font-semibold ${isLow ? 'text-red-400' : 'text-text'}`}>
+        {balance} credits
+      </span>
+      {isLow && (
+        <span className="text-xs text-red-400 font-medium">Low</span>
+      )}
     </Link>
   );
 }

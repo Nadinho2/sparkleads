@@ -1,5 +1,6 @@
 'use client';
 
+import { useState, useEffect } from 'react';
 import { usePathname } from 'next/navigation';
 import Link from 'next/link';
 import { Zap, Search, History, BarChart3, Users, Settings, LogOut } from 'lucide-react';
@@ -8,6 +9,7 @@ const navItems = [
   { label: 'New Search', href: '/dashboard', icon: Search },
   { label: 'Search History', href: '/dashboard/history', icon: History },
   { label: 'My Leads', href: '/dashboard/leads', icon: BarChart3 },
+  { label: 'Credits', href: '/dashboard/credits', icon: Zap },
   { label: 'Affiliate', href: '/dashboard/affiliate', icon: Users },
   { label: 'Settings', href: '/dashboard/settings', icon: Settings },
 ];
@@ -18,6 +20,14 @@ interface SidebarProps {
 
 export function Sidebar({ userToken }: SidebarProps) {
   const pathname = usePathname();
+  const [balance, setBalance] = useState<number | null>(null);
+
+  useEffect(() => {
+    fetch('/api/credits/ensure')
+      .then((res) => res.json())
+      .then((data) => setBalance(data.balance ?? 0))
+      .catch(() => setBalance(0));
+  }, []);
 
   function handleLogout() {
     document.cookie = 'sparkleads_token=; path=/; max-age=0';
@@ -46,14 +56,27 @@ export function Sidebar({ userToken }: SidebarProps) {
             <Link
               key={item.href}
               href={item.href}
-              className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors ${
+              className={`flex items-center justify-between px-3 py-2.5 rounded-lg text-sm font-medium transition-colors ${
                 isActive
                   ? 'bg-primary/10 text-primary'
                   : 'text-muted hover:text-text hover:bg-surface2'
               }`}
             >
-              <item.icon className="w-5 h-5" />
-              {item.label}
+              <div className="flex items-center gap-3">
+                <item.icon className="w-5 h-5" />
+                {item.label}
+              </div>
+              {item.href === '/dashboard/credits' && balance !== null && (
+                <span className={`text-xs font-bold px-2 py-0.5 rounded-full ${
+                  balance === 0
+                    ? 'bg-red-500/20 text-red-400'
+                    : balance < 10
+                      ? 'bg-yellow-500/20 text-yellow-400'
+                      : 'bg-green-500/20 text-green-400'
+                }`}>
+                  {balance}
+                </span>
+              )}
             </Link>
           );
         })}
