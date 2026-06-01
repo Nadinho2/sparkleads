@@ -23,6 +23,48 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
   }
 
+  const inferLocation = (): string => {
+    if (body.location && body.location.trim()) return body.location.trim();
+
+    const currencyMap: Record<string, string> = {
+      NGN: 'Nigeria',
+      GHS: 'Ghana',
+      KES: 'Kenya',
+      ZAR: 'South Africa',
+      UGX: 'Uganda',
+      TZS: 'Tanzania',
+      USD: 'United States',
+      GBP: 'United Kingdom',
+      EUR: 'Europe',
+      CAD: 'Canada',
+      AUD: 'Australia',
+      INR: 'India',
+      AED: 'United Arab Emirates',
+      SAR: 'Saudi Arabia',
+      EGP: 'Egypt',
+      MAD: 'Morocco',
+    };
+
+    return currencyMap[body.budgetCurrency] || 'Nigeria';
+  };
+
+  const inferBusinessContext = (): string => {
+    const name = body.businessName.toLowerCase();
+    const hints: string[] = [];
+
+    if (name.includes('hair') || name.includes('belle') || name.includes('glam') || name.includes('beauty')) {
+      hints.push('beauty and hair industry business');
+    }
+    if (name.includes('ng') || name.includes('naija')) {
+      hints.push('Nigerian business');
+    }
+
+    return hints.join(', ') || '';
+  };
+
+  const resolvedLocation = inferLocation();
+  const businessContext = inferBusinessContext();
+
   const supabase = createSupabaseAdmin();
 
   const { data: credits } = await supabase
@@ -39,7 +81,7 @@ export async function POST(request: NextRequest) {
   }
 
   try {
-    const plan = await generateAdPlan(body);
+    const plan = await generateAdPlan({ ...body, resolvedLocation, businessContext });
 
     const newBalance = credits.balance - 5;
     await supabase

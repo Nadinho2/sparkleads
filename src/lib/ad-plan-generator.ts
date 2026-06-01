@@ -118,9 +118,17 @@ function geminiTextFromResponse(data: unknown): string {
   return parts.map((p) => p?.text || '').join('').trim();
 }
 
+function resolveInput(input: AdPlanInput): AdPlanInput & { resolvedLocation: string; businessContext: string } {
+  return {
+    ...input,
+    resolvedLocation: input.resolvedLocation || input.location || 'Nigeria',
+    businessContext: input.businessContext || '',
+  };
+}
+
 async function generateAdPlanWithGemini(input: AdPlanInput): Promise<AdPlan> {
   const apiKey = process.env.GEMINI_API_KEY!;
-  const prompt = buildAdPlanPrompt(input);
+  const prompt = buildAdPlanPrompt(resolveInput(input));
 
   const response = await fetch(
     `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`,
@@ -150,7 +158,7 @@ async function generateAdPlanWithGemini(input: AdPlanInput): Promise<AdPlan> {
 
 async function generateAdPlanWithClaude(input: AdPlanInput): Promise<AdPlan> {
   const apiKey = process.env.ANTHROPIC_API_KEY!;
-  const prompt = buildAdPlanPrompt(input);
+  const prompt = buildAdPlanPrompt(resolveInput(input));
 
   const response = await fetch('https://api.anthropic.com/v1/messages', {
     method: 'POST',
@@ -180,8 +188,8 @@ async function generateAdPlanWithClaude(input: AdPlanInput): Promise<AdPlan> {
 }
 
 function generateFallbackAdPlan(input: AdPlanInput): AdPlan {
-  const loc = input.location || 'not specified';
-  const currency = input.budgetCurrency || 'USD';
+  const loc = input.resolvedLocation || input.location || 'Nigeria';
+  const currency = input.budgetCurrency || 'NGN';
   const daily = Math.round((input.budget || 0) / 30);
   const hasWebsite = !!input.website;
 

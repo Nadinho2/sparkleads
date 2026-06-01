@@ -7,153 +7,171 @@ export interface AdPlanInput {
   location?: string;
   website?: string;
   extraContext?: string;
+  resolvedLocation?: string;
+  businessContext?: string;
 }
 
-export function buildAdPlanPrompt(input: AdPlanInput): string {
-  const budgetFormatted = new Intl.NumberFormat('en', {
-    style: 'currency',
-    currency: input.budgetCurrency || 'USD',
-    maximumFractionDigits: 0,
-  }).format(input.budget);
-
+export function buildAdPlanPrompt(
+  input: AdPlanInput & { resolvedLocation: string; businessContext: string }
+): string {
+  const budget = input.budget;
+  const currency = input.budgetCurrency || 'NGN';
+  const location = input.resolvedLocation;
+  const businessType = input.businessType;
+  const businessName = input.businessName;
   const hasWebsite = !!input.website;
-  const location = input.location || 'not specified';
+  const goal = input.goal;
+
+  const facebookAmount = Math.round(budget * 0.45);
+  const instagramAmount = Math.round(budget * 0.35);
 
   return `
-You are a world-class paid advertising strategist with expertise
-across every major market globally — including Africa, Asia,
-Europe, North America, Latin America, and the Middle East.
+You are a senior performance marketing strategist.
+Generate a complete, specific, accurate ad strategy.
 
-You have deep knowledge of local consumer behavior, cultural
-nuances, platform usage patterns, and buying psychology for
-every country and region.
-
-Your task is to create a hyper-accurate ad strategy for this
-specific business by applying your real knowledge of:
-1. Who ACTUALLY buys this product/service in this specific market
-2. How buyers in this country/region make purchasing decisions
-3. Which platforms dominate in this market
-4. What messaging and creative approaches work in this culture
-5. What the realistic budget can achieve in this market
-
----
+ABSOLUTE RULES — NEVER BREAK THESE:
+1. NEVER write "not specified" anywhere in your response
+2. NEVER write "varies" for estimated numbers — always give a range
+3. NEVER use the business type as an interest category on Facebook
+   (e.g. "Hair Vendor" is NOT a Facebook interest — use real interest
+   categories like "Hair care", "Beauty", "Fashion", "Online shopping")
+4. ALWAYS give specific estimated numbers based on the market
+5. ALWAYS generate exactly 3 different ad copy variations
+6. ALWAYS determine gender from real buying behavior knowledge
+7. ALWAYS use ${businessName} as the business name in ad copies
+8. ALWAYS use ${location} as the location — never leave it blank in output
 
 BUSINESS:
-Name: ${input.businessName}
-Type: ${input.businessType}
-Goal: ${input.goal}
-Budget: ${budgetFormatted} per month
+Name: ${businessName}
+Type: ${businessType}
+Goal: ${goal}
+Budget: ${currency} ${budget.toLocaleString()} per month
 Location: ${location}
-Website: ${input.website || 'None'}
+Website: ${hasWebsite ? input.website : 'None — use WhatsApp/DM as only conversion'}
 Extra context: ${input.extraContext || 'None'}
+Business context hints: ${input.businessContext || 'None'}
 
----
+THINK STEP BY STEP BEFORE WRITING:
 
-BEFORE GENERATING, THINK THROUGH THESE:
+STEP 1 — GENDER ANALYSIS
+Who ACTUALLY buys ${businessType} in real life?
+- Think about the real-world customer base
+- Hair products, wigs, extensions → almost exclusively female
+- Barbershops → almost exclusively male
+- Restaurants → all genders
+- Be specific and accurate — do not default to "all genders"
+  unless the business genuinely serves all genders equally
 
-1. MARKET ANALYSIS
-Who are the real buyers of "${input.businessType}" in "${location}"?
-- What is the actual gender split based on real buying behavior?
-  (e.g. wig sellers serve almost exclusively women regardless of country,
-   restaurants serve all genders, barbershops serve primarily men)
-- What age group actually has the money and desire to buy this?
-- What is the income level required for this purchase?
-- How do people in ${input.location || 'this market'} typically discover and
-  buy this type of product or service?
+STEP 2 — LOCATION INTELLIGENCE
+Apply your knowledge of ${location}:
+- What platforms do people actually use there?
+- What is the CPM/CPC in this market? Give real estimates.
+- What cultural nuances affect buying behavior?
+- What are peak buying seasons or events in this market?
+- What language and tone resonates with buyers there?
 
-2. PLATFORM REALITY CHECK
-Which platforms do people in "${location}" actually use most?
-- Do not assume Facebook/Instagram are dominant everywhere
-- In some markets TikTok dominates (Southeast Asia, parts of Africa)
-- In others WhatsApp Business is the primary sales channel
-- LinkedIn matters more for B2B in developed markets
-- Apply your real knowledge of platform penetration in this market
+STEP 3 — REALISTIC BUDGET CALCULATION
+Budget is ${currency} ${budget.toLocaleString()} per month
+= ${currency} ${Math.round(budget / 30).toLocaleString()} per day
 
-3. CULTURAL BUYING BEHAVIOR
-How does the culture in "${location}" influence buying decisions?
-- Is this a relationship-based market where trust must be built first?
-- Is it a price-sensitive market where value messaging wins?
-- Is social proof (reviews, testimonials) extremely important here?
-- Are there local holidays, events, or seasons that drive peak demand?
-- What language tone works — formal, conversational, community-oriented?
+In ${location}, this budget will achieve approximately:
+- Calculate realistic reach range
+- Calculate realistic result range
+- Calculate realistic cost per result
+DO NOT write "varies" — give actual estimated numbers
 
-4. BUDGET REALITY
-What does ${budgetFormatted} actually buy in "${location}"?
-- CPM, CPC, and CPL vary enormously by country
-- $100 in Nigeria buys far more reach than $100 in the UK
-- Calibrate ALL estimates to the actual market costs
-- Give realistic numbers, not global averages
+STEP 4 — REAL FACEBOOK INTEREST CATEGORIES
+For ${businessType} in ${location}, the REAL Facebook/Instagram
+interest categories to target are things like:
+- Actual interest names people follow on Facebook
+- Celebrity names, magazine names, competitor brand names
+- Lifestyle interests, hobby interests
+NOT the business type itself
 
-${!hasWebsite ? `
-5. NO WEBSITE CONSTRAINT
-This business has no website. Every campaign objective and
-conversion action MUST use:
-- WhatsApp messages
-- Phone calls
-- Social media DMs
-- Lead generation forms (Facebook/Instagram native)
-- Direct store/location visits
-Do NOT recommend traffic or conversion campaigns to a website.
-` : ''}
+STEP 5 — AD COPY REQUIREMENTS
+Write exactly 3 variations:
+- Variation 1: Hook-based (opens with surprising fact or bold statement)
+- Variation 2: Problem-Solution (identifies pain, offers solution)
+- Variation 3: Social proof / offer (results + urgency)
 
----
+Each copy must:
+- Use ${businessName} by name
+- Reference ${location} naturally
+- Have a clear line break structure (hook → body → proof → CTA)
+- Include WhatsApp or website in the CTA: ${hasWebsite ? input.website : 'WhatsApp'}
+- Sound like a real human wrote it, not a template
 
-NOW GENERATE THE COMPLETE AD STRATEGY.
-
-Apply everything you know about this specific business type in
-this specific market. Be precise, not generic.
-
-If the location is not specified, make reasonable assumptions
-based on the business name and type, and state your assumptions.
-
-Return ONLY valid JSON matching this exact structure.
-No markdown. No explanation. Just the JSON.
+Return ONLY valid JSON. No markdown. No explanation. Just JSON.
 
 {
   "market_context": {
-    "country_or_region": "What market this strategy is built for",
+    "country_or_region": "${location}",
     "market_maturity": "Emerging | Developing | Mature",
-    "primary_discovery_channel": "How people find this type of business here",
-    "cultural_note": "Key cultural insight that affects this strategy",
-    "budget_power": "What this budget realistically achieves in this market",
-    "peak_seasons": ["Season/month 1", "Season/month 2"]
+    "primary_discovery_channel": "Specific answer for ${location}",
+    "cultural_note": "Specific cultural insight relevant to selling ${businessType} in ${location}",
+    "budget_power": "Specific description of what ${currency} ${budget} achieves in ${location}",
+    "peak_seasons": ["Specific season 1 for ${location}", "Season 2"]
   },
 
-  "executive_summary": "2-3 sentences. Specific strategy for this business in this market.",
+  "executive_summary": "2-3 sentences specific to ${businessName} selling ${businessType} in ${location} with ${currency} ${budget} budget targeting ${goal}.",
 
   "audience": {
     "primary": {
-      "description": "Exactly who to target based on real buyer behavior",
-      "gender": "Male only | Female only | Primarily Male | Primarily Female | All genders",
-      "gender_reasoning": "Real-world explanation of who actually buys this",
-      "age_range": "e.g. 25-45",
-      "age_reasoning": "Why this age range has the money and motivation",
-      "income_level": "Budget-conscious | Middle income | Upper-middle | High income",
-      "income_reasoning": "Why this income level for this product/market",
-      "location_targeting": "Specific targeting approach for this market",
-      "psychographics": "What motivates these buyers psychologically"
+      "description": "Specific description of real buyers of ${businessType}",
+      "gender": "MUST be specific: Male only | Female only | Primarily Female (80%+) | Primarily Male (70%+) | All genders — choose based on real buying behavior",
+      "gender_reasoning": "Explain who ACTUALLY buys ${businessType} and why",
+      "age_range": "Specific range e.g. 22-40",
+      "age_reasoning": "Why this age has the money and motivation for ${businessType}",
+      "income_level": "Specific: Budget-conscious | Middle income | Upper-middle | High income",
+      "income_reasoning": "Why this income level for ${businessType} in ${location}",
+      "location_targeting": "Specific geographic targeting approach in ${location}",
+      "psychographics": "What motivates real buyers of ${businessType}"
     },
     "secondary": {
-      "description": "Secondary audience or null if none",
+      "description": "Secondary segment or null",
       "gender": "...",
       "age_range": "...",
       "reasoning": "..."
     },
     "interests": [
       {
-        "interest": "Specific targetable interest",
-        "relevance": "Why this connects to buyers of this product",
-        "platform_availability": "Available on Facebook | Instagram | TikTok | All"
+        "interest": "REAL Facebook interest category name (not the business type)",
+        "relevance": "Why real buyers of ${businessType} follow this",
+        "platform_availability": "Facebook | Instagram | Both"
+      },
+      {
+        "interest": "Second real interest category",
+        "relevance": "...",
+        "platform_availability": "..."
+      },
+      {
+        "interest": "Third real interest category",
+        "relevance": "...",
+        "platform_availability": "..."
+      },
+      {
+        "interest": "Fourth real interest category",
+        "relevance": "...",
+        "platform_availability": "..."
+      },
+      {
+        "interest": "Fifth real interest category",
+        "relevance": "...",
+        "platform_availability": "..."
       }
     ],
     "behaviors": [
       {
-        "behavior": "Specific targeting behavior",
-        "why": "Relevance to this business"
+        "behavior": "Specific Facebook/Instagram targeting behavior",
+        "why": "Why relevant to ${businessType} buyers"
+      },
+      {
+        "behavior": "Second behavior",
+        "why": "..."
       }
     ],
-    "lookalike_strategy": "Who to base lookalike audiences on",
-    "exclusions": ["Who to exclude and why"]
+    "lookalike_strategy": "Specific lookalike approach for ${businessName}",
+    "exclusions": ["Specific exclusion with reason"]
   },
 
   "platforms": [
@@ -161,102 +179,188 @@ No markdown. No explanation. Just the JSON.
       "name": "Platform name",
       "recommended": true,
       "priority": 1,
-      "market_penetration": "How dominant this platform is in the target market",
-      "why": "Specific reason for this business type and market",
+      "market_penetration": "How widely used in ${location} specifically",
+      "why": "Specific reason for ${businessType} in ${location}",
       "why_not": null,
-      "budget_percentage": 40,
-      "objective": "Exact campaign objective to select",
-      "ad_formats": ["format1", "format2"],
-      "best_format": "Single best format and why",
-      "best_days": "Best days of the week",
-      "best_hours": "Best hours to run ads",
-      "expected_cpr": "Realistic cost per result in the budget currency",
-      "local_tip": "Platform-specific tip for this market"
+      "budget_percentage": 45,
+      "objective": "Exact campaign objective name in Ads Manager",
+      "ad_formats": ["Best format 1", "Best format 2"],
+      "best_format": "Single best format with reason",
+      "best_days": "Specific days",
+      "best_hours": "Specific hours in ${location} timezone",
+      "expected_cpr": "Specific number e.g. NGN 800-1,500 per lead",
+      "local_tip": "Platform-specific tip for ${location} market"
     }
   ],
 
   "budget": {
-    "total": ${input.budget},
-    "currency": "${input.budgetCurrency || 'USD'}",
-    "daily": ${Math.round(input.budget / 30)},
+    "total": ${budget},
+    "currency": "${currency}",
+    "daily": ${Math.round(budget / 30)},
     "duration_days": 30,
-    "split": [],
-    "market_context": "How far this budget goes in this specific market",
-    "estimated_reach": "Realistic range for this market at this budget",
-    "estimated_results": "Realistic range with reasoning",
-    "estimated_cpr": "Realistic cost per result with currency",
-    "optimization_note": "When and how to adjust after launch"
+    "split": [
+      { "platform": "Facebook", "amount": ${facebookAmount}, "percentage": 45 },
+      { "platform": "Instagram", "amount": ${instagramAmount}, "percentage": 35 },
+      { "platform": "TikTok", "amount": 0, "percentage": 0 }
+    ],
+    "market_context": "Specific statement about buying power of ${currency} ${budget} in ${location}",
+    "estimated_reach": "SPECIFIC range e.g. 45,000-90,000 people — NOT 'varies'",
+    "estimated_results": "SPECIFIC range e.g. 80-200 leads — NOT 'varies'",
+    "estimated_cpr": "SPECIFIC number e.g. ${currency} 500-1,250 per result",
+    "optimization_note": "When and how to optimize after launch"
   },
 
   "ad_copies": [
     {
-      "platform": "Platform name",
-      "format": "Ad format",
-      "approach": "Hook-based | Problem-Solution | Social Proof | Direct Offer | Educational",
-      "cultural_angle": "How this copy is tailored to this specific market/culture",
-      "headline": "Punchy headline under 40 chars",
-      "primary_text": "Line 1 hook\\n\\nLine 2-3 body\\n\\nLine 4 proof or urgency\\n\\nLine 5 CTA",
-      "cta_button": "Most appropriate CTA button",
-      "local_language_tip": "Whether to use local language, slang, or phrases"
+      "platform": "Facebook & Instagram",
+      "format": "Feed Post",
+      "variation": "1 of 3",
+      "approach": "Hook-based",
+      "cultural_angle": "How this copy fits ${location} market",
+      "headline": "Under 40 chars. Uses ${businessName}.",
+      "primary_text": "Line 1: Bold hook about ${businessType}\\n\\nLine 2-3: Specific value proposition for ${businessName}\\n\\nLine 4: Trust signal or proof\\n\\nLine 5: CTA with ${hasWebsite ? input.website : 'WhatsApp number placeholder'}",
+      "cta_button": "Send Message | Learn More | Shop Now",
+      "local_language_tip": "Specific language tip for ${location}"
+    },
+    {
+      "platform": "Facebook & Instagram",
+      "format": "Feed Post",
+      "variation": "2 of 3",
+      "approach": "Problem-Solution",
+      "cultural_angle": "...",
+      "headline": "Different headline from variation 1",
+      "primary_text": "Different angle from variation 1\\n\\nBody paragraph\\n\\nProof line\\n\\nCTA",
+      "cta_button": "...",
+      "local_language_tip": "..."
+    },
+    {
+      "platform": "Facebook & Instagram",
+      "format": "Story/Reel",
+      "variation": "3 of 3",
+      "approach": "Social Proof + Offer",
+      "cultural_angle": "...",
+      "headline": "Different headline from variations 1 and 2",
+      "primary_text": "Different angle\\n\\nOffer or proof\\n\\nUrgency\\n\\nCTA",
+      "cta_button": "...",
+      "local_language_tip": "..."
     }
   ],
 
   "keywords": {
-    "google_primary": ["keyword1", "keyword2"],
-    "google_longtail": ["long keyword phrase 1"],
-    "negative": ["exclude1"],
-    "social_hashtags": ["tag1", "tag2"],
-    "local_search_terms": ["How locals actually search for this in their language/slang"]
+    "google_primary": [
+      "${businessType} in ${location}",
+      "${businessType} near me",
+      "buy ${businessType} ${location}"
+    ],
+    "google_longtail": [
+      "best ${businessType} in ${location}",
+      "affordable ${businessType} ${location}",
+      "${businessType} delivery ${location}"
+    ],
+    "negative": ["free", "jobs", "hiring", "DIY"],
+    "social_hashtags": [
+      "Specific hashtag 1 for ${location}",
+      "Specific hashtag 2",
+      "Specific hashtag 3",
+      "Specific hashtag 4",
+      "Specific hashtag 5"
+    ],
+    "local_search_terms": ["How locals in ${location} actually search for ${businessType}"]
   },
 
   "creative_brief": {
-    "visual_direction": "What ads should look like for this market",
-    "cultural_sensitivity": "Any cultural norms to respect in creatives",
-    "color_psychology": "Colors that resonate in this market",
+    "visual_direction": "Specific visual approach for ${businessType} ads in ${location}",
+    "cultural_sensitivity": "Specific cultural norm for ${location} to respect",
+    "color_psychology": "Colors that work for ${businessType} in ${location}",
     "content_ideas": [
       {
-        "type": "Video | Photo | Carousel",
-        "concept": "Specific concept for this market",
-        "why_it_works": "Cultural or behavioral reason"
+        "type": "Video",
+        "concept": "Specific video concept for ${businessName}",
+        "why_it_works": "Why this works for ${location} audience"
+      },
+      {
+        "type": "Photo",
+        "concept": "Specific photo concept",
+        "why_it_works": "..."
+      },
+      {
+        "type": "Carousel",
+        "concept": "Specific carousel concept",
+        "why_it_works": "..."
       }
     ],
-    "do": ["Market-specific best practice"],
-    "dont": ["Market-specific mistake to avoid"]
+    "do": [
+      "Specific do for ${businessType} in ${location}",
+      "Specific do 2",
+      "Specific do 3"
+    ],
+    "dont": [
+      "Specific dont for ${location} market",
+      "Specific dont 2"
+    ]
   },
 
   "local_strategy": {
-    "trust_building": "How to build trust with buyers in this market specifically",
-    "payment_methods": "Preferred payment methods in this market to mention in ads",
-    "communication_channel": "Preferred contact method in this market",
-    "seasonal_opportunities": "Upcoming local events, holidays, or seasons to capitalize on",
-    "competitive_advantage": "What messaging gives an edge in this specific market"
+    "trust_building": "How to build trust with ${location} buyers specifically",
+    "payment_methods": "Common payment methods in ${location} to mention",
+    "communication_channel": "Primary contact method preference in ${location}",
+    "seasonal_opportunities": "Upcoming events or seasons in ${location} to use",
+    "competitive_advantage": "Specific edge in ${location} market for ${businessType}"
   },
 
   "kpis": [
     {
-      "metric": "Metric name",
-      "target": "Realistic target for this market",
-      "how_to_track": "Where to find this metric"
+      "metric": "Cost Per Lead",
+      "target": "Specific ${currency} target for ${location} market",
+      "how_to_track": "Where to find in Ads Manager"
+    },
+    {
+      "metric": "Click Through Rate",
+      "target": "Specific % target",
+      "how_to_track": "..."
+    },
+    {
+      "metric": "Cost Per 1,000 Impressions",
+      "target": "Specific ${currency} estimate for ${location}",
+      "how_to_track": "..."
     }
   ],
 
   "week_by_week": [
     {
       "week": 1,
-      "focus": "Testing phase focus",
-      "action": "Specific action",
-      "what_to_watch": "Key metric to monitor"
+      "focus": "Launch and test",
+      "action": "Specific action for ${businessName}",
+      "what_to_watch": "Key metric"
+    },
+    {
+      "week": 2,
+      "focus": "Optimize",
+      "action": "Specific optimization action",
+      "what_to_watch": "Key metric"
+    },
+    {
+      "week": 3,
+      "focus": "Scale winners",
+      "action": "What to scale",
+      "what_to_watch": "Key metric"
+    },
+    {
+      "week": 4,
+      "focus": "Review and plan",
+      "action": "End of month review",
+      "what_to_watch": "Overall ROAS"
     }
   ],
 
   "quick_wins": [
-    "Immediate action specific to this business and market",
-    "Quick win 2",
+    "Specific immediate action for ${businessName} in ${location}",
+    "Quick win 2 specific to ${businessType}",
     "Quick win 3"
   ],
 
   "warnings": [
-    "Market-specific mistake to avoid",
+    "Specific warning for ${businessType} ads in ${location}",
     "Platform policy warning if applicable"
   ]
 }

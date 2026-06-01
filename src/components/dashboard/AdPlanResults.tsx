@@ -93,6 +93,21 @@ export function AdPlanResults({ plan, businessName, budget, currency, onRegenera
     window.print();
   };
 
+  const getBudgetSplit = (): { platform: string; amount: number; percentage: number }[] => {
+    if (plan.budget?.split?.length > 0) {
+      return plan.budget.split as { platform: string; amount: number; percentage: number }[];
+    }
+
+    const recommended = plan.platforms?.filter((p) => p.recommended) || [];
+    return recommended.map((p) => ({
+      platform: p.name,
+      amount: Math.round((plan.budget?.total || 0) * (p.budget_percentage / 100)),
+      percentage: p.budget_percentage,
+    }));
+  };
+
+  const budgetSplit = getBudgetSplit();
+
   return (
     <div className="space-y-6">
       {plan.market_context && (
@@ -374,6 +389,31 @@ export function AdPlanResults({ plan, businessName, budget, currency, onRegenera
             <p className="text-sm font-semibold text-text">{plan.budget.estimated_cpr}</p>
           </div>
         </div>
+
+        {budgetSplit.length > 0 && (
+          <div className="pt-4 border-t border-border mt-4">
+            <p className="text-sm font-medium text-text mb-3">Budget Split by Platform</p>
+            <div className="space-y-3">
+              {budgetSplit.map((item, i) => (
+                <div key={i} className="space-y-1">
+                  <div className="flex items-center justify-between text-xs">
+                    <span className="text-text font-medium">{item.platform}</span>
+                    <span className="text-muted">{sym}{item.amount.toLocaleString()} ({item.percentage}%)</span>
+                  </div>
+                  <div className="w-full h-2 rounded-full bg-surface2 overflow-hidden">
+                    <div
+                      className="h-full rounded-full transition-all duration-500"
+                      style={{
+                        width: `${item.percentage}%`,
+                        backgroundColor: PLATFORM_COLORS[item.platform] || '#6366f1',
+                      }}
+                    />
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
       </div>
 
       {/* SECTION 7 — AD COPIES */}
@@ -390,7 +430,7 @@ export function AdPlanResults({ plan, businessName, budget, currency, onRegenera
                   : 'bg-surface2 text-muted hover:text-text'
               }`}
             >
-              {copy.platform} — {copy.format}
+              {copy.approach || `${copy.platform} — ${copy.format}`}
             </button>
           ))}
         </div>
