@@ -93,6 +93,7 @@ export default function ContentPage() {
   const [balance, setBalance] = useState(0);
 
   const [selectedPlatforms, setSelectedPlatforms] = useState<string[]>(['instagram', 'facebook']);
+  const [variationCount, setVariationCount] = useState(5);
   const [contentType, setContentType] = useState('');
   const [goal, setGoal] = useState('');
   const [extraContext, setExtraContext] = useState('');
@@ -155,6 +156,14 @@ export default function ContentPage() {
     );
   };
 
+  const getCreditCost = (count: number) => {
+    if (count <= 1) return 1;
+    if (count <= 3) return 2;
+    return 3;
+  };
+
+  const creditCost = getCreditCost(variationCount);
+
   const copyToClipboard = async (text: string, field: string) => {
     try {
       await navigator.clipboard.writeText(text);
@@ -181,6 +190,7 @@ export default function ContentPage() {
           platforms: selectedPlatforms,
           content_type: contentType,
           goal,
+          variation_count: variationCount,
           extra_context: extraContext || undefined,
           tone_override: toneOverride || undefined,
         }),
@@ -190,7 +200,7 @@ export default function ContentPage() {
 
       if (!res.ok) {
         if (data.error === 'insufficient_credits') {
-          toast.error('Not enough credits. You need 3 credits.');
+          toast.error(`Not enough credits. You need ${creditCost} credits.`);
           return;
         }
         toast.error(data.error || data.details || 'Failed to generate content');
@@ -199,7 +209,7 @@ export default function ContentPage() {
 
       setGeneratedContent(data.content.platforms);
       setActivePlatformTab(selectedPlatforms[0]);
-      setBalance((prev) => prev - 3);
+      setBalance((prev) => prev - creditCost);
       toast.success('Content generated successfully!');
     } catch {
       toast.error('Something went wrong');
@@ -363,6 +373,32 @@ export default function ContentPage() {
               </div>
 
               <div>
+                <label className="block text-sm font-medium text-text mb-2">Variations per Platform</label>
+                <div className="flex gap-2">
+                  {[
+                    { count: 1, credits: 1, label: '1 variation' },
+                    { count: 3, credits: 2, label: '3 variations' },
+                    { count: 5, credits: 3, label: '5 variations' },
+                  ].map((opt) => (
+                    <button
+                      key={opt.count}
+                      onClick={() => setVariationCount(opt.count)}
+                      className={`flex-1 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors text-center ${
+                        variationCount === opt.count
+                          ? 'bg-primary text-white'
+                          : 'bg-surface2 text-muted border border-border hover:text-text'
+                      }`}
+                    >
+                      <span className="block">{opt.label}</span>
+                      <span className={`block text-xs mt-0.5 ${variationCount === opt.count ? 'text-white/70' : 'text-muted'}`}>
+                        {opt.credits} {opt.credits === 1 ? 'credit' : 'credits'}
+                      </span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div>
                 <label className="block text-sm font-medium text-text mb-1.5">Goal</label>
                 <select
                   value={goal}
@@ -409,24 +445,24 @@ export default function ContentPage() {
                 <div className="flex items-center gap-3">
                   <Zap size={16} className="text-yellow-400" />
                   <div>
-                    <p className="text-sm font-medium text-text">This uses 3 credits</p>
+                    <p className="text-sm font-medium text-text">This uses {creditCost} {creditCost === 1 ? 'credit' : 'credits'}</p>
                     <p className="text-xs text-muted">Your balance: {balance} credits</p>
                   </div>
                 </div>
-                {balance < 3 && (
+                {balance < creditCost && (
                   <a href="/dashboard/credits" className="text-xs text-primary underline">Get more credits</a>
                 )}
               </div>
 
               <button
                 onClick={handleGenerate}
-                disabled={!selectedPlatforms.length || !contentType || !goal || balance < 3 || isGenerating}
+                disabled={!selectedPlatforms.length || !contentType || !goal || balance < creditCost || isGenerating}
                 className="w-full flex items-center justify-center gap-2 px-6 py-3 rounded-lg bg-primary text-white text-base font-medium hover:bg-primary/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {isGenerating ? (
                   <><Spinner size="sm" /> Generating content...</>
                 ) : (
-                  <><Sparkles size={16} /> Generate 5 Variations — 3 Credits</>
+                  <><Sparkles size={16} /> Generate {variationCount} {variationCount === 1 ? 'Variation' : 'Variations'} — {creditCost} {creditCost === 1 ? 'Credit' : 'Credits'}</>
                 )}
               </button>
             </div>

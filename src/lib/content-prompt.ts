@@ -374,6 +374,7 @@ async function generateContentWithClaude(
   contentType: string,
   goal: string,
   trendingHashtags: string[],
+  variationCount: number,
   extraContext?: string,
   toneOverride?: string
 ): Promise<{ platforms: Record<string, PlatformResult> }> {
@@ -389,7 +390,7 @@ async function generateContentWithClaude(
   if (profile.linkedin) socialHandles.push(`LinkedIn: ${profile.linkedin}`);
   if (profile.whatsapp) socialHandles.push(`WhatsApp: ${profile.whatsapp}`);
 
-  const prompt = `Generate social media content for a business. Create exactly 5 unique variations per platform.
+  const prompt = `Generate social media content for a business. Create exactly ${variationCount} unique variation${variationCount > 1 ? 's' : ''} per platform.
 
 BUSINESS PROFILE:
 - Name: ${profile.business_name}
@@ -458,7 +459,7 @@ Return ONLY valid JSON with this exact schema (no markdown, no explanation):
 }
 
 Only include the platforms requested: ${platforms.join(', ')}
-Each platform must have exactly 5 variations with ids 1 through 5.`;
+Each platform must have exactly ${variationCount} variation${variationCount > 1 ? 's' : ''} with ids 1 through ${variationCount}.`;
 
   const response = await fetch('https://api.anthropic.com/v1/messages', {
     method: 'POST',
@@ -493,6 +494,7 @@ function generateSerpContent(
   contentType: string,
   goal: string,
   trendingHashtags: string[],
+  variationCount: number,
   extraContext?: string,
   toneOverride?: string
 ): { platforms: Record<string, PlatformResult> } {
@@ -501,7 +503,7 @@ function generateSerpContent(
 
   for (const platform of platforms) {
     const variations: Variation[] = [];
-    for (let i = 0; i < 5; i++) {
+    for (let i = 0; i < variationCount; i++) {
       variations.push(
         buildVariation(i + 1, profile, platform, contentType, goal, voice, extraContext, trendingHashtags, i)
       );
@@ -518,18 +520,19 @@ export async function generateContent(
   contentType: string,
   goal: string,
   extraContext?: string,
-  toneOverride?: string
+  toneOverride?: string,
+  variationCount: number = 5
 ): Promise<{ platforms: Record<string, PlatformResult> }> {
   const location = profile.location || 'Nigeria';
   const trendingHashtags = await fetchHashtags(profile.business_type, location);
 
   if (process.env.ANTHROPIC_API_KEY) {
     try {
-      return await generateContentWithClaude(profile, platforms, contentType, goal, trendingHashtags, extraContext, toneOverride);
+      return await generateContentWithClaude(profile, platforms, contentType, goal, trendingHashtags, variationCount, extraContext, toneOverride);
     } catch (err) {
       console.error('Anthropic failed, falling back to SerpAPI:', err);
     }
   }
 
-  return generateSerpContent(profile, platforms, contentType, goal, trendingHashtags, extraContext, toneOverride);
+  return generateSerpContent(profile, platforms, contentType, goal, trendingHashtags, variationCount, extraContext, toneOverride);
 }

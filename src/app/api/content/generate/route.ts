@@ -18,11 +18,14 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'Invalid request body' }, { status: 400 });
   }
 
-  const { profile_id, platforms, content_type, goal, extra_context, tone_override } = body;
+  const { profile_id, platforms, content_type, goal, variation_count, extra_context, tone_override } = body;
 
   if (!profile_id || !platforms?.length || !content_type || !goal) {
     return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
   }
+
+  const varCount = Math.min(Math.max(Number(variation_count) || 5, 1), 5);
+  const creditCost = varCount <= 1 ? 1 : varCount <= 3 ? 2 : 3;
 
   const supabase = createSupabaseAdmin();
 
@@ -32,7 +35,7 @@ export async function POST(request: NextRequest) {
     .eq('user_token', userToken)
     .single();
 
-  if (!credits || credits.balance < 3) {
+  if (!credits || credits.balance < creditCost) {
     return NextResponse.json(
       { error: 'insufficient_credits', balance: credits?.balance ?? 0 },
       { status: 403 }
@@ -57,10 +60,11 @@ export async function POST(request: NextRequest) {
       content_type,
       goal,
       extra_context,
-      tone_override
+      tone_override,
+      varCount
     );
 
-    const newBalance = credits.balance - 3;
+    const newBalance = credits.balance - creditCost;
     await supabase
       .from('user_credits')
       .update({ balance: newBalance, updated_at: new Date().toISOString() })
@@ -69,8 +73,8 @@ export async function POST(request: NextRequest) {
     await supabase.from('credit_transactions').insert({
       user_token: userToken,
       type: 'usage',
-      amount: -3,
-      description: `Content generation for ${profile.business_name}`,
+      amount: -creditCost,
+      description: `Content generation (${varCount} variations) for ${profile.business_name}`,
       balance_after: newBalance,
     });
 
@@ -83,7 +87,7 @@ export async function POST(request: NextRequest) {
         content_type,
         goal,
         variations: content,
-        credits_used: 3,
+        credits_used: creditCost,
       })
       .select('id')
       .single();
