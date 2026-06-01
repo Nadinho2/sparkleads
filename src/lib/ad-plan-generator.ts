@@ -424,39 +424,85 @@ function generateKeywords(input: AdPlanInput, intel: BusinessIntelligence): AdPl
   };
 }
 
-function generateAdCopies(input: AdPlanInput, goalConfig: typeof GOAL_CONFIGS[string]): AdPlan['ad_copies'] {
+function generateAdCopies(input: AdPlanInput, goalConfig: typeof GOAL_CONFIGS[string], intel: BusinessIntelligence): AdPlan['ad_copies'] {
   const location = input.location ? ` in ${input.location}` : '';
   const name = input.businessName;
-  const type = input.businessType;
+  const bt = input.businessType;
+  const type = bt.toLowerCase();
   const cta = goalConfig.cta;
   const hasWebsite = !!input.website;
+  const ctx = input.extraContext || '';
+
+  const topCompetitor = intel.topBusinesses.length > 0 ? intel.topBusinesses[0].name : null;
+  const avgRating = intel.topBusinesses.filter(b => b.rating).length > 0
+    ? (intel.topBusinesses.filter(b => b.rating).reduce((s, b) => s + (b.rating || 0), 0) / intel.topBusinesses.filter(b => b.rating).length).toFixed(1)
+    : null;
+  const competitorCount = intel.topBusinesses.length;
+  const relatedTerms = intel.relatedKeywords.slice(0, 3);
+
+  const contactMethod = hasWebsite
+    ? 'Visit our website to see our work and ' + cta.toLowerCase() + ' today.'
+    : 'Message us on WhatsApp to ' + cta.toLowerCase() + '.';
+
+  const hooks: Record<string, string[]> = {
+    salon: [
+      `Your hair deserves a stylist who actually listens.`,
+      `Tired of leaving the salon disappointed? We get it.`,
+      `The ${bt.toLowerCase()} ${location || 'experience'} everyone keeps talking about.`,
+    ],
+    restaurant: [
+      `Life's too short for boring meals.`,
+      `That craving? We've got exactly what you need.`,
+      `The spot ${location || 'your city'} has been waiting for.`,
+    ],
+    gym: [
+      `No judgment. No shortcuts. Just results.`,
+      `Your transformation starts with showing up. We handle the rest.`,
+      `The gym where beginners feel welcome and regulars feel challenged.`,
+    ],
+    default: [
+      `Stop settling for less when it comes to ${type}${location}.`,
+      `Looking for a ${type}${location} that actually delivers? You found us.`,
+      `${name} — where quality meets reliability.`,
+    ],
+  };
+
+  const hookPool = hooks[bt.toLowerCase()] || hooks['default'];
+
+  const socialProofLine = avgRating && parseFloat(avgRating) >= 4
+    ? `Rated ${avgRating}/5 by real customers.`
+    : competitorCount > 5
+    ? `Trusted by hundreds of customers in a market with ${competitorCount}+ competitors.`
+    : `Trusted by customers${location} who know quality when they see it.`;
+
+  const competitiveLine = topCompetitor
+    ? `Unlike ${topCompetitor} and others, we ${ctx || 'focus on personalized service and real results'}.`
+    : ctx
+    ? `${ctx}.`
+    : `We focus on what matters: quality, reliability, and your satisfaction.`;
 
   return [
     {
       platform: 'Facebook/Instagram',
       format: 'Feed Ad',
-      headline: `Best ${type}${location} — ${name}`,
-      primary_text: hasWebsite
-        ? `Looking for a trusted ${type.toLowerCase()}${location}? ${name} delivers quality results every time. Visit our website to see our work and ${cta.toLowerCase()} today. Limited slots available — don't miss out!`
-        : `Looking for a trusted ${type.toLowerCase()}${location}? ${name} delivers quality results every time. Message us on WhatsApp to ${cta.toLowerCase()}. Limited slots available — don't miss out!`,
+      headline: `${name} — ${cta} | ${bt}${location}`,
+      primary_text: `${hookPool[0]}\n\n${socialProofLine} ${competitiveLine}\n\n${contactMethod} Limited slots available — don't miss out!`,
       call_to_action: cta,
-      hook: `Stop searching for the perfect ${type.toLowerCase()}${location} — you just found it.`,
+      hook: hookPool[0],
     },
     {
       platform: 'Facebook/Instagram',
       format: 'Story Ad',
       headline: `${name} — ${cta}`,
-      primary_text: `Your go-to ${type.toLowerCase()}${location}. Quality you can trust. ${cta} now and experience the difference.`,
+      primary_text: `${hookPool[1] || hookPool[0]}\n\n${socialProofLine} ${relatedTerms.length > 0 ? `People search for "${relatedTerms[0]}" — that's exactly what we deliver.` : `Quality you can trust.`}\n\n${cta} now.`,
       call_to_action: cta,
-      hook: `${type} ${location} that everyone is talking about`,
+      hook: hookPool[1] || hookPool[0],
     },
     {
       platform: 'Google Search',
       format: 'Search Ad',
-      headline: `${name} | ${type}${location}`,
-      primary_text: hasWebsite
-        ? `Professional ${type.toLowerCase()} services${location}. Trusted by customers. Visit our website for pricing and availability. ${cta} today.`
-        : `Professional ${type.toLowerCase()} services${location}. Call or WhatsApp us now to book. Trusted by customers. ${cta} today.`,
+      headline: `${name} | Best ${bt}${location} — ${cta}`,
+      primary_text: `${socialProofLine} Professional ${type} services${location}. ${competitiveLine} ${hasWebsite ? 'Visit our website for pricing and availability.' : 'Call or WhatsApp us now.'} ${cta} today.`,
       call_to_action: cta,
       hook: '',
     },
@@ -710,7 +756,7 @@ function generateSerpAdPlan(input: AdPlanInput, intel: BusinessIntelligence): Ad
   const behaviors = profile.behaviors;
   const platforms = goalConfig.platformSplit;
   const keywords = generateKeywords(input, intel);
-  const adCopies = generateAdCopies(input, goalConfig);
+  const adCopies = generateAdCopies(input, goalConfig, intel);
   const creativeDirection = generateCreativeDirection(input, profile);
   const kpis = goalConfig.kpis;
   const tips = generateTips(input, intel);
