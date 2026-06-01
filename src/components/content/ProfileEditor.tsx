@@ -1,7 +1,7 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import { X, Building2, Share2, Palette, Settings, Plus, ExternalLink } from 'lucide-react';
+import { useState, useEffect, useCallback } from 'react';
+import { X, Building2, Share2, Palette, Settings, Plus, ExternalLink, Globe, Check } from 'lucide-react';
 import { toast } from 'sonner';
 import { Spinner } from '@/components/ui';
 
@@ -20,6 +20,16 @@ const BRAND_VOICES = [
   { value: 'luxury', label: 'Luxury', icon: '💎', desc: 'Premium and elegant' },
   { value: 'bold', label: 'Bold & Direct', icon: '⚡', desc: 'Confident and assertive' },
   { value: 'educational', label: 'Educational', icon: '📚', desc: 'Informative and helpful' },
+];
+
+const BUSINESS_TYPES = [
+  'Hair Salon', 'Hair Vendor', 'Hair Distributor', 'Wig Maker',
+  'Restaurant', 'Hotel', 'Gym', 'Pharmacy', 'Boutique',
+  'Real Estate', 'School', 'Hospital', 'Supermarket',
+  'Bar/Lounge', 'Bakery', 'Auto Repair', 'Event Venue',
+  'Photography Studio', 'Spa', 'Barbershop', 'Nail Salon',
+  'Catering', 'Event Planning', 'Digital Agency', 'Tech Company',
+  'Logistics', 'Cleaning Service', 'Security Company',
 ];
 
 const SERVICE_SUGGESTIONS: Record<string, string[]> = {
@@ -50,6 +60,8 @@ export function ProfileEditor({ isOpen, onClose, onSaved, initialData, leadId }:
 
   const [businessName, setBusinessName] = useState('');
   const [businessType, setBusinessType] = useState('');
+  const [showSuggestions, setShowSuggestions] = useState(false);
+  const [suggestions, setSuggestions] = useState<string[]>([]);
   const [location, setLocation] = useState('');
   const [website, setWebsite] = useState('');
   const [phone, setPhone] = useState('');
@@ -58,6 +70,10 @@ export function ProfileEditor({ isOpen, onClose, onSaved, initialData, leadId }:
   const [tagline, setTagline] = useState('');
   const [usp, setUsp] = useState('');
   const [targetAudience, setTargetAudience] = useState('');
+  const [websiteExcerpt, setWebsiteExcerpt] = useState('');
+  const [isReadingWebsite, setIsReadingWebsite] = useState(false);
+  const [websiteRead, setWebsiteRead] = useState(false);
+  const [autoReadAttempted, setAutoReadAttempted] = useState(false);
 
   const [instagram, setInstagram] = useState('');
   const [facebook, setFacebook] = useState('');
@@ -85,6 +101,9 @@ export function ProfileEditor({ isOpen, onClose, onSaved, initialData, leadId }:
       setTagline((initialData.tagline as string) || '');
       setUsp((initialData.usp as string) || '');
       setTargetAudience((initialData.target_audience as string) || '');
+      setWebsiteExcerpt((initialData.website_excerpt as string) || '');
+      setWebsiteRead(!!(initialData.website_excerpt as string));
+      setAutoReadAttempted(false);
       setInstagram((initialData.instagram as string) || '');
       setFacebook((initialData.facebook as string) || '');
       setTiktok((initialData.tiktok as string) || '');
@@ -98,6 +117,78 @@ export function ProfileEditor({ isOpen, onClose, onSaved, initialData, leadId }:
       setDefaultPlatforms((initialData.default_platforms as string[]) || ['instagram', 'facebook']);
     }
   }, [initialData]);
+
+  const handleBusinessTypeChange = (value: string) => {
+    setBusinessType(value);
+    if (value.length > 1) {
+      const normalized = value.toLowerCase().trim();
+      const tokens = normalized.split(/\s+/).filter(Boolean);
+      const firstToken = tokens[0] || normalized;
+
+      const strictMatches = BUSINESS_TYPES.filter((type) =>
+        type.toLowerCase().includes(normalized)
+      );
+
+      const isExactMatch =
+        strictMatches.length === 1 && strictMatches[0]?.toLowerCase() === normalized;
+
+      const looseMatches = BUSINESS_TYPES.filter((type) =>
+        type.toLowerCase().includes(firstToken)
+      );
+
+      const merged = Array.from(
+        new Set([...(isExactMatch ? looseMatches : strictMatches.length > 0 ? strictMatches : looseMatches)])
+      ).slice(0, 6);
+
+      setSuggestions(merged);
+      setShowSuggestions(merged.length > 0);
+    } else {
+      setShowSuggestions(false);
+      setSuggestions([]);
+    }
+  };
+
+  const selectSuggestion = (suggestion: string) => {
+    setBusinessType(suggestion);
+    setShowSuggestions(false);
+  };
+
+  const readWebsite = useCallback(async () => {
+    if (!website || isReadingWebsite) return;
+    setIsReadingWebsite(true);
+    try {
+      const res = await fetch('/api/content/read-website', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ url: website }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        if (!tagline && data.description) setTagline(String(data.description).slice(0, 100));
+        if (!phone && data.phone) setPhone(String(data.phone));
+        setWebsiteExcerpt(data.excerpt || '');
+        setWebsiteRead(true);
+        toast.success('Website read successfully');
+      } else {
+        toast.error('Could not read website — enter details manually');
+      }
+    } catch {
+      toast.error('Website read failed');
+    } finally {
+      setIsReadingWebsite(false);
+    }
+  }, [website, isReadingWebsite, tagline, phone]);
+
+  useEffect(() => {
+    if (!isOpen) return;
+    if (!website) return;
+    if (websiteRead) return;
+    if (websiteExcerpt) return;
+    if (isReadingWebsite) return;
+    if (autoReadAttempted) return;
+    setAutoReadAttempted(true);
+    readWebsite();
+  }, [isOpen, website, websiteRead, websiteExcerpt, isReadingWebsite, autoReadAttempted, readWebsite]);
 
   const addService = () => {
     if (serviceInput.trim() && !services.includes(serviceInput.trim())) {
@@ -126,7 +217,7 @@ export function ProfileEditor({ isOpen, onClose, onSaved, initialData, leadId }:
     );
   };
 
-  const suggestions = SERVICE_SUGGESTIONS[businessType.toLowerCase()] || [];
+  const serviceSuggestions = SERVICE_SUGGESTIONS[businessType.toLowerCase()] || [];
 
   const handleSave = async () => {
     if (!businessName.trim() || !businessType.trim()) {
@@ -146,6 +237,7 @@ export function ProfileEditor({ isOpen, onClose, onSaved, initialData, leadId }:
           business_type: businessType,
           location,
           website,
+          website_excerpt: websiteExcerpt || null,
           phone,
           instagram,
           facebook,
@@ -226,9 +318,37 @@ export function ProfileEditor({ isOpen, onClose, onSaved, initialData, leadId }:
                 <label className="block text-sm font-medium text-text mb-1.5">Business Name *</label>
                 <input value={businessName} onChange={(e) => setBusinessName(e.target.value)} placeholder="e.g. Glamour Touch Salon" className="w-full rounded-lg border bg-surface2 px-4 py-2.5 text-sm text-text placeholder:text-muted focus:outline-none focus:ring-2 focus:ring-primary/50 border-border" />
               </div>
-              <div>
+              <div className="relative">
                 <label className="block text-sm font-medium text-text mb-1.5">Business Type *</label>
-                <input value={businessType} onChange={(e) => setBusinessType(e.target.value)} placeholder="e.g. Hair Salon" className="w-full rounded-lg border bg-surface2 px-4 py-2.5 text-sm text-text placeholder:text-muted focus:outline-none focus:ring-2 focus:ring-primary/50 border-border" />
+                <input
+                  value={businessType}
+                  onChange={(e) => handleBusinessTypeChange(e.target.value)}
+                  onFocus={() => {
+                    if (suggestions.length > 0) setShowSuggestions(true);
+                  }}
+                  onBlur={() => setTimeout(() => setShowSuggestions(false), 150)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Escape') setShowSuggestions(false);
+                  }}
+                  autoComplete="off"
+                  placeholder="e.g. Hair Vendor, Restaurant, Digital Agency"
+                  className="w-full rounded-lg border bg-surface2 px-4 py-2.5 text-sm text-text placeholder:text-muted focus:outline-none focus:ring-2 focus:ring-primary/50 border-border"
+                />
+                {showSuggestions && suggestions.length > 0 && (
+                  <div className="absolute top-full left-0 right-0 z-50 mt-1 rounded-xl bg-surface border border-border shadow-xl overflow-hidden">
+                    {suggestions.map((suggestion) => (
+                      <button
+                        key={suggestion}
+                        type="button"
+                        onMouseDown={(e) => e.preventDefault()}
+                        onClick={() => selectSuggestion(suggestion)}
+                        className="w-full text-left px-4 py-2.5 text-sm text-text hover:bg-surface2 transition-colors"
+                      >
+                        {suggestion}
+                      </button>
+                    ))}
+                  </div>
+                )}
               </div>
               <div>
                 <label className="block text-sm font-medium text-text mb-1.5">Location</label>
@@ -236,7 +356,33 @@ export function ProfileEditor({ isOpen, onClose, onSaved, initialData, leadId }:
               </div>
               <div>
                 <label className="block text-sm font-medium text-text mb-1.5">Website</label>
-                <input value={website} onChange={(e) => setWebsite(e.target.value)} placeholder="https://yourbusiness.com" className="w-full rounded-lg border bg-surface2 px-4 py-2.5 text-sm text-text placeholder:text-muted focus:outline-none focus:ring-2 focus:ring-primary/50 border-border" />
+                <input
+                  value={website}
+                  onChange={(e) => {
+                    setWebsite(e.target.value);
+                    setWebsiteRead(false);
+                    setWebsiteExcerpt('');
+                    setAutoReadAttempted(false);
+                  }}
+                  placeholder="https://yourbusiness.com"
+                  className="w-full rounded-lg border bg-surface2 px-4 py-2.5 text-sm text-text placeholder:text-muted focus:outline-none focus:ring-2 focus:ring-primary/50 border-border"
+                />
+                {website && (
+                  <button
+                    type="button"
+                    onClick={readWebsite}
+                    disabled={isReadingWebsite}
+                    className="flex items-center gap-2 text-xs px-3 py-2 rounded-lg bg-surface2 hover:bg-surface text-muted hover:text-text transition-colors mt-1 disabled:opacity-60"
+                  >
+                    {isReadingWebsite ? (
+                      <><Spinner size="sm" /> Reading website...</>
+                    ) : websiteRead ? (
+                      <><Check size={12} className="text-green-400" /> Website read ✓</>
+                    ) : (
+                      <><Globe size={12} /> Read website for context</>
+                    )}
+                  </button>
+                )}
               </div>
               <div>
                 <label className="block text-sm font-medium text-text mb-1.5">Phone</label>
@@ -248,9 +394,9 @@ export function ProfileEditor({ isOpen, onClose, onSaved, initialData, leadId }:
                   <input value={serviceInput} onChange={(e) => setServiceInput(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && (e.preventDefault(), addService())} placeholder="Type and press Enter" className="flex-1 rounded-lg border bg-surface2 px-4 py-2.5 text-sm text-text placeholder:text-muted focus:outline-none focus:ring-2 focus:ring-primary/50 border-border" />
                   <button onClick={addService} className="px-3 py-2.5 rounded-lg bg-primary text-white text-sm font-medium hover:bg-primary/90">Add</button>
                 </div>
-                {suggestions.length > 0 && services.length === 0 && (
+                {serviceSuggestions.length > 0 && services.length === 0 && (
                   <div className="flex flex-wrap gap-1.5 mb-2">
-                    {suggestions.map((s) => (
+                    {serviceSuggestions.map((s) => (
                       <button key={s} onClick={() => { if (!services.includes(s)) setServices([...services, s]); }} className="px-2 py-1 rounded-full bg-surface2 text-xs text-muted hover:text-text border border-border transition-colors">+ {s}</button>
                     ))}
                   </div>

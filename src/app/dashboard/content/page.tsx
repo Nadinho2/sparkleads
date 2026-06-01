@@ -29,6 +29,7 @@ interface ContentProfile {
   business_type: string;
   location: string | null;
   website: string | null;
+  website_excerpt?: string | null;
   phone: string | null;
   instagram: string | null;
   facebook: string | null;
@@ -172,7 +173,28 @@ export default function ContentPage() {
       if (data.exists) {
         setSelectedProfile(data.profile);
       } else {
-        setEditorData(data.prefilled);
+        let prefilled = data.prefilled;
+        const websiteUrl = String(prefilled?.website || '').trim();
+        if (websiteUrl) {
+          try {
+            const readRes = await fetch('/api/content/read-website', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ url: websiteUrl }),
+            });
+            const readData = await readRes.json();
+            if (readData?.success) {
+              prefilled = {
+                ...prefilled,
+                website_excerpt: readData.excerpt || '',
+                tagline: prefilled?.tagline || (readData.description ? String(readData.description).slice(0, 100) : ''),
+                phone: prefilled?.phone || readData.phone || '',
+              };
+            }
+          } catch {
+          }
+        }
+        setEditorData(prefilled);
         setEditorLeadId(lead.id);
         setEditorOpen(true);
       }
@@ -216,6 +238,11 @@ export default function ContentPage() {
     } catch {
       toast.error('Failed to copy');
     }
+  };
+
+  const formatHashtags = (hashtagString: string) => {
+    if (!hashtagString) return '';
+    return hashtagString.replace(/#/g, ' #').replace(/\s+/g, ' ').trim();
   };
 
   const handleGenerate = async () => {
@@ -304,7 +331,10 @@ export default function ContentPage() {
   };
 
   const formatCopyAll = (v: Variation) => {
-    return `CAPTION:\n${v.caption}\n\nHASHTAGS:\n${v.hashtags.join(' ')}\n\nIMAGE DIRECTION:\n${v.image_direction}`;
+    const tags = formatHashtags(
+      v.hashtag_string || v.hashtags.map((t) => `#${t.replace(/^#/, '')}`).join(' ')
+    );
+    return `CAPTION:\n${v.caption}\n\nHASHTAGS:\n${tags}\n\nIMAGE DIRECTION:\n${v.image_direction}`;
   };
 
   const regenerateVariation = async (variationId: number) => {
@@ -895,7 +925,10 @@ export default function ContentPage() {
                             ))}
                           </div>
                           <p className="text-xs text-primary">
-                            {v.hashtag_string || v.hashtags.map(t => t.startsWith('#') ? t : `#${t}`).join(' ')}
+                            {formatHashtags(
+                              v.hashtag_string ||
+                                v.hashtags.map((t) => `#${t.replace(/^#/, '')}`).join(' ')
+                            )}
                           </p>
                         </div>
                       </div>
@@ -913,15 +946,55 @@ export default function ContentPage() {
                   <div className="p-4 rounded-lg bg-surface2">
                     <div className="flex items-center justify-between mb-2">
                       <p className="text-xs text-muted uppercase tracking-wider">Hashtags</p>
-                      <button onClick={() => copyToClipboard(v.hashtags.join(' '), `hashtags-${activePlatformTab}-${i}`)} className="p-1 rounded text-muted hover:text-primary">
+                      <button
+                        onClick={() =>
+                          copyToClipboard(
+                            formatHashtags(
+                              v.hashtag_string ||
+                                v.hashtags.map((t) => `#${t.replace(/^#/, '')}`).join(' ')
+                            ),
+                            `hashtags-${activePlatformTab}-${i}`
+                          )
+                        }
+                        className="p-1 rounded text-muted hover:text-primary"
+                      >
                         {copiedField === `hashtags-${activePlatformTab}-${i}` ? <Check className="w-3.5 h-3.5 text-success" /> : <Copy className="w-3.5 h-3.5" />}
                       </button>
                     </div>
-                    <div className="flex flex-wrap gap-1.5">
-                      {v.hashtags.map((tag: string, j: number) => (
-                        <span key={j} className="px-2 py-0.5 rounded-full bg-purple-500/10 text-purple-400 text-xs">{tag}</span>
-                      ))}
-                    </div>
+                    {(() => {
+                      const hashtagArray =
+                        (v.hashtags && v.hashtags.length > 0
+                          ? v.hashtags
+                          : (v.hashtag_string || '')
+                              .split(' ')
+                              .filter((t: string) => t.startsWith('#'))
+                              .map((t: string) => t.replace('#', ''))) || [];
+                      const normalized = hashtagArray.map((t: string) => t.replace(/^#/, ''));
+                      const copyAll = formatHashtags(
+                        v.hashtag_string || normalized.map((t: string) => `#${t}`).join(' ')
+                      );
+
+                      return (
+                        <div className="flex flex-wrap gap-1.5 mt-1">
+                          {normalized.map((tag: string, j: number) => (
+                            <span
+                              key={j}
+                              className="text-xs px-2 py-1 rounded-full bg-primary/10 text-primary font-medium cursor-pointer hover:bg-primary/20 transition-colors"
+                              onClick={() => copyToClipboard(`#${tag}`, `hashtag-${activePlatformTab}-${i}-${j}`)}
+                              title="Click to copy"
+                            >
+                              #{tag}
+                            </span>
+                          ))}
+                          <button
+                            onClick={() => copyToClipboard(copyAll, `hashtags-all-${activePlatformTab}-${i}`)}
+                            className="text-xs px-2 py-1 rounded-full bg-surface text-muted hover:text-text transition-colors"
+                          >
+                            Copy all
+                          </button>
+                        </div>
+                      );
+                    })()}
                   </div>
 
                   {v.hook && (

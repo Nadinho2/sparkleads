@@ -9,6 +9,7 @@ export interface ContentProfile {
   business_type: string;
   location?: string | null;
   website?: string | null;
+  website_excerpt?: string | null;
   phone?: string | null;
   instagram?: string | null;
   facebook?: string | null;
@@ -85,12 +86,12 @@ const BEST_TIMES: Record<string, string[]> = {
 };
 
 const PLATFORM_HASHTAGS: Record<string, string[]> = {
-  instagram: ['#instagood', '#photooftheday', '#explorepage', '#viral', '#reels', '#trending'],
-  facebook: ['#smallbusiness', '#supportlocal', '#community', '#shoplocal', '#localbusiness'],
-  tiktok: ['#fyp', '#foryoupage', '#viral', '#trending', '#tiktoknigeria', '#africantiktok'],
-  twitter: ['#trending', '#Nigeria', '#business', '#thread', '#TwitterNG'],
-  linkedin: ['#business', '#entrepreneurship', '#leadership', '#growth', '#professional'],
-  whatsapp: ['#whatsapp', '#deals', '#ordernow', '#directmessage'],
+  instagram: ['instagood', 'photooftheday', 'explorepage', 'viral', 'reels', 'trending'],
+  facebook: ['smallbusiness', 'supportlocal', 'community', 'shoplocal', 'localbusiness'],
+  tiktok: ['fyp', 'foryoupage', 'viral', 'trending', 'tiktoknigeria', 'africantiktok'],
+  twitter: ['trending', 'Nigeria', 'business', 'thread', 'TwitterNG'],
+  linkedin: ['business', 'entrepreneurship', 'leadership', 'growth', 'professional'],
+  whatsapp: ['whatsapp', 'deals', 'ordernow', 'directmessage'],
 };
 
 const NICHE_INSIGHTS: Record<string, {
@@ -256,7 +257,7 @@ async function fetchHashtags(businessType: string, location: string): Promise<st
     for (const result of organic.slice(0, 3)) {
       if (result.snippet) {
         const found = (result.snippet as string).match(/#\w+/g);
-        if (found) hashtags.push(...found.slice(0, 5));
+        if (found) hashtags.push(...found.slice(0, 5).map((h) => h.replace(/^#/, '')));
       }
     }
     return hashtags.slice(0, 10);
@@ -297,15 +298,7 @@ function buildServiceLine(profile: ContentProfile): string {
 
 function buildAudienceLine(profile: ContentProfile): string {
   if (profile.target_audience) return profile.target_audience;
-  const bt = profile.business_type.toLowerCase();
-  if (bt.includes('salon') || bt.includes('beauty') || bt.includes('spa')) return 'women aged 18-45 who value self-care and looking their best';
-  if (bt.includes('restaurant') || bt.includes('food') || bt.includes('bakery')) return 'food lovers and families looking for great dining experiences';
-  if (bt.includes('gym') || bt.includes('fitness')) return 'health-conscious individuals aged 20-40 who want to transform their fitness';
-  if (bt.includes('real estate') || bt.includes('property')) return 'young professionals and families looking for their next home';
-  if (bt.includes('hotel') || bt.includes('hospitality')) return 'travelers and business professionals looking for comfortable accommodation';
-  if (bt.includes('pharmacy') || bt.includes('clinic') || bt.includes('hospital')) return 'individuals and families seeking reliable healthcare';
-  if (bt.includes('boutique') || bt.includes('fashion')) return 'style-conscious individuals who want to look unique and trendy';
-  return 'people in your area who need quality services';
+  return `people who need ${profile.business_type.toLowerCase()} services in ${profile.location || 'their area'}`;
 }
 
 function buildNicheHashtags(profile: ContentProfile, location: string): string[] {
@@ -333,11 +326,11 @@ function buildNicheHashtags(profile: ContentProfile, location: string): string[]
   }
 
   if (tags.length === 0) {
-    tags.push(`#${bt.replace(/\s+/g, '')}`, `#${bt.replace(/\s+/g, '')}life`);
+    tags.push(`${bt.replace(/\s+/g, '')}`, `${bt.replace(/\s+/g, '')}life`);
   }
 
   if (city && city.toLowerCase() !== 'your area') {
-    tags.push(`#${city.replace(/\s+/g, '')}`, `#${city.replace(/\s+/g, '')}${bt.replace(/\s+/g, '')}`);
+    tags.push(`${city.replace(/\s+/g, '')}`, `${city.replace(/\s+/g, '')}${bt.replace(/\s+/g, '')}`);
   }
 
   return Array.from(new Set(tags));
@@ -647,14 +640,14 @@ function buildSmartVariation(
   }
 
   const nicheTags = buildNicheHashtags(profile, location);
-  const locationTags = location ? [`#${location.split(',')[0]?.trim().replace(/\s+/g, '')}`, `#${location.split(',')[0]?.trim().replace(/\s+/g, '')}Business`] : [];
+  const locationTags = location ? [`${location.split(',')[0]?.trim().replace(/\s+/g, '')}`, `${location.split(',')[0]?.trim().replace(/\s+/g, '')}Business`] : [];
 
   const allHashtags = Array.from(new Set([
     ...nicheTags,
     ...locationTags,
     ...pickMultiple(trendingHashtags, 3),
     ...pickMultiple(platformTags, 3),
-  ])).slice(0, 15);
+  ].map((t) => String(t).replace(/^#/, '')))).slice(0, 15);
 
   const platformEngagementTips: Record<string, string[]> = {
     instagram: [
@@ -702,7 +695,7 @@ function buildSmartVariation(
     caption,
     hashtags: allHashtags,
     hashtag_count: allHashtags.length,
-    hashtag_string: allHashtags.map(t => t.startsWith('#') ? t : `#${t}`).join(' '),
+    hashtag_string: allHashtags.map((t) => `#${t.replace(/^#/, '')}`).join(' '),
     image_direction: imageDir,
     video_direction: videoDir,
     cta,
@@ -752,6 +745,27 @@ Brand voice: ${voice}
 WhatsApp: ${whatsapp || 'not provided'}
 Social handles: ${platformHandles || 'not provided'}
 Extra context for this post: ${extraContext || 'none'}
+${profile.website_excerpt ? `
+WEBSITE CONTENT (use this to understand the business better):
+"${String(profile.website_excerpt).slice(0, 1500)}"
+
+Use specific details from this website content in the generated posts
+where relevant. Reference actual services, offers, or language from
+the website. Do not invent details not found here or in the profile.
+` : ''}
+
+MARKET KNOWLEDGE:
+Apply your real knowledge of:
+- Who actually consumes "${profile.business_type}" content in "${profile.location || 'this market'}"
+- What content formats perform best on each platform in this market
+- Local trends, slang, and cultural references that resonate
+- Peak engagement times for this audience in this timezone
+- Whether to use formal language, local dialect, or a mix
+- Local hashtags that actually drive discovery in this market
+- Seasonal or cultural events coming up that could be referenced
+
+Do not apply generic Western social media best practices
+if the business is in a different market. Use market-specific knowledge.
 
 CONTENT REQUEST:
 Platforms: ${platforms.join(', ')}
@@ -775,6 +789,8 @@ LINE 5: CTA — clear action. Include WhatsApp number if provided.
 LINE 6: Handle mention if provided
 
 - Hashtags must be on a SEPARATE line from the caption
+- Generate hashtags WITHOUT the # symbol in the array
+- hashtag_string must have a SPACE between each hashtag (e.g. "#tag1 #tag2 #tag3")
 - Write as if a real human from ${location} wrote this
 - Match voice strictly: ${voice}
   professional = formal, no slang

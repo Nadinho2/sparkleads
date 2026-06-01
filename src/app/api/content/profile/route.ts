@@ -79,6 +79,7 @@ export async function POST(request: NextRequest) {
     id, lead_id, business_name, business_type, location, website, phone,
     instagram, facebook, tiktok, twitter, linkedin, whatsapp,
     services, tagline, brand_voice, target_audience, usp, brand_colors,
+    website_excerpt,
     default_platforms, always_include_phone, always_include_handles,
   } = body;
 
@@ -95,6 +96,7 @@ export async function POST(request: NextRequest) {
     business_type,
     location: location || null,
     website: website || null,
+    website_excerpt: website_excerpt || null,
     phone: phone || null,
     instagram: instagram || null,
     facebook: facebook || null,
