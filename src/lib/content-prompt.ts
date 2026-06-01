@@ -368,18 +368,135 @@ function buildVariation(
   };
 }
 
-export async function generateContent(
+async function generateContentWithClaude(
   profile: ContentProfile,
   platforms: string[],
   contentType: string,
   goal: string,
+  trendingHashtags: string[],
   extraContext?: string,
   toneOverride?: string
 ): Promise<{ platforms: Record<string, PlatformResult> }> {
+  const apiKey = process.env.ANTHROPIC_API_KEY!;
   const voice = toneOverride || profile.brand_voice || 'friendly';
   const location = profile.location || 'Nigeria';
-  const trendingHashtags = await fetchHashtags(profile.business_type, location);
 
+  const socialHandles: string[] = [];
+  if (profile.instagram) socialHandles.push(`Instagram: @${profile.instagram}`);
+  if (profile.facebook) socialHandles.push(`Facebook: ${profile.facebook}`);
+  if (profile.tiktok) socialHandles.push(`TikTok: @${profile.tiktok}`);
+  if (profile.twitter) socialHandles.push(`Twitter/X: @${profile.twitter}`);
+  if (profile.linkedin) socialHandles.push(`LinkedIn: ${profile.linkedin}`);
+  if (profile.whatsapp) socialHandles.push(`WhatsApp: ${profile.whatsapp}`);
+
+  const prompt = `Generate social media content for a business. Create exactly 5 unique variations per platform.
+
+BUSINESS PROFILE:
+- Name: ${profile.business_name}
+- Type: ${profile.business_type}
+- Location: ${location}
+- Tagline: ${profile.tagline || 'Not set'}
+- Services: ${profile.services?.join(', ') || 'General services'}
+- USP: ${profile.usp || 'Quality service'}
+- Target Audience: ${profile.target_audience || 'General audience'}
+- Website: ${profile.website || 'None'}
+- Phone: ${profile.phone || 'None'}
+${socialHandles.length > 0 ? `- Social handles:\n${socialHandles.map(h => `  ${h}`).join('\n')}` : ''}
+
+CONTENT DETAILS:
+- Content Type: ${contentType}
+- Goal: ${goal}
+- Tone/Voice: ${voice}
+- Platforms: ${platforms.join(', ')}
+${extraContext ? `- Extra context: ${extraContext}` : ''}
+
+TRENDING HASHTAGS (mix these in): ${trendingHashtags.slice(0, 10).join(', ') || 'None available'}
+
+GUIDELINES:
+- This is an African business — use culturally relevant language
+- WhatsApp is a primary business communication channel
+- Always include a clear CTA with WhatsApp/phone if available
+- Captions should be platform-appropriate length
+- Use emojis matching the ${voice} tone
+- Include location-based hashtags
+- Each variation must have a unique hook and angle
+
+PLATFORM SPECIFICS:
+- Instagram: Visual-first, use hooks, 2200 char max caption, 20-30 hashtags ok
+- Facebook: Longer captions ok, conversational, fewer hashtags (5-10)
+- TikTok: Short punchy captions, trending audio references, 3-5 hashtags
+- Twitter/X: 280 char max, concise, 2-3 hashtags, thread-worthy
+- LinkedIn: Professional tone, thought leadership, 5-8 hashtags
+- WhatsApp: Short, direct, action-oriented, no hashtags needed
+
+Return ONLY valid JSON with this exact schema (no markdown, no explanation):
+{
+  "platforms": {
+    "instagram": {
+      "variations": [
+        {
+          "id": 1,
+          "hook": "Attention-grabbing opening line",
+          "caption": "Full caption text with emojis, body, and CTA",
+          "hashtags": ["#tag1", "#tag2"],
+          "hashtag_count": 12,
+          "image_direction": "Description of what image/video should look like",
+          "video_direction": "For Reels — description of video concept (empty string if not a video format)",
+          "cta": "The call to action used",
+          "best_time": "Best time to post this specific content",
+          "format": "Single Image / Carousel / Reel / Story",
+          "engagement_tip": "Specific tip to boost engagement on this post"
+        }
+      ]
+    },
+    "facebook": { "variations": [...] },
+    "tiktok": { "variations": [...] },
+    "twitter": { "variations": [...] },
+    "linkedin": { "variations": [...] },
+    "whatsapp": { "variations": [...] }
+  }
+}
+
+Only include the platforms requested: ${platforms.join(', ')}
+Each platform must have exactly 5 variations with ids 1 through 5.`;
+
+  const response = await fetch('https://api.anthropic.com/v1/messages', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'x-api-key': apiKey,
+      'anthropic-version': '2023-06-01',
+    },
+    body: JSON.stringify({
+      model: 'claude-sonnet-4-20250514',
+      max_tokens: 6000,
+      system: 'You are an expert social media content strategist specializing in African business marketing. You create platform-native, engaging content that drives real business results. You always respond in valid JSON only. No markdown. No explanation outside JSON.',
+      messages: [{ role: 'user', content: prompt }],
+    }),
+  });
+
+  if (!response.ok) {
+    const errBody = await response.text();
+    throw new Error(`Anthropic API error: ${response.status} - ${errBody}`);
+  }
+
+  const data = await response.json();
+  const text = data.content?.[0]?.text;
+  if (!text) throw new Error('No content in Anthropic response');
+
+  return JSON.parse(text) as { platforms: Record<string, PlatformResult> };
+}
+
+function generateSerpContent(
+  profile: ContentProfile,
+  platforms: string[],
+  contentType: string,
+  goal: string,
+  trendingHashtags: string[],
+  extraContext?: string,
+  toneOverride?: string
+): { platforms: Record<string, PlatformResult> } {
+  const voice = toneOverride || profile.brand_voice || 'friendly';
   const result: Record<string, PlatformResult> = {};
 
   for (const platform of platforms) {
@@ -393,4 +510,26 @@ export async function generateContent(
   }
 
   return { platforms: result };
+}
+
+export async function generateContent(
+  profile: ContentProfile,
+  platforms: string[],
+  contentType: string,
+  goal: string,
+  extraContext?: string,
+  toneOverride?: string
+): Promise<{ platforms: Record<string, PlatformResult> }> {
+  const location = profile.location || 'Nigeria';
+  const trendingHashtags = await fetchHashtags(profile.business_type, location);
+
+  if (process.env.ANTHROPIC_API_KEY) {
+    try {
+      return await generateContentWithClaude(profile, platforms, contentType, goal, trendingHashtags, extraContext, toneOverride);
+    } catch (err) {
+      console.error('Anthropic failed, falling back to SerpAPI:', err);
+    }
+  }
+
+  return generateSerpContent(profile, platforms, contentType, goal, trendingHashtags, extraContext, toneOverride);
 }

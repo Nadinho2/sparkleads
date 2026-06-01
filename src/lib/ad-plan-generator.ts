@@ -568,8 +568,121 @@ function estimateMetrics(input: AdPlanInput): {
   };
 }
 
-export async function generateAdPlan(input: AdPlanInput): Promise<AdPlan> {
-  const intel = await fetchBusinessIntelligence(input);
+async function generateAdPlanWithClaude(input: AdPlanInput, intel: BusinessIntelligence): Promise<AdPlan> {
+  const apiKey = process.env.ANTHROPIC_API_KEY!;
+  const currency = CURRENCY_SYMBOLS[input.budgetCurrency] || input.budgetCurrency;
+  const competitorSummary = intel.topBusinesses.length > 0
+    ? `Top competitors in area: ${intel.topBusinesses.slice(0, 5).map((b) => `${b.name} (${b.rating || 'N/A'} rating, ${b.reviews || 0} reviews)`).join(', ')}`
+    : 'Limited competitor data available.';
+
+  const prompt = `Create a complete digital advertising strategy for this business.
+
+BUSINESS DETAILS:
+- Name: ${input.businessName}
+- Type: ${input.businessType}
+- Primary Goal: ${input.goal}
+- Monthly Budget: ${currency}${input.budget.toLocaleString()}
+- Location: ${input.location || 'Not specified — target broadly'}
+- Website: ${input.website || 'No website'}
+- Extra context: ${input.extraContext || 'None provided'}
+
+MARKET INTELLIGENCE (from live search data):
+${competitorSummary}
+Related keywords found: ${intel.relatedKeywords.slice(0, 8).join(', ')}
+Market size: ${intel.marketSize}
+
+CONTEXT:
+- This is likely a business in Africa (Nigeria, Kenya, Ghana, or similar market)
+- Mobile-first audience
+- WhatsApp is heavily used for business communication
+- Budget is in ${input.budgetCurrency}
+
+${!input.website ? 'Note: No website. Recommend WhatsApp or phone call as the conversion action.' : ''}
+
+Return ONLY valid JSON matching this exact schema (no markdown, no explanation):
+
+{
+  "summary": "One paragraph overview of the recommended strategy",
+  "audience": {
+    "description": "Who to target and why",
+    "age_min": 18,
+    "age_max": 45,
+    "age_primary": "25-35",
+    "gender": "All",
+    "gender_reasoning": "Why this gender targeting",
+    "location_targeting": "Specific areas to target",
+    "languages": ["English"]
+  },
+  "interests": [
+    { "category": "Interest category", "specific": ["interest1", "interest2"], "reasoning": "Why relevant" }
+  ],
+  "behaviors": ["behavior1", "behavior2"],
+  "platforms": [
+    { "name": "Facebook", "priority": 1, "recommended": true, "reason": "Why", "budget_percentage": 40, "ad_format": "Format", "best_time": "When" }
+  ],
+  "budget_breakdown": {
+    "total": ${input.budget},
+    "currency": "${input.budgetCurrency}",
+    "daily_budget": ${Math.round(input.budget / 30)},
+    "duration_days": 30,
+    "split": [{ "platform": "Facebook", "amount": 40000, "percentage": 40 }],
+    "cost_per_result_estimate": "₦500 - ₦1,200 per lead",
+    "estimated_reach": "15,000 - 45,000 people",
+    "estimated_results": "80 - 200 leads"
+  },
+  "ad_copies": [
+    { "platform": "Facebook/Instagram", "format": "Feed Ad", "headline": "...", "primary_text": "...", "call_to_action": "Book Now", "hook": "..." },
+    { "platform": "Facebook/Instagram", "format": "Story Ad", "headline": "...", "primary_text": "...", "call_to_action": "Book Now", "hook": "..." },
+    { "platform": "Google Search", "format": "Search Ad", "headline": "...", "primary_text": "...", "call_to_action": "Book Now", "hook": "" }
+  ],
+  "keywords": {
+    "google_search": ["keyword1", "keyword2"],
+    "hashtags_social": ["#tag1", "#tag2"],
+    "negative_keywords": ["exclude1", "exclude2"]
+  },
+  "creative_direction": {
+    "visual_style": "What images/videos should look like",
+    "colors": "Color recommendations",
+    "content_ideas": ["Idea 1", "Idea 2", "Idea 3"],
+    "do": ["Best practice 1", "Best practice 2"],
+    "dont": ["Avoid 1", "Avoid 2"]
+  },
+  "kpis": [
+    { "metric": "Cost Per Lead", "target": "₦800 or less" },
+    { "metric": "Click Through Rate", "target": "2% or higher" },
+    { "metric": "Return on Ad Spend", "target": "3x minimum" }
+  ],
+  "tips": ["Tip 1", "Tip 2", "Tip 3", "Tip 4"]
+}`;
+
+  const response = await fetch('https://api.anthropic.com/v1/messages', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'x-api-key': apiKey,
+      'anthropic-version': '2023-06-01',
+    },
+    body: JSON.stringify({
+      model: 'claude-sonnet-4-20250514',
+      max_tokens: 4000,
+      system: 'You are an expert digital advertising strategist with 10+ years experience running profitable ad campaigns for African and global businesses on Facebook, Instagram, TikTok, and Google. You always respond in valid JSON only. No markdown. No explanation outside JSON.',
+      messages: [{ role: 'user', content: prompt }],
+    }),
+  });
+
+  if (!response.ok) {
+    const errBody = await response.text();
+    throw new Error(`Anthropic API error: ${response.status} - ${errBody}`);
+  }
+
+  const data = await response.json();
+  const text = data.content?.[0]?.text;
+  if (!text) throw new Error('No content in Anthropic response');
+
+  return JSON.parse(text) as AdPlan;
+}
+
+function generateSerpAdPlan(input: AdPlanInput, intel: BusinessIntelligence): AdPlan {
   const btKey = input.businessType.toLowerCase();
   const profile = BUSINESS_PROFILES[btKey] || DEFAULT_PROFILE;
   const goalConfig = GOAL_CONFIGS[input.goal] || GOAL_CONFIGS['Get More Customers'];
@@ -645,4 +758,18 @@ export async function generateAdPlan(input: AdPlanInput): Promise<AdPlan> {
     kpis,
     tips,
   };
+}
+
+export async function generateAdPlan(input: AdPlanInput): Promise<AdPlan> {
+  const intel = await fetchBusinessIntelligence(input);
+
+  if (process.env.ANTHROPIC_API_KEY) {
+    try {
+      return await generateAdPlanWithClaude(input, intel);
+    } catch (err) {
+      console.error('Anthropic failed, falling back to SerpAPI:', err);
+    }
+  }
+
+  return generateSerpAdPlan(input, intel);
 }
