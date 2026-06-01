@@ -345,7 +345,7 @@ export default function ContentPage() {
 
               <div>
                 <label className="block text-sm font-medium text-text mb-2">Content Type</label>
-                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2">
                   {CONTENT_TYPES.map((ct) => (
                     <button
                       key={ct}
@@ -513,13 +513,13 @@ export default function ContentPage() {
                     {v.video_direction && <p className="text-sm text-muted mt-1">Video: {v.video_direction}</p>}
                   </div>
 
-                  <div className="flex items-center gap-4 text-xs text-muted">
+                  <div className="flex flex-wrap items-center gap-2 sm:gap-4 text-xs text-muted">
                     <span>Best time: {v.best_time}</span>
                     <span>CTA: {v.cta}</span>
                     <span>Tip: {v.engagement_tip}</span>
                   </div>
 
-                  <div className="flex gap-2">
+                  <div className="flex flex-wrap gap-2">
                     <button
                       onClick={() => copyToClipboard(formatCopyAll(v), `all-${activePlatformTab}-${i}`)}
                       className="flex items-center gap-2 px-4 py-2 rounded-lg bg-primary/10 text-primary text-sm font-medium hover:bg-primary/20 transition-colors"

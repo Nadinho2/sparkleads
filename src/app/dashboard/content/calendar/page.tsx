@@ -279,9 +279,9 @@ export default function ContentCalendarPage() {
       )}
 
       {selectedEvent && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
           <div className="fixed inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setSelectedEvent(null)} />
-          <div className="relative z-50 w-full max-w-lg rounded-xl border border-border bg-surface p-6">
+          <div className="relative z-50 w-full max-w-lg max-h-[85vh] overflow-y-auto rounded-xl border border-border bg-surface p-4 sm:p-6">
             <div className="flex items-center justify-between mb-4">
               <h3 className="text-lg font-semibold text-text">{selectedEvent.profile?.business_name}</h3>
               <div className="flex items-center gap-2">
@@ -315,9 +315,9 @@ export default function ContentCalendarPage() {
       )}
 
       {showScheduleModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
           <div className="fixed inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setShowScheduleModal(false)} />
-          <div className="relative z-50 w-full max-w-lg rounded-xl border border-border bg-surface p-6 space-y-4">
+          <div className="relative z-50 w-full max-w-lg max-h-[85vh] overflow-y-auto rounded-xl border border-border bg-surface p-4 sm:p-6 space-y-4">
             <div className="flex items-center justify-between">
               <h3 className="text-lg font-semibold text-text">Schedule Content</h3>
               <button onClick={() => setShowScheduleModal(false)} className="p-1.5 rounded-lg text-muted hover:text-text hover:bg-surface2"><X className="w-5 h-5" /></button>

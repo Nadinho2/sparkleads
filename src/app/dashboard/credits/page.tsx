@@ -151,7 +151,7 @@ export default function CreditsPage() {
             </div>
           </div>
           <div className="text-right">
-            <div className={`text-5xl font-bold ${balanceColor}`}>{balance}</div>
+            <div className={`text-3xl sm:text-5xl font-bold text-right ${balanceColor}`}>{balance}</div>
             <p className="text-sm text-muted">credits remaining</p>
           </div>
         </div>
@@ -209,7 +209,7 @@ export default function CreditsPage() {
       {transactions.length > 0 && (
         <div className="p-6 rounded-xl border border-border bg-surface">
           <h3 className="text-lg font-semibold text-text mb-4">Usage This Month</h3>
-          <div className="grid grid-cols-3 gap-4">
+          <div className="grid grid-cols-3 gap-2 sm:gap-4">
             <div className="p-4 rounded-lg bg-surface2 text-center">
               <div className="text-2xl font-bold text-danger">{totalUsed}</div>
               <p className="text-xs text-muted mt-1">Credits used</p>

@@ -172,7 +172,7 @@ export default function ContentLibraryPage() {
       {selectedItem && (
         <div className="fixed inset-0 z-50 flex items-center justify-center">
           <div className="fixed inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setSelectedItem(null)} />
-          <div className="relative z-50 w-full max-w-2xl max-h-[80vh] overflow-y-auto rounded-xl border border-border bg-surface p-6">
+          <div className="relative z-50 w-full max-w-2xl max-h-[85vh] overflow-y-auto rounded-xl border border-border bg-surface p-4 sm:p-6 mx-4">
             <div className="flex items-center justify-between mb-4">
               <h2 className="text-lg font-semibold text-text">{selectedItem.profile?.business_name} — {selectedItem.content_type}</h2>
               <button onClick={() => setSelectedItem(null)} className="p-1.5 rounded-lg text-muted hover:text-text hover:bg-surface2"><X className="w-5 h-5" /></button>

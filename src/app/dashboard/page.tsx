@@ -867,7 +867,7 @@ export default function DashboardPage() {
             initial={{ y: 100, opacity: 0 }}
             animate={{ y: 0, opacity: 1 }}
             exit={{ y: 100, opacity: 0 }}
-            className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 flex items-center gap-3 px-5 py-3 rounded-2xl bg-surface border border-border shadow-2xl shadow-black/40 backdrop-blur-sm"
+            className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 flex flex-wrap items-center justify-center gap-3 px-4 sm:px-5 py-3 rounded-2xl bg-surface border border-border shadow-2xl shadow-black/40 backdrop-blur-sm max-w-[calc(100vw-2rem)]"
           >
             <span className="text-sm font-semibold text-text">
               {selectedLeads.size} selected

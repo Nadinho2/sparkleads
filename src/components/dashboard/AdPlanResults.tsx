@@ -149,7 +149,7 @@ export function AdPlanResults({ plan, businessName, budget, currency, onRegenera
       {/* SECTION 3 — TARGET AUDIENCE */}
       <div className="p-6 rounded-xl border border-border bg-surface">
         <SectionHeader icon={Users} title="Target Audience" />
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4 mb-4">
           <div className="p-3 rounded-lg bg-surface2">
             <div className="flex items-center gap-2 mb-1">
               <Target className="w-4 h-4 text-primary" />
@@ -281,7 +281,7 @@ export function AdPlanResults({ plan, businessName, budget, currency, onRegenera
       {/* SECTION 6 — BUDGET BREAKDOWN */}
       <div className="p-6 rounded-xl border-2 border-primary/30 bg-surface">
         <SectionHeader icon={DollarSign} title="Budget Breakdown" />
-        <div className="grid grid-cols-3 gap-4 mb-6">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
           <div className="p-4 rounded-lg bg-surface2 text-center">
             <p className="text-2xl font-bold text-text">{sym}{plan.budget_breakdown.total.toLocaleString()}</p>
             <p className="text-xs text-muted mt-1">Total Budget</p>
@@ -324,7 +324,7 @@ export function AdPlanResults({ plan, businessName, budget, currency, onRegenera
           ))}
         </div>
 
-        <div className="grid grid-cols-3 gap-4 pt-4 border-t border-border">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 pt-4 border-t border-border">
           <div className="text-center">
             <div className="flex items-center justify-center gap-1 mb-1">
               <Eye className="w-4 h-4 text-primary" />
@@ -352,7 +352,7 @@ export function AdPlanResults({ plan, businessName, budget, currency, onRegenera
       {/* SECTION 7 — AD COPIES */}
       <div className="p-6 rounded-xl border border-border bg-surface">
         <SectionHeader icon={MessageSquare} title="Ad Copy Templates" />
-        <div className="flex gap-2 mb-4 overflow-x-auto pb-1">
+        <div className="flex gap-2 mb-4 overflow-x-auto pb-2 -mx-1 px-1">
           {plan.ad_copies.map((copy, i) => (
             <button
               key={i}

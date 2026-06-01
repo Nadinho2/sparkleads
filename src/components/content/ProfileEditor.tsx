@@ -322,7 +322,7 @@ export function ProfileEditor({ isOpen, onClose, onSaved, initialData, leadId }:
             <>
               <div>
                 <label className="block text-sm font-medium text-text mb-3">Brand Voice</label>
-                <div className="grid grid-cols-2 gap-3">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   {BRAND_VOICES.map((v) => (
                     <button
                       key={v.value}
