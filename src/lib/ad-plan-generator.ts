@@ -614,6 +614,51 @@ function estimateMetrics(input: AdPlanInput): {
   };
 }
 
+export function buildAdPlanPrompt(input: AdPlanInput, intel?: BusinessIntelligence): string {
+  const budgetFormatted = new Intl.NumberFormat('en-NG', {
+    style: 'currency',
+    currency: input.budgetCurrency === 'NGN' ? 'NGN' : 'USD',
+    maximumFractionDigits: 0,
+  }).format(input.budget);
+
+  const hasWebsite = !!input.website;
+  const isNigerian = input.budgetCurrency === 'NGN' ||
+                     input.location?.toLowerCase().includes('nigeria') ||
+                     input.location?.toLowerCase().includes('lagos') ||
+                     input.location?.toLowerCase().includes('abuja');
+
+  const competitorSummary = intel?.topBusinesses.length
+    ? `Top competitors: ${intel.topBusinesses.slice(0, 5).map((b) => `${b.name} (${b.rating || 'N/A'}★, ${b.reviews || 0} reviews)`).join(', ')}`
+    : 'Limited competitor data available.';
+
+  return `
+You are a senior paid advertising strategist with deep experience
+running profitable ad campaigns for businesses in Africa and globally.
+
+Create a complete, specific, actionable ad strategy for this exact business.
+Do NOT give generic advice. Every recommendation must be tailored to
+this specific business, budget, and location.
+
+BUSINESS DETAILS:
+- Business name: ${input.businessName}
+- Business type: ${input.businessType}
+- Campaign goal: ${input.goal}
+- Monthly budget: ${budgetFormatted}
+- Location: ${input.location || 'Nigeria (assumed)'}
+- Website: ${input.website || 'NONE — use WhatsApp/phone as conversion'}
+- Extra context: ${input.extraContext || 'none'}
+
+MARKET CONTEXT:
+- ${isNigerian ? 'Nigerian market — mobile-first, WhatsApp-heavy, data-conscious audience' : 'International market'}
+- ${!hasWebsite ? 'NO WEBSITE: All ad objectives must use WhatsApp, phone calls, or Facebook/Instagram lead forms as the conversion action. Do not recommend website traffic campaigns.' : 'Has website — can run traffic and conversion campaigns'}
+- Budget level: ${input.budget < 50000 ? 'Small budget — must be highly targeted, no waste' : input.budget < 200000 ? 'Medium budget — balanced approach' : 'Good budget — can test multiple platforms'}
+- ${competitorSummary}
+${intel?.relatedKeywords.length ? `- Related keywords from search: ${intel.relatedKeywords.slice(0, 8).join(', ')}` : ''}
+
+Return ONLY valid JSON. No markdown. No explanation. Just the JSON object below.
+`;
+}
+
 async function generateAdPlanWithClaude(input: AdPlanInput, intel: BusinessIntelligence): Promise<AdPlan> {
   const apiKey = process.env.ANTHROPIC_API_KEY!;
   const currency = CURRENCY_SYMBOLS[input.budgetCurrency] || input.budgetCurrency;

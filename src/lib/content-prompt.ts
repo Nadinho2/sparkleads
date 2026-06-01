@@ -26,17 +26,20 @@ export interface ContentProfile {
   always_include_handles?: boolean;
 }
 
-interface Variation {
+export interface Variation {
   id: number;
+  approach: string;
   hook: string;
   caption: string;
   hashtags: string[];
   hashtag_count: number;
+  hashtag_string: string;
   image_direction: string;
   video_direction: string;
   cta: string;
   best_time: string;
   format: string;
+  emoji_suggestion: string;
   engagement_tip: string;
 }
 
@@ -693,17 +696,130 @@ function buildSmartVariation(
 
   return {
     id,
+    approach: APPROACH_NAMES[(id - 1) % APPROACH_NAMES.length],
     hook,
     caption,
     hashtags: allHashtags,
     hashtag_count: allHashtags.length,
+    hashtag_string: allHashtags.map(t => t.startsWith('#') ? t : `#${t}`).join(' '),
     image_direction: imageDir,
     video_direction: videoDir,
     cta,
     best_time: bestTime,
     format,
+    emoji_suggestion: voiceStyle.emojis.slice(0, 3).join(' '),
     engagement_tip: pickRandom(platformEngagementTips[platform] || platformEngagementTips['instagram']),
   };
+}
+
+const APPROACH_NAMES = ['Hook-based', 'Problem/Solution', 'Social proof', 'Direct promotional', 'Educational'];
+
+export function buildContentPrompt(
+  profile: ContentProfile,
+  platforms: string[],
+  contentType: string,
+  goal: string,
+  extraContext?: string,
+  toneOverride?: string
+): string {
+  const voice = toneOverride || profile.brand_voice || 'friendly';
+  const location = profile.location || 'Nigeria';
+  const services = profile.services?.join(', ') || profile.business_type;
+  const whatsapp = profile.whatsapp || profile.phone;
+
+  const platformHandles = platforms
+    .map(p => {
+      const handle = profile[p as keyof ContentProfile];
+      return handle ? `${p}: @${handle}` : null;
+    })
+    .filter(Boolean)
+    .join(', ');
+
+  return `
+You are a professional social media copywriter.
+Write content ONLY for this specific business.
+Do NOT mix in terminology, analogies, or references from other industries.
+
+BUSINESS:
+Name: ${profile.business_name}
+Industry: ${profile.business_type}
+Services offered: ${services}
+Location: ${location}
+Unique selling point: ${profile.usp || 'Quality service and expertise'}
+Target audience: ${profile.target_audience || 'Local customers in ' + location}
+Brand voice: ${voice}
+WhatsApp: ${whatsapp || 'not provided'}
+Social handles: ${platformHandles || 'not provided'}
+Extra context for this post: ${extraContext || 'none'}
+
+CONTENT REQUEST:
+Platforms: ${platforms.join(', ')}
+Content type: ${contentType}
+Goal: ${goal}
+
+STRICT RULES:
+- Write ONLY about ${profile.business_name} and their actual services
+- NEVER use metaphors or terms from unrelated industries
+- NEVER use the word "silk press" unless this is a hair business
+- Each caption must have clear paragraph breaks (use actual line breaks)
+- Structure every caption like this:
+
+LINE 1: Strong hook — one punchy sentence that stops scrolling
+[blank line]
+LINE 2-3: Body — value, story, or offer details. 2 sentences max per paragraph.
+[blank line]
+LINE 4: Social proof or benefit — one sentence
+[blank line]
+LINE 5: CTA — clear action. Include WhatsApp number if provided.
+LINE 6: Handle mention if provided
+
+- Hashtags must be on a SEPARATE line from the caption
+- Write as if a real human from ${location} wrote this
+- Match voice strictly: ${voice}
+  professional = formal, no slang
+  friendly = warm, conversational, light emojis
+  fun = playful, upbeat, more emojis
+  luxury = elegant, aspirational, minimal emojis
+  bold = direct, confident, urgent
+  educational = informative, helpful, clear
+
+IMPORTANT:
+The 5 variations must be genuinely different approaches:
+- Variation 1: Hook-based (opens with a surprising statement)
+- Variation 2: Problem/Solution (identify pain point, offer solution)
+- Variation 3: Social proof / results focused
+- Variation 4: Direct promotional (offer, price, urgency)
+- Variation 5: Educational / value-first
+
+Return ONLY valid JSON. No markdown. No explanation. Just JSON.
+
+{
+  "platforms": {
+    "instagram": {
+      "variations": [
+        {
+          "id": 1,
+          "approach": "Hook-based",
+          "hook": "Single line hook only",
+          "caption": "Line 1 hook\\n\\nLine 2-3 body paragraph\\n\\nLine 4 benefit or proof\\n\\nLine 5 CTA with WhatsApp/handle",
+          "hashtags": ["relevanthashtag1", "relevanthashtag2", "niche3", "location4", "brand5"],
+          "hashtag_string": "#relevanthashtag1 #relevanthashtag2 #niche3 #location4 #brand5",
+          "image_direction": "Practical description of what to photograph with a phone. Be specific.",
+          "video_direction": "30-second reel concept if applicable",
+          "cta": "The standalone CTA sentence",
+          "best_time": "e.g. Tuesday–Thursday, 7pm–9pm",
+          "format": "Single Image | Carousel | Reel | Story",
+          "emoji_suggestion": "2-3 relevant emojis to use",
+          "engagement_tip": "One specific tip to boost comments or shares"
+        }
+      ]
+    }
+  }
+}
+
+Generate for these platforms only: ${platforms.join(', ')}
+Each platform gets exactly 5 variations.
+`;
 }
 
 async function generateContentWithClaude(
@@ -711,91 +827,14 @@ async function generateContentWithClaude(
   platforms: string[],
   contentType: string,
   goal: string,
-  trendingHashtags: string[],
-  variationCount: number,
-  intel: MarketIntelligence,
+  _trendingHashtags: string[],
+  _variationCount: number,
+  _intel: MarketIntelligence,
   extraContext?: string,
   toneOverride?: string
 ): Promise<{ platforms: Record<string, PlatformResult> }> {
   const apiKey = process.env.ANTHROPIC_API_KEY!;
-  const voice = toneOverride || profile.brand_voice || 'friendly';
-  const location = profile.location || 'Nigeria';
-  const niche = getNicheInsights(profile.business_type);
-
-  const socialHandles: string[] = [];
-  if (profile.instagram) socialHandles.push(`Instagram: @${profile.instagram}`);
-  if (profile.facebook) socialHandles.push(`Facebook: ${profile.facebook}`);
-  if (profile.tiktok) socialHandles.push(`TikTok: @${profile.tiktok}`);
-  if (profile.twitter) socialHandles.push(`Twitter/X: ${profile.twitter}`);
-  if (profile.linkedin) socialHandles.push(`LinkedIn: ${profile.linkedin}`);
-  if (profile.whatsapp) socialHandles.push(`WhatsApp: ${profile.whatsapp}`);
-
-  const prompt = `You are writing social media content for a real business. Be specific, creative, and sound human — NOT like a template.
-
-BUSINESS PROFILE:
-- Name: ${profile.business_name}
-- Type: ${profile.business_type}
-- Location: ${location}
-- Tagline: ${profile.tagline || 'None'}
-- Services: ${profile.services?.join(', ') || 'General ' + profile.business_type + ' services'}
-- USP: ${profile.usp || 'Quality service'}
-- Target Audience: ${profile.target_audience || 'General audience'}
-- Brand Voice: ${voice}
-- Website: ${profile.website || 'None'}
-- Phone: ${profile.phone || 'None'}
-${socialHandles.length > 0 ? `- Social handles:\n${socialHandles.map(h => `  ${h}`).join('\n')}` : ''}
-
-MARKET INTELLIGENCE (use this to make content relevant):
-- Trending topics: ${intel.trendingTopics.slice(0, 5).join(' | ') || 'None'}
-- What customers are asking: ${intel.popularQuestions.slice(0, 4).join(' | ') || 'None'}
-- Competitor insights: ${intel.competitorInsights.slice(0, 3).join(' | ') || 'None'}
-- Trending hashtags in this niche: ${trendingHashtags.slice(0, 8).join(', ') || 'None'}
-
-AUDIENCE PAIN POINTS: ${niche.painPoints.join(', ')}
-WHAT THEY DESIRE: ${niche.desires.join(', ')}
-COMMON OBJECTIONS: ${niche.objections.join(', ')}
-INSIDER LANGUAGE: ${niche.insiderLanguage.join(', ')}
-
-CONTENT DETAILS:
-- Content Type: ${contentType}
-- Goal: ${goal}
-- Variations per platform: ${variationCount}
-${extraContext ? `- Extra context: ${extraContext}` : ''}
-
-CRITICAL RULES:
-1. Each variation MUST have a completely different hook, angle, and caption structure
-2. Sound like a real person wrote it — casual, specific, no corporate-speak
-3. Reference specific services, pain points, and desires from the profile
-4. Use insider language and slang from the niche naturally (don't force it)
-5. Platform-specific: Instagram = visual hooks + long captions ok. TikTok = short + punchy. Twitter = 280 chars max. LinkedIn = professional insight. WhatsApp = direct + action-oriented. Facebook = conversational.
-6. Include real engagement tips specific to the post, not generic advice
-7. Image/video directions should be specific and actionable, not "show your business"
-
-Return ONLY valid JSON:
-{
-  "platforms": {
-    "instagram": {
-      "variations": [
-        {
-          "id": 1,
-          "hook": "The first line that stops the scroll — be specific, not generic",
-          "caption": "Full caption with personality, specifics, and CTA. Sound human.",
-          "hashtags": ["#relevant", "#specific", "#tags"],
-          "hashtag_count": 12,
-          "image_direction": "Specific, actionable direction for the visual",
-          "video_direction": "Specific direction if it's a Reel, empty string otherwise",
-          "cta": "The specific call to action used",
-          "best_time": "Best time for THIS specific post type",
-          "format": "Reel / Carousel / Single Image / Story",
-          "engagement_tip": "Specific tip for this exact post, not generic advice"
-        }
-      ]
-    }
-  }
-}
-
-Only include platforms: ${platforms.join(', ')}
-Each platform needs exactly ${variationCount} variation(s) with ids 1 through ${variationCount}.`;
+  const prompt = buildContentPrompt(profile, platforms, contentType, goal, extraContext, toneOverride);
 
   const response = await fetch('https://api.anthropic.com/v1/messages', {
     method: 'POST',
@@ -807,7 +846,7 @@ Each platform needs exactly ${variationCount} variation(s) with ids 1 through ${
     body: JSON.stringify({
       model: 'claude-sonnet-4-20250514',
       max_tokens: 8000,
-      system: 'You are a social media content strategist who writes content that sounds human, specific, and engaging. You NEVER use generic templates. Every caption you write feels like it was crafted by someone who deeply understands the business and its customers. You use real market data, customer psychology, and platform-specific best practices. Always respond in valid JSON only.',
+      system: 'You are a professional social media copywriter. You write content that sounds human, specific, and engaging. You NEVER use generic templates or metaphors from unrelated industries. Always respond in valid JSON only.',
       messages: [{ role: 'user', content: prompt }],
     }),
   });

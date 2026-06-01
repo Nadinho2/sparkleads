@@ -13,6 +13,10 @@ import {
   Zap,
   CalendarDays,
   ArrowRight,
+  RefreshCw,
+  ImageIcon,
+  Eye,
+  EyeOff,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { Spinner } from '@/components/ui';
@@ -42,14 +46,17 @@ interface ContentProfile {
 
 interface Variation {
   id: number;
+  approach: string;
   hook: string;
   caption: string;
   hashtags: string[];
+  hashtag_string?: string;
   image_direction: string;
   video_direction: string;
   cta: string;
   best_time: string;
   format: string;
+  emoji_suggestion?: string;
   engagement_tip: string;
 }
 
@@ -84,6 +91,14 @@ const TONE_OPTIONS = [
   { value: 'bold', label: 'More urgent' },
 ];
 
+const APPROACH_COLORS: Record<string, string> = {
+  'Hook-based': 'bg-purple-500/20 text-purple-400',
+  'Problem/Solution': 'bg-red-500/20 text-red-400',
+  'Social proof': 'bg-green-500/20 text-green-400',
+  'Direct promotional': 'bg-yellow-500/20 text-yellow-400',
+  'Educational': 'bg-blue-500/20 text-blue-400',
+};
+
 export default function ContentPage() {
   const router = useRouter();
   const [profiles, setProfiles] = useState<ContentProfile[]>([]);
@@ -104,6 +119,8 @@ export default function ContentPage() {
   const [generatedContent, setGeneratedContent] = useState<Record<string, { variations: Variation[] }> | null>(null);
   const [activePlatformTab, setActivePlatformTab] = useState('');
   const [copiedField, setCopiedField] = useState<string | null>(null);
+  const [previewMode, setPreviewMode] = useState<Record<string, boolean>>({});
+  const [regeneratingId, setRegeneratingId] = useState<string | null>(null);
 
   const [genMode, setGenMode] = useState<'single' | 'calendar'>('single');
   const [postsPerWeek, setPostsPerWeek] = useState(3);
@@ -289,6 +306,55 @@ export default function ContentPage() {
   const formatCopyAll = (v: Variation) => {
     return `CAPTION:\n${v.caption}\n\nHASHTAGS:\n${v.hashtags.join(' ')}\n\nIMAGE DIRECTION:\n${v.image_direction}`;
   };
+
+  const regenerateVariation = async (variationId: number) => {
+    if (!selectedProfile || !activePlatformTab || !generatedContent) return;
+    const key = `${activePlatformTab}-${variationId}`;
+    setRegeneratingId(key);
+    try {
+      const res = await fetch('/api/content/regenerate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          profile_id: selectedProfile.id,
+          platform: activePlatformTab,
+          content_type: contentType,
+          goal,
+          variation_id: variationId,
+          approach: APPROACH_NAMES[(variationId - 1) % APPROACH_NAMES.length],
+          tone_override: toneOverride || undefined,
+          extra_context: extraContext || undefined,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        toast.error(data.error || 'Failed to regenerate');
+        return;
+      }
+      setGeneratedContent((prev) => {
+        if (!prev) return prev;
+        const updated = { ...prev };
+        const platformResult = updated[activePlatformTab];
+        if (platformResult) {
+          updated[activePlatformTab] = {
+            ...platformResult,
+            variations: platformResult.variations.map((v) =>
+              v.id === variationId ? { ...data.variation, id: variationId } : v
+            ),
+          };
+        }
+        return updated;
+      });
+      setBalance((prev) => prev - 1);
+      toast.success('Variation regenerated!');
+    } catch {
+      toast.error('Something went wrong');
+    } finally {
+      setRegeneratingId(null);
+    }
+  };
+
+  const APPROACH_NAMES = ['Hook-based', 'Problem/Solution', 'Social proof', 'Direct promotional', 'Educational'];
 
   return (
     <div className="space-y-6">
@@ -758,12 +824,38 @@ export default function ContentPage() {
 
               {generatedContent[activePlatformTab]?.variations.map((v: Variation, i: number) => (
                 <div key={v.id} className="p-5 rounded-xl border border-border bg-surface space-y-4">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-3">
-                      <span className="text-sm font-semibold text-text">Variation {i + 1}</span>
-                      <span className="px-2 py-0.5 rounded-full bg-primary/10 text-primary text-xs">{v.format}</span>
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-3">
+                        <span className="text-sm font-semibold text-text">Variation {i + 1}</span>
+                        {v.approach && (
+                          <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${APPROACH_COLORS[v.approach] || 'bg-surface2 text-muted'}`}>
+                            {v.approach}
+                          </span>
+                        )}
+                        <span className="px-2 py-0.5 rounded-full bg-primary/10 text-primary text-xs">{v.format}</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <button
+                          onClick={() => {
+                            const key = `${activePlatformTab}-${i}`;
+                            setPreviewMode((prev) => ({ ...prev, [key]: !prev[key] }));
+                          }}
+                          className="flex items-center gap-1 px-2 py-1 rounded text-xs text-muted hover:text-primary transition-colors"
+                        >
+                          {previewMode[`${activePlatformTab}-${i}`] ? <EyeOff size={12} /> : <Eye size={12} />}
+                          {previewMode[`${activePlatformTab}-${i}`] ? 'Edit' : 'Preview'}
+                        </button>
+                        <button
+                          onClick={() => regenerateVariation(v.id)}
+                          disabled={regeneratingId === `${activePlatformTab}-${v.id}`}
+                          className="flex items-center gap-1 px-2 py-1 rounded text-xs text-muted hover:text-primary transition-colors disabled:opacity-50"
+                          title="Regenerate this variation (1 credit)"
+                        >
+                          <RefreshCw size={12} className={regeneratingId === `${activePlatformTab}-${v.id}` ? 'animate-spin' : ''} />
+                          Regenerate
+                        </button>
+                      </div>
                     </div>
-                  </div>
 
                   <div className="p-4 rounded-lg bg-surface2">
                     <div className="flex items-center justify-between mb-2">
@@ -772,7 +864,50 @@ export default function ContentPage() {
                         {copiedField === `caption-${activePlatformTab}-${i}` ? <Check className="w-3.5 h-3.5 text-success" /> : <Copy className="w-3.5 h-3.5" />}
                       </button>
                     </div>
-                    <p className="text-sm text-text whitespace-pre-wrap">{v.caption}</p>
+                    {previewMode[`${activePlatformTab}-${i}`] ? (
+                      <div className="rounded-2xl bg-white dark:bg-zinc-900 border border-border max-w-[320px] mx-auto overflow-hidden">
+                        <div className="flex items-center gap-3 px-4 py-3 border-b border-border">
+                          <div className="w-8 h-8 rounded-full bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center text-white text-xs font-bold">
+                            {selectedProfile?.business_name?.[0] || 'B'}
+                          </div>
+                          <div>
+                            <p className="text-xs font-semibold text-text">
+                              {selectedProfile?.instagram ? `@${selectedProfile.instagram}` : selectedProfile?.business_name}
+                            </p>
+                            <p className="text-xs text-muted">{selectedProfile?.location || ''}</p>
+                          </div>
+                        </div>
+                        <div className="w-full aspect-square bg-surface2 flex items-center justify-center border-b border-border">
+                          <div className="text-center space-y-2 p-4">
+                            <ImageIcon size={32} className="text-muted mx-auto" />
+                            <p className="text-xs text-muted">{v.image_direction}</p>
+                          </div>
+                        </div>
+                        <div className="px-4 py-3 space-y-2">
+                          <p className="text-xs font-semibold text-text">
+                            {selectedProfile?.instagram ? `@${selectedProfile.instagram}` : selectedProfile?.business_name}
+                          </p>
+                          <div className="text-xs text-text leading-relaxed">
+                            {v.caption.split('\n').map((line: string, j: number) => (
+                              line.trim() === ''
+                                ? <div key={j} className="h-2" />
+                                : <span key={j} className="block">{line}</span>
+                            ))}
+                          </div>
+                          <p className="text-xs text-primary">
+                            {v.hashtag_string || v.hashtags.map(t => t.startsWith('#') ? t : `#${t}`).join(' ')}
+                          </p>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="space-y-1">
+                        {v.caption.split('\n').map((line: string, j: number) => (
+                          line.trim() === ''
+                            ? <div key={j} className="h-3" />
+                            : <p key={j} className="text-sm text-text leading-relaxed">{line}</p>
+                        ))}
+                      </div>
+                    )}
                   </div>
 
                   <div className="p-4 rounded-lg bg-surface2">
