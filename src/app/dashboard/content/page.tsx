@@ -193,7 +193,7 @@ export default function ContentPage() {
           toast.error('Not enough credits. You need 3 credits.');
           return;
         }
-        toast.error(data.error || 'Failed to generate content');
+        toast.error(data.error || data.details || 'Failed to generate content');
         return;
       }
 
