@@ -273,10 +273,12 @@ function pickMultiple<T>(arr: T[], count: number): T[] {
 function getNicheInsights(businessType: string) {
   const bt = businessType.toLowerCase();
   for (const [key, value] of Object.entries(NICHE_INSIGHTS)) {
-    if (bt.includes(key) || key.includes(bt)) return value;
+    if (bt.includes(key)) return value;
   }
+  const words = bt.split(/[\s,]+/).filter(w => w.length > 2);
   for (const [key, value] of Object.entries(NICHE_INSIGHTS)) {
-    if (bt.split(' ').some(w => key.includes(w))) return value;
+    const keyWords = key.split(' ');
+    if (words.some(w => keyWords.includes(w))) return value;
   }
   return DEFAULT_INSIGHTS;
 }
@@ -330,7 +332,7 @@ function buildNicheHashtags(profile: ContentProfile, location: string): string[]
     tags.push(`#${bt.replace(/\s+/g, '')}`, `#${bt.replace(/\s+/g, '')}life`);
   }
 
-  if (city) {
+  if (city && city.toLowerCase() !== 'your area') {
     tags.push(`#${city.replace(/\s+/g, '')}`, `#${city.replace(/\s+/g, '')}${bt.replace(/\s+/g, '')}`);
   }
 
@@ -374,7 +376,10 @@ function buildSmartVariation(
   const platformTags = PLATFORM_HASHTAGS[platform] || PLATFORM_HASHTAGS['instagram'];
   const niche = getNicheInsights(profile.business_type);
 
-  const location = profile.location || 'your area';
+  const location = profile.location || '';
+  const locPhrase = location ? ` in ${location}` : '';
+  const locCommunity = location ? `the ${location} community` : 'our community';
+  const locArea = location ? location : 'your area';
   const name = profile.business_name;
   const bt = profile.business_type;
   const services = buildServiceLine(profile);
@@ -424,7 +429,7 @@ function buildSmartVariation(
         hook = `⏰ This is not a drill — ${name} has something special for you`;
         caption = CAPTION_STRUCTURES.urgency(
           hook,
-          `${extraContext || `We're offering exclusive deals on ${serviceDisplay} for a limited time only`}. ${uspLine ? `${uspLine}.` : ''} This is for the people in ${location} who've been waiting for the right moment.`,
+          `${extraContext || `We're offering exclusive deals on ${serviceDisplay} for a limited time only`}. ${uspLine ? `${uspLine}.` : ''} This is for the people${locPhrase} who've been waiting for the right moment.`,
           ctaLine,
           emoji
         );
@@ -432,12 +437,12 @@ function buildSmartVariation(
         hook = `The moment you realize your ${bt.toLowerCase()} actually gets it right`;
         caption = CAPTION_STRUCTURES.story(
           hook,
-          `At ${name}, we don't just offer ${serviceDisplay} — we create experiences that keep you coming back. ${socialProof ? `Known for being ${socialProof}.` : ''} ${tagline ? `"${tagline}"` : ''} Serving the ${location} community with pride.`,
+          `At ${name}, we don't just offer ${serviceDisplay} — we create experiences that keep you coming back. ${socialProof ? `Known for being ${socialProof}.` : ''} ${tagline ? `"${tagline}"` : ''} Serving ${locCommunity} with pride.`,
           ctaLine,
           emoji
         );
       } else {
-        hook = `${name} said: let's make ${location} look good this week ${slang ? `— ${slang}` : ''}`;
+        hook = `${name} said: let's make ${locArea} look good this week ${slang ? `— ${slang}` : ''}`;
         caption = CAPTION_STRUCTURES.question(
           hook,
           `${extraContext || `Our ${serviceDisplay} is exactly what you need right now`}. ${uspLine ? `Why us? ${uspLine}.` : ''} We're not just another ${bt.toLowerCase()} — we're the one your friends keep recommending.`,
@@ -455,7 +460,7 @@ function buildSmartVariation(
           `Always check the quality before committing`,
           `Ask about the process — a good ${bt.toLowerCase()} will explain everything`,
           `Don't settle for the first option you find`,
-          `Look for reviews from real customers in ${location}`,
+          `Look for reviews from real customers${locPhrase}`,
           `Communication is key — make sure they understand what you want`,
         ];
         hook = `${pickMultiple(tips, 1)[0].slice(0, 60)}... here's what most people get wrong`;
@@ -470,7 +475,7 @@ function buildSmartVariation(
         hook = `Stop making this mistake with your ${bt.toLowerCase().includes('salon') ? 'hair' : bt.toLowerCase()}`;
         caption = CAPTION_STRUCTURES.problem_solution(
           hook,
-          `Most people in ${location} ${painPoint} — but it doesn't have to be that way. At ${name}, we ${desire}. ${uspLine ? `Here's our approach: ${uspLine}.` : ''} ${services ? `Our ${services} service is designed to give you exactly what you need.` : ''}`,
+          `Most people${locPhrase} ${painPoint} — but it doesn't have to be that way. At ${name}, we ${desire}. ${uspLine ? `Here's our approach: ${uspLine}.` : ''} ${services ? `Our ${services} service is designed to give you exactly what you need.` : ''}`,
           `${ctaLine} — let us show you the difference`,
           emoji
         );
@@ -479,7 +484,7 @@ function buildSmartVariation(
         hook = `Here's something nobody tells you about ${serviceDisplay}`;
         caption = CAPTION_STRUCTURES.story(
           hook,
-          `After years of serving the ${location} community, we've learned what really works. ${niche.insiderLanguage.length > 0 ? `In the ${bt.toLowerCase()} world, we call it "${slang}" — and it makes all the difference.` : ''} ${audience ? `This is especially important if you're ${audience}.` : ''}`,
+          `After years of serving ${locCommunity}, we've learned what really works. ${niche.insiderLanguage.length > 0 ? `In the ${bt.toLowerCase()} world, we call it "${slang}" — and it makes all the difference.` : ''} ${audience ? `This is especially important if you're ${audience}.` : ''}`,
           `${ctaLine} — follow us for more insider tips`,
           emoji
         );
@@ -490,7 +495,7 @@ function buildSmartVariation(
 
     case 'Engagement':
       if (structure === 'question') {
-        hook = `Quick question, ${location} — help us settle this`;
+        hook = `Quick question${locPhrase} — help us settle this`;
         caption = CAPTION_STRUCTURES.question(
           hook,
           `When it comes to ${serviceDisplay}, what matters most to you? We genuinely want to know because ${name} is built on what YOU need, not what we think you should want. Drop your answer below ${emoji}`,
@@ -502,7 +507,7 @@ function buildSmartVariation(
         hook = `Tag someone who ${painPoint} and needs ${name} in their life`;
         caption = CAPTION_STRUCTURES.story(
           hook,
-          `You know that friend who's always complaining about ${painPoint}? Send them our way. At ${name} in ${location}, we ${desire}. ${socialProof ? `We're known for ${socialProof}.` : ''}`,
+          `You know that friend who's always complaining about ${painPoint}? Send them our way. At ${name}${locPhrase}, we ${desire}. ${socialProof ? `We're known for ${socialProof}.` : ''}`,
           `Tag them below and follow ${handle} for more ${emoji}`,
           emoji
         );
@@ -539,15 +544,15 @@ function buildSmartVariation(
 
     case 'Product/Service Highlight':
       if (structure === 'problem_solution') {
-        hook = `Looking for ${serviceDisplay} in ${location}? Read this first`;
+        hook = `Looking for ${serviceDisplay}${locPhrase}? Read this first`;
         caption = CAPTION_STRUCTURES.problem_solution(
-          `Not all ${bt.toLowerCase()} services in ${location} are created equal. ${objection ? `We hear it all the time: "${objection}"` : ''} ${competitorRef ? `Here's what we've noticed about the market: ${competitorRef}.` : ''}`,
+          `Not all ${bt.toLowerCase()} services${locPhrase} are created equal. ${objection ? `We hear it all the time: "${objection}"` : ''} ${competitorRef ? `Here's what we've noticed about the market: ${competitorRef}.` : ''}`,
           `At ${name}, ${uspLine || `we do things differently`}. ${services ? `Our specialty: ${services}.` : ''} ${socialProof ? `${socialProof.charAt(0).toUpperCase() + socialProof.slice(1)}.` : ''} ${audience ? `Perfect for ${audience}.` : ''}`,
           ctaLine,
           emoji
         );
       } else if (structure === 'testimonial_style') {
-        hook = `Don't take our word for it — here's what ${location} is saying about ${name}`;
+        hook = `Don't take our word for it — here's what ${locArea} is saying about ${name}`;
         caption = CAPTION_STRUCTURES.testimonial_style(
           hook,
           `I tried so many ${bt.toLowerCase()} places before finding ${name}. ${desire ? `Finally, somewhere that ${desire}.` : 'The difference is night and day.'} ${uspLine ? `What I love most: ${uspLine}.` : ''}`,
@@ -555,7 +560,7 @@ function buildSmartVariation(
           emoji
         );
       } else {
-        hook = `This is why ${name} is the ${bt.toLowerCase()} ${location} keeps talking about`;
+        hook = `This is why ${name} is the ${bt.toLowerCase()} ${locArea} keeps talking about`;
         caption = CAPTION_STRUCTURES.story(
           hook,
           `${services ? `Our ${services} service` : `What we do`} isn't just about the end result — it's about the experience. ${uspLine ? `${uspLine}.` : ''} ${audience ? `Designed for ${audience}.` : ''} ${socialProof ? `Known for: ${socialProof}.` : ''}`,
@@ -572,7 +577,7 @@ function buildSmartVariation(
       if (structure === 'testimonial_style') {
         caption = CAPTION_STRUCTURES.testimonial_style(
           hook,
-          `I was skeptical at first because ${objection || 'I\'d been disappointed before'}. But ${name} changed everything. ${desire ? `They helped me ${desire}.` : 'The results speak for themselves.'} Now I tell everyone in ${location} about them.`,
+          `I was skeptical at first because ${objection || 'I\'d been disappointed before'}. But ${name} changed everything. ${desire ? `They helped me ${desire}.` : 'The results speak for themselves.'} Now I tell everyone${locPhrase} about them.`,
           `${ctaLine} — your story could be next`,
           emoji
         );
@@ -592,7 +597,7 @@ function buildSmartVariation(
       hook = `${pickRandom(['This season', 'This month', 'Right now'])}, treat yourself to something special at ${name}`;
       caption = CAPTION_STRUCTURES.urgency(
         hook,
-        `${extraContext || `${name} in ${location} is celebrating with exclusive offers on ${serviceDisplay}`}. ${uspLine ? `${uspLine}.` : ''} Don't miss this — it won't last forever.`,
+        `${extraContext || `${name} in ${locArea} is celebrating with exclusive offers on ${serviceDisplay}`}. ${uspLine ? `${uspLine}.` : ''} Don't miss this — it won't last forever.`,
         ctaLine,
         emoji
       );
@@ -601,7 +606,7 @@ function buildSmartVariation(
       break;
 
     case 'Announcement':
-      hook = `Big news from ${name} — ${location}, you\'re going to want to hear this`;
+      hook = `Big news from ${name}${locPhrase} — you're going to want to hear this`;
       if (structure === 'story') {
         caption = CAPTION_STRUCTURES.story(
           hook,
@@ -612,7 +617,7 @@ function buildSmartVariation(
       } else {
         caption = CAPTION_STRUCTURES.urgency(
           hook,
-          `${extraContext || `${name} is evolving, and we're taking ${location} along for the ride`}. ${uspLine ? `${uspLine}.` : ''} This is just the beginning.`,
+          `${extraContext || `${name} is evolving${locPhrase ? `, and we're taking ${locArea} along for the ride` : ''}`}. ${uspLine ? `${uspLine}.` : ''} This is just the beginning.`,
           `${ctaLine} — turn on notifications so you don't miss what's next`,
           emoji
         );
@@ -625,7 +630,7 @@ function buildSmartVariation(
       hook = `${name} — ${desire}`;
       caption = CAPTION_STRUCTURES.story(
         hook,
-        `At ${name} in ${location}, we understand what ${audience} really need. ${services ? `We specialize in ${services}.` : ''} ${uspLine ? `What makes us different: ${uspLine}.` : ''} ${socialProof ? `${socialProof.charAt(0).toUpperCase() + socialProof.slice(1)}.` : ''} ${intelContext ? `Trending now: ${intelContext}.` : ''}`,
+        `At ${name}${locPhrase}, we understand what ${audience} really need. ${services ? `We specialize in ${services}.` : ''} ${uspLine ? `What makes us different: ${uspLine}.` : ''} ${socialProof ? `${socialProof.charAt(0).toUpperCase() + socialProof.slice(1)}.` : ''} ${intelContext ? `Trending now: ${intelContext}.` : ''}`,
         ctaLine,
         emoji
       );
