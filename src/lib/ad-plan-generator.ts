@@ -1,4 +1,5 @@
 import { getJson } from 'serpapi';
+import { safeJsonParse } from './safe-json';
 
 export interface AdPlanInput {
   businessName: string;
@@ -770,7 +771,7 @@ Return ONLY valid JSON matching this exact schema (no markdown, no explanation):
   const text = data.content?.[0]?.text;
   if (!text) throw new Error('No content in Anthropic response');
 
-  return JSON.parse(text) as AdPlan;
+  return safeJsonParse<AdPlan>(text);
 }
 
 function generateSerpAdPlan(input: AdPlanInput, intel: BusinessIntelligence): AdPlan {

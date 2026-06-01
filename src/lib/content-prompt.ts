@@ -1,4 +1,5 @@
 import { getJson } from 'serpapi';
+import { safeJsonParse } from './safe-json';
 
 export interface ContentProfile {
   id?: string;
@@ -860,7 +861,7 @@ async function generateContentWithClaude(
   const text = data.content?.[0]?.text;
   if (!text) throw new Error('No content in Anthropic response');
 
-  return JSON.parse(text) as { platforms: Record<string, PlatformResult> };
+  return safeJsonParse<{ platforms: Record<string, PlatformResult> }>(text);
 }
 
 function generateSerpContent(
