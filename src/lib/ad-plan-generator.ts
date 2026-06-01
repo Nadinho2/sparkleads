@@ -1,5 +1,5 @@
 import { safeJsonParse } from './safe-json';
-import { buildAdPlanPrompt, type AdPlanInput } from './ad-plan-prompt';
+import { buildFocusedPrompt, AD_PLAN_SYSTEM_INSTRUCTION, type AdPlanInput } from './ad-plan-prompt';
 
 export type { AdPlanInput } from './ad-plan-prompt';
 
@@ -128,7 +128,7 @@ function resolveInput(input: AdPlanInput): AdPlanInput & { resolvedLocation: str
 
 async function generateAdPlanWithGemini(input: AdPlanInput): Promise<AdPlan> {
   const apiKey = process.env.GEMINI_API_KEY!;
-  const prompt = buildAdPlanPrompt(resolveInput(input));
+  const prompt = buildFocusedPrompt(resolveInput(input));
 
   const response = await fetch(
     `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`,
@@ -136,10 +136,14 @@ async function generateAdPlanWithGemini(input: AdPlanInput): Promise<AdPlan> {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
+        systemInstruction: {
+          parts: [{ text: AD_PLAN_SYSTEM_INSTRUCTION }],
+        },
         contents: [{ role: 'user', parts: [{ text: prompt }] }],
         generationConfig: {
           temperature: 0.6,
           maxOutputTokens: 8192,
+          responseMimeType: 'application/json',
         },
       }),
     }
@@ -153,12 +157,13 @@ async function generateAdPlanWithGemini(input: AdPlanInput): Promise<AdPlan> {
   const data = await response.json();
   const text = geminiTextFromResponse(data);
   if (!text) throw new Error('No content in Gemini response');
-  return safeJsonParse<AdPlan>(text);
+  const rawPlan = safeJsonParse<AdPlan>(text);
+  return validateAndFix(rawPlan, input);
 }
 
 async function generateAdPlanWithClaude(input: AdPlanInput): Promise<AdPlan> {
   const apiKey = process.env.ANTHROPIC_API_KEY!;
-  const prompt = buildAdPlanPrompt(resolveInput(input));
+  const prompt = buildFocusedPrompt(resolveInput(input));
 
   const response = await fetch('https://api.anthropic.com/v1/messages', {
     method: 'POST',
@@ -184,7 +189,69 @@ async function generateAdPlanWithClaude(input: AdPlanInput): Promise<AdPlan> {
   const data = await response.json();
   const text = data.content?.[0]?.text;
   if (!text) throw new Error('No content in Anthropic response');
-  return safeJsonParse<AdPlan>(text);
+  const rawPlan = safeJsonParse<AdPlan>(text);
+  return validateAndFix(rawPlan, input);
+}
+
+function validateAndFix(plan: AdPlan, input: AdPlanInput): AdPlan {
+  const type = input.businessType?.toLowerCase() || '';
+
+  const femaleBusinesses = ['hair', 'wig', 'lace', 'weave', 'nail',
+    'makeup', 'beauty', 'lash', 'skincare', 'boutique', 'fashion',
+    'lingerie', 'bridal', 'cosmetic'];
+  const maleBusinesses = ['barber', 'barbershop', 'mechanic',
+    'auto repair', 'tyre', 'engine'];
+
+  const isFemale = femaleBusinesses.some(b => type.includes(b));
+  const isMale = maleBusinesses.some(b => type.includes(b));
+
+  if (isFemale && plan.audience?.primary?.gender === 'All genders') {
+    plan.audience.primary.gender = 'Primarily Female';
+    plan.audience.primary.gender_reasoning =
+      `${input.businessType} products are purchased predominantly by women. Male buyers represent less than 10-15% of the customer base.`;
+  }
+
+  if (isMale && plan.audience?.primary?.gender === 'All genders') {
+    plan.audience.primary.gender = 'Primarily Male';
+    plan.audience.primary.gender_reasoning =
+      `${input.businessType} services are used predominantly by men.`;
+  }
+
+  if (plan.budget?.estimated_reach?.toLowerCase().includes('varies')) {
+    const estimatedImpressions = Math.round((input.budget / 275) * 1000);
+    const reachMin = Math.round(estimatedImpressions * 0.3);
+    const reachMax = Math.round(estimatedImpressions * 0.6);
+    plan.budget.estimated_reach =
+      `${reachMin.toLocaleString()}–${reachMax.toLocaleString()} people`;
+  }
+
+  if (plan.budget?.estimated_results?.toLowerCase().includes('varies')) {
+    const leadsMin = Math.round(input.budget / 1800);
+    const leadsMax = Math.round(input.budget / 600);
+    plan.budget.estimated_results =
+      `${leadsMin}–${leadsMax} leads or enquiries`;
+  }
+
+  if (plan.budget?.estimated_cpr?.toLowerCase().includes('varies')) {
+    plan.budget.estimated_cpr =
+      `${input.budgetCurrency} 600–1,800 per lead`;
+  }
+
+  if (plan.audience?.interests) {
+    plan.audience.interests = plan.audience.interests.filter(
+      (i) => i.interest?.toLowerCase() !== input.businessType?.toLowerCase()
+    );
+  }
+
+  if (!plan.budget?.split || plan.budget.split.length === 0) {
+    plan.budget.split = [
+      { platform: 'Instagram', amount: Math.round(input.budget * 0.40), percentage: 40 },
+      { platform: 'Facebook', amount: Math.round(input.budget * 0.45), percentage: 45 },
+      { platform: 'TikTok', amount: Math.round(input.budget * 0.15), percentage: 15 },
+    ];
+  }
+
+  return plan;
 }
 
 function generateFallbackAdPlan(input: AdPlanInput): AdPlan {
@@ -353,6 +420,6 @@ export async function generateAdPlan(input: AdPlanInput): Promise<AdPlan> {
     }
   }
 
-  return generateFallbackAdPlan(input);
+  return validateAndFix(generateFallbackAdPlan(input), input);
 }
 
