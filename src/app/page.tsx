@@ -28,6 +28,7 @@ import {
   Sparkles,
   Shield,
   Clock,
+  Target,
 } from 'lucide-react';
 
 function useInView() {
@@ -558,6 +559,62 @@ export default function Home() {
                 <p className="text-sm text-muted">{feature.description}</p>
               </div>
             ))}
+          </div>
+        </div>
+      </section>
+
+      {/* ==================== MORE THAN LEAD GENERATION ==================== */}
+      <section className="py-20 fade-in-section">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="text-center mb-16">
+            <h2 className="text-3xl sm:text-4xl font-bold text-text mb-4">More Than Lead Generation</h2>
+            <p className="text-lg text-muted max-w-xl mx-auto">
+              SparkLeads helps you find clients AND help them succeed
+            </p>
+          </div>
+
+          <div className="grid sm:grid-cols-3 gap-6 max-w-5xl mx-auto">
+            <div className="p-8 rounded-2xl border border-primary/30 bg-surface hover:border-primary/50 transition-all duration-300 hover:shadow-[0_0_25px_rgba(59,130,246,0.15)]">
+              <div className="w-14 h-14 rounded-2xl bg-primary/10 flex items-center justify-center mb-5">
+                <Target className="w-7 h-7 text-primary" />
+              </div>
+              <h3 className="text-xl font-semibold text-text mb-3">AI Ad Campaign Planner</h3>
+              <p className="text-sm text-muted leading-relaxed mb-4">
+                Generate a complete Facebook, Instagram, TikTok and Google ad strategy in 30 seconds.
+                Audience targeting, age brackets, ad copy, budget split &mdash; everything your client
+                needs to run profitable ads.
+              </p>
+              <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-primary/10 text-primary text-xs font-medium">
+                <Sparkles className="w-3 h-3" />
+                Powered by AI
+              </span>
+            </div>
+
+            <div className="p-8 rounded-2xl border border-purple-500/30 bg-surface hover:border-purple-500/50 transition-all duration-300 hover:shadow-[0_0_25px_rgba(168,85,247,0.15)]">
+              <div className="w-14 h-14 rounded-2xl bg-purple-500/10 flex items-center justify-center mb-5">
+                <Pen className="w-7 h-7 text-purple-400" />
+              </div>
+              <h3 className="text-xl font-semibold text-text mb-3">Content Generation Studio</h3>
+              <p className="text-sm text-muted leading-relaxed mb-4">
+                Generate platform-specific social media captions, hashtags, image directions and
+                posting schedules for any business in seconds. Instagram, Facebook, TikTok, Twitter
+                and WhatsApp &mdash; all from one place.
+              </p>
+              <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-purple-500/10 text-purple-400 text-xs font-medium">
+                5 variations per generation
+              </span>
+            </div>
+
+            <div className="p-8 rounded-2xl border border-border bg-surface hover:border-primary/30 transition-all duration-300">
+              <div className="w-14 h-14 rounded-2xl bg-green-500/10 flex items-center justify-center mb-5">
+                <Globe className="w-7 h-7 text-green-400" />
+              </div>
+              <h3 className="text-xl font-semibold text-text mb-3">Built for African Markets</h3>
+              <p className="text-sm text-muted leading-relaxed">
+                Strategies calibrated for Nigerian, Kenyan, Ghanaian, and African markets where
+                mobile-first and WhatsApp conversion flows convert best.
+              </p>
+            </div>
           </div>
         </div>
       </section>

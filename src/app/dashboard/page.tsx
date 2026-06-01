@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback, useRef } from 'react';
+import { useRouter } from 'next/navigation';
 import {
   Search,
   Download,
@@ -16,6 +17,7 @@ import {
   Bell,
   StickyNote,
   Plus,
+  Sparkles,
 } from 'lucide-react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { toast } from 'sonner';
@@ -84,6 +86,7 @@ function generateSuggestions(query: string): string[] {
 }
 
 export default function DashboardPage() {
+  const router = useRouter();
   const [sessionId, setSessionId] = useState('');
   const [query, setQuery] = useState('');
   const [currentQuery, setCurrentQuery] = useState('');
@@ -770,6 +773,17 @@ export default function DashboardPage() {
                             <ExternalLink className="w-3.5 h-3.5" />
                           </a>
                         )}
+                        <button
+                          onClick={() => {
+                            localStorage.setItem('sparkleads_content_lead', JSON.stringify(lead));
+                            router.push('/dashboard/content');
+                          }}
+                          className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-purple-600 hover:bg-purple-500 text-white text-xs font-medium transition-colors"
+                          title="Generate social media content"
+                        >
+                          <Sparkles size={12} />
+                          <span className="hidden xl:inline">Content</span>
+                        </button>
                       </div>
                     </td>
                   </tr>
