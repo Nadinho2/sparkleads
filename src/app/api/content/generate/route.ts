@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createSupabaseAdmin } from '@/lib/supabase';
 import { getToken } from '@/lib/auth';
-import { buildContentPrompt } from '@/lib/content-prompt';
+import { generateContent } from '@/lib/content-prompt';
 
 export const runtime = 'nodejs';
 
@@ -50,76 +50,15 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'Profile not found' }, { status: 404 });
   }
 
-  const prompt = buildContentPrompt(
-    profile,
-    platforms,
-    content_type,
-    goal,
-    extra_context,
-    tone_override
-  );
-
   try {
-    const apiKey = process.env.GEMINI_API_KEY;
-    if (!apiKey) {
-      return NextResponse.json({ error: 'GEMINI_API_KEY not configured' }, { status: 500 });
-    }
-
-    const models = ['gemini-1.5-flash', 'gemini-2.0-flash-lite', 'gemini-1.5-pro'];
-    let response: Response | null = null;
-    let lastError = '';
-
-    for (const model of models) {
-      for (let attempt = 0; attempt < 3; attempt++) {
-        response = await fetch(
-          `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`,
-          {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              contents: [{ parts: [{ text: prompt }] }],
-              generationConfig: {
-                responseMimeType: 'application/json',
-                temperature: 0.8,
-                maxOutputTokens: 8192,
-              },
-            }),
-          }
-        );
-
-        if (response.ok) break;
-
-        const errBody = await response.text();
-        lastError = `${model}: ${response.status}`;
-
-        if (response.status === 429) {
-          await new Promise((r) => setTimeout(r, (attempt + 1) * 2000));
-          continue;
-        }
-
-        if (response.status === 404) break;
-        console.error('Gemini error:', model, response.status, errBody);
-        break;
-      }
-      if (response?.ok) break;
-    }
-
-    if (!response || !response.ok) {
-      return NextResponse.json(
-        { error: 'Rate limit reached. Please wait a moment and try again.', details: lastError },
-        { status: 429 }
-      );
-    }
-
-    const data = await response.json();
-    const responseText = data.candidates?.[0]?.content?.parts?.[0]?.text;
-
-    if (!responseText) {
-      console.error('No content in Gemini response:', JSON.stringify(data));
-      return NextResponse.json({ error: 'No content generated' }, { status: 502 });
-    }
-
-    const content = JSON.parse(responseText);
+    const content = await generateContent(
+      profile,
+      platforms,
+      content_type,
+      goal,
+      extra_context,
+      tone_override
+    );
 
     const newBalance = credits.balance - 3;
     await supabase
