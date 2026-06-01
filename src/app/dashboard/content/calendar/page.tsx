@@ -56,6 +56,7 @@ export default function ContentCalendarPage() {
   const [loading, setLoading] = useState(true);
   const [currentDate, setCurrentDate] = useState(new Date());
   const [selectedEvent, setSelectedEvent] = useState<CalendarEvent | null>(null);
+  const [moreEvents, setMoreEvents] = useState<{ date: string; events: CalendarEvent[] } | null>(null);
   const [showScheduleModal, setShowScheduleModal] = useState(false);
   const [scheduleDate, setScheduleDate] = useState('');
   const [profileFilter, setProfileFilter] = useState('');
@@ -269,12 +270,68 @@ export default function ContentCalendarPage() {
                     </button>
                   ))}
                   {dayEvents.length > 2 && (
-                    <p className="text-[10px] text-muted text-center">+{dayEvents.length - 2}</p>
+                    <button
+                      onClick={(ev) => {
+                        ev.stopPropagation();
+                        setMoreEvents({ date: dateKey, events: dayEvents });
+                      }}
+                      className="w-full text-[10px] text-muted text-center hover:text-text transition-colors"
+                      title="Show all scheduled content"
+                    >
+                      +{dayEvents.length - 2}
+                    </button>
                   )}
                 </div>
               </div>
             );
           })}
+        </div>
+      )}
+
+      {moreEvents && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          <div className="fixed inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setMoreEvents(null)} />
+          <div className="relative z-50 w-full max-w-lg max-h-[85vh] overflow-y-auto rounded-xl border border-border bg-surface p-4 sm:p-6">
+            <div className="flex items-center justify-between mb-4">
+              <div>
+                <h3 className="text-lg font-semibold text-text">More scheduled content</h3>
+                <p className="text-xs text-muted mt-0.5">{moreEvents.date}</p>
+              </div>
+              <button
+                onClick={() => setMoreEvents(null)}
+                className="p-1.5 rounded-lg text-muted hover:text-text hover:bg-surface2"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="space-y-2">
+              {moreEvents.events.map((e) => (
+                <button
+                  key={e.id}
+                  onClick={() => {
+                    setMoreEvents(null);
+                    setSelectedEvent(e);
+                  }}
+                  className="w-full text-left p-3 rounded-lg border border-border bg-surface2 hover:bg-surface2/80 transition-colors"
+                >
+                  <div className="flex items-center justify-between gap-3">
+                    <div className="min-w-0">
+                      <p className="text-sm font-medium text-text truncate">
+                        {PLATFORM_ICONS[e.platform]} {e.profile?.business_name || 'Scheduled content'}
+                      </p>
+                      <p className="text-xs text-muted mt-0.5 truncate">
+                        {e.scheduled_time ? `${e.scheduled_time} • ` : ''}{e.platform}
+                      </p>
+                    </div>
+                    <span className={`px-2 py-0.5 rounded-full text-xs border ${PLATFORM_COLORS[e.platform] || 'bg-surface2 text-muted border-border'}`}>
+                      {e.status}
+                    </span>
+                  </div>
+                </button>
+              ))}
+            </div>
+          </div>
         </div>
       )}
 
