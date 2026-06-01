@@ -11,6 +11,8 @@ import {
   Calendar,
   Edit3,
   Zap,
+  CalendarDays,
+  ArrowRight,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { Spinner } from '@/components/ui';
@@ -103,6 +105,22 @@ export default function ContentPage() {
   const [activePlatformTab, setActivePlatformTab] = useState('');
   const [copiedField, setCopiedField] = useState<string | null>(null);
 
+  const [genMode, setGenMode] = useState<'single' | 'calendar'>('single');
+  const [postsPerWeek, setPostsPerWeek] = useState(3);
+  const [calendarMonth, setCalendarMonth] = useState(() => {
+    const now = new Date();
+    return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+  });
+  const [isGeneratingCalendar, setIsGeneratingCalendar] = useState(false);
+  const [calendarResult, setCalendarResult] = useState<{
+    month: string;
+    total_posts: number;
+    platforms: string[];
+    credits_used: number;
+    new_balance: number;
+    posts: { date: string; time: string; platform: string; content_type: string; hook: string; caption: string; format: string }[];
+  } | null>(null);
+
   const loadProfiles = useCallback(async () => {
     try {
       const res = await fetch('/api/content/profile');
@@ -164,6 +182,14 @@ export default function ContentPage() {
 
   const creditCost = getCreditCost(variationCount);
 
+  const calendarCreditCost = postsPerWeek * 4 * selectedPlatforms.length;
+
+  const getMonthLabel = (val: string) => {
+    const [y, m] = val.split('-');
+    const months = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+    return `${months[parseInt(m) - 1]} ${y}`;
+  };
+
   const copyToClipboard = async (text: string, field: string) => {
     try {
       await navigator.clipboard.writeText(text);
@@ -215,6 +241,48 @@ export default function ContentPage() {
       toast.error('Something went wrong');
     } finally {
       setIsGenerating(false);
+    }
+  };
+
+  const handleGenerateCalendar = async () => {
+    if (!selectedProfile || !selectedPlatforms.length || !goal) return;
+
+    setIsGeneratingCalendar(true);
+    setCalendarResult(null);
+
+    try {
+      const res = await fetch('/api/content/calendar-generate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          profile_id: selectedProfile.id,
+          platforms: selectedPlatforms,
+          goal,
+          posts_per_week: postsPerWeek,
+          month: calendarMonth,
+          tone_override: toneOverride || undefined,
+          extra_context: extraContext || undefined,
+        }),
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        if (data.error === 'insufficient_credits') {
+          toast.error(`Not enough credits. You need ${data.required} credits.`);
+          return;
+        }
+        toast.error(data.error || data.details || 'Failed to generate calendar');
+        return;
+      }
+
+      setCalendarResult(data);
+      setBalance(data.new_balance);
+      toast.success(`${data.total_posts} posts generated and added to your calendar!`);
+    } catch {
+      toast.error('Something went wrong');
+    } finally {
+      setIsGeneratingCalendar(false);
     }
   };
 
@@ -322,10 +390,162 @@ export default function ContentPage() {
             </div>
           )}
 
+          {/* CALENDAR RESULTS */}
+          {calendarResult && genMode === 'calendar' && (
+            <div className="space-y-4">
+              <div className="p-5 rounded-xl border border-border bg-surface">
+                <div className="flex items-center justify-between mb-4">
+                  <div>
+                    <h3 className="text-lg font-semibold text-text flex items-center gap-2">
+                      <CalendarDays className="w-5 h-5 text-primary" />
+                      {getMonthLabel(calendarResult.month)} Content Calendar
+                    </h3>
+                    <p className="text-sm text-muted mt-1">
+                      {calendarResult.total_posts} posts across {calendarResult.platforms.length} {calendarResult.platforms.length === 1 ? 'platform' : 'platforms'} — {calendarResult.credits_used} credits used
+                    </p>
+                  </div>
+                  <a
+                    href="/dashboard/content/calendar"
+                    className="flex items-center gap-2 px-4 py-2 rounded-lg bg-primary/10 text-primary text-sm font-medium hover:bg-primary/20 transition-colors"
+                  >
+                    View in Calendar <ArrowRight className="w-4 h-4" />
+                  </a>
+                </div>
+
+                <div className="grid grid-cols-7 gap-px bg-border rounded-lg overflow-hidden">
+                  {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map((d) => (
+                    <div key={d} className="bg-surface2 px-2 py-1.5 text-center text-xs font-medium text-muted">{d}</div>
+                  ))}
+
+                  {(() => {
+                    const [yr, mn] = calendarResult.month.split('-').map(Number);
+                    const firstDay = new Date(yr, mn - 1, 1).getDay();
+                    const daysInMonth = new Date(yr, mn, 0).getDate();
+                    const cells: (null | typeof calendarResult.posts)[] = [];
+
+                    for (let i = 0; i < firstDay; i++) cells.push(null);
+                    for (let d = 1; d <= daysInMonth; d++) {
+                      const dateStr = `${yr}-${String(mn).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+                      const dayPosts = calendarResult.posts.filter((p) => p.date === dateStr);
+                      cells.push(dayPosts.length > 0 ? dayPosts : null);
+                    }
+
+                    return cells.map((dayPosts, i) => (
+                      <div key={i} className={`min-h-[80px] p-1.5 ${dayPosts ? 'bg-surface' : 'bg-surface/50'}`}>
+                        {dayPosts && (
+                          <>
+                            <p className="text-xs font-medium text-muted mb-1">
+                              {new Date(dayPosts[0].date).getDate()}
+                            </p>
+                            {dayPosts.map((p, j) => {
+                              const pl = PLATFORMS.find((x) => x.key === p.platform);
+                              return (
+                                <div
+                                  key={j}
+                                  className="mb-1 px-1.5 py-1 rounded text-[10px] leading-tight bg-primary/10 text-primary truncate"
+                                  title={`${p.content_type} — ${p.hook}`}
+                                >
+                                  {pl?.icon} {p.content_type}
+                                </div>
+                              );
+                            })}
+                          </>
+                        )}
+                      </div>
+                    ));
+                  })()}
+                </div>
+              </div>
+
+              <div className="space-y-3">
+                {calendarResult.posts.map((post, i) => {
+                  const pl = PLATFORMS.find((x) => x.key === post.platform);
+                  return (
+                    <div key={i} className="p-4 rounded-xl border border-border bg-surface flex items-start gap-4">
+                      <div className="flex-shrink-0 text-center min-w-[60px]">
+                        <p className="text-lg font-bold text-text">{new Date(post.date).getDate()}</p>
+                        <p className="text-xs text-muted">
+                          {new Date(post.date).toLocaleDateString('en-US', { weekday: 'short' })}
+                        </p>
+                        <p className="text-xs text-primary mt-0.5">{post.time}</p>
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 mb-1">
+                          <span className="text-sm">{pl?.icon}</span>
+                          <span className="text-sm font-medium text-text">{post.content_type}</span>
+                          <span className="px-2 py-0.5 rounded-full bg-primary/10 text-primary text-xs">{post.format}</span>
+                        </div>
+                        <p className="text-sm text-text italic mb-1">&ldquo;{post.hook}&rdquo;</p>
+                        <p className="text-xs text-muted truncate">{post.caption}</p>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
           {/* GENERATION FORM */}
           {selectedProfile && (
             <div className="p-5 rounded-xl border border-border bg-surface space-y-5">
-              <h3 className="text-base font-semibold text-text">Generate Content</h3>
+              <div className="flex items-center justify-between">
+                <h3 className="text-base font-semibold text-text">Generate Content</h3>
+                <div className="flex rounded-lg border border-border overflow-hidden">
+                  <button
+                    onClick={() => { setGenMode('single'); setCalendarResult(null); }}
+                    className={`px-3 py-1.5 text-xs font-medium transition-colors ${genMode === 'single' ? 'bg-primary text-white' : 'bg-surface2 text-muted hover:text-text'}`}
+                  >
+                    Single Post
+                  </button>
+                  <button
+                    onClick={() => { setGenMode('calendar'); setGeneratedContent(null); }}
+                    className={`px-3 py-1.5 text-xs font-medium transition-colors ${genMode === 'calendar' ? 'bg-primary text-white' : 'bg-surface2 text-muted hover:text-text'}`}
+                  >
+                    Monthly Calendar
+                  </button>
+                </div>
+              </div>
+
+              {genMode === 'calendar' && (
+              <>
+              <div>
+                <label className="block text-sm font-medium text-text mb-2">Target Month</label>
+                <input
+                  type="month"
+                  value={calendarMonth}
+                  onChange={(e) => setCalendarMonth(e.target.value)}
+                  className="w-full rounded-lg border bg-surface2 px-4 py-2.5 text-sm text-text focus:outline-none focus:ring-2 focus:ring-primary/50 border-border"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-text mb-2">Posts Per Week</label>
+                <div className="flex gap-2">
+                  {[
+                    { count: 2, label: '2/week', total: '8 posts' },
+                    { count: 3, label: '3/week', total: '12 posts' },
+                    { count: 4, label: '4/week', total: '16 posts' },
+                    { count: 5, label: '5/week', total: '20 posts' },
+                  ].map((opt) => (
+                    <button
+                      key={opt.count}
+                      onClick={() => setPostsPerWeek(opt.count)}
+                      className={`flex-1 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors text-center ${
+                        postsPerWeek === opt.count
+                          ? 'bg-primary text-white'
+                          : 'bg-surface2 text-muted border border-border hover:text-text'
+                      }`}
+                    >
+                      <span className="block">{opt.label}</span>
+                      <span className={`block text-xs mt-0.5 ${postsPerWeek === opt.count ? 'text-white/70' : 'text-muted'}`}>
+                        {opt.total}
+                      </span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+              </>
+              )}
 
               <div>
                 <label className="block text-sm font-medium text-text mb-2">Platforms</label>
@@ -353,6 +573,8 @@ export default function ContentPage() {
                 )}
               </div>
 
+              {genMode === 'single' && (
+              <>
               <div>
                 <label className="block text-sm font-medium text-text mb-2">Content Type</label>
                 <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2">
@@ -397,6 +619,8 @@ export default function ContentPage() {
                   ))}
                 </div>
               </div>
+              </>
+              )}
 
               <div>
                 <label className="block text-sm font-medium text-text mb-1.5">Goal</label>
@@ -445,15 +669,31 @@ export default function ContentPage() {
                 <div className="flex items-center gap-3">
                   <Zap size={16} className="text-yellow-400" />
                   <div>
-                    <p className="text-sm font-medium text-text">This uses {creditCost} {creditCost === 1 ? 'credit' : 'credits'}</p>
-                    <p className="text-xs text-muted">Your balance: {balance} credits</p>
+                    {genMode === 'single' ? (
+                      <>
+                        <p className="text-sm font-medium text-text">This uses {creditCost} {creditCost === 1 ? 'credit' : 'credits'}</p>
+                        <p className="text-xs text-muted">Your balance: {balance} credits</p>
+                      </>
+                    ) : (
+                      <>
+                        <p className="text-sm font-medium text-text">This uses {calendarCreditCost} credits ({postsPerWeek * 4} posts × {selectedPlatforms.length} {selectedPlatforms.length === 1 ? 'platform' : 'platforms'})</p>
+                        <p className="text-xs text-muted">Your balance: {balance} credits</p>
+                      </>
+                    )}
                   </div>
                 </div>
-                {balance < creditCost && (
-                  <a href="/dashboard/credits" className="text-xs text-primary underline">Get more credits</a>
+                {genMode === 'single' ? (
+                  balance < creditCost && (
+                    <a href="/dashboard/credits" className="text-xs text-primary underline">Get more credits</a>
+                  )
+                ) : (
+                  balance < calendarCreditCost && (
+                    <a href="/dashboard/credits" className="text-xs text-primary underline">Get more credits</a>
+                  )
                 )}
               </div>
 
+              {genMode === 'single' ? (
               <button
                 onClick={handleGenerate}
                 disabled={!selectedPlatforms.length || !contentType || !goal || balance < creditCost || isGenerating}
@@ -465,6 +705,19 @@ export default function ContentPage() {
                   <><Sparkles size={16} /> Generate {variationCount} {variationCount === 1 ? 'Variation' : 'Variations'} — {creditCost} {creditCost === 1 ? 'Credit' : 'Credits'}</>
                 )}
               </button>
+              ) : (
+              <button
+                onClick={handleGenerateCalendar}
+                disabled={!selectedPlatforms.length || !goal || balance < calendarCreditCost || isGeneratingCalendar}
+                className="w-full flex items-center justify-center gap-2 px-6 py-3 rounded-lg bg-primary text-white text-base font-medium hover:bg-primary/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {isGeneratingCalendar ? (
+                  <><Spinner size="sm" /> Generating {postsPerWeek * 4} posts for {getMonthLabel(calendarMonth)}...</>
+                ) : (
+                  <><CalendarDays size={16} /> Generate {postsPerWeek * 4} Posts for {getMonthLabel(calendarMonth)} — {calendarCreditCost} Credits</>
+                )}
+              </button>
+              )}
             </div>
           )}
 
@@ -480,7 +733,7 @@ export default function ContentPage() {
           )}
 
           {/* GENERATED RESULTS */}
-          {generatedContent && activePlatformTab && (
+          {generatedContent && activePlatformTab && genMode === 'single' && (
             <div className="space-y-4">
               {selectedPlatforms.length > 1 && (
                 <div className="flex gap-2 overflow-x-auto pb-1">
