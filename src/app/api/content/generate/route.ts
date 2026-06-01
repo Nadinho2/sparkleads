@@ -65,28 +65,49 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'GEMINI_API_KEY not configured' }, { status: 500 });
     }
 
-    const response = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`,
-      {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          contents: [{ parts: [{ text: prompt }] }],
-          generationConfig: {
-            responseMimeType: 'application/json',
-            temperature: 0.8,
-            maxOutputTokens: 8192,
-          },
-        }),
-      }
-    );
+    const models = ['gemini-1.5-flash', 'gemini-2.0-flash-lite', 'gemini-1.5-pro'];
+    let response: Response | null = null;
+    let lastError = '';
 
-    if (!response.ok) {
-      const errorBody = await response.text();
-      console.error('Gemini API error:', response.status, errorBody);
+    for (const model of models) {
+      for (let attempt = 0; attempt < 3; attempt++) {
+        response = await fetch(
+          `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`,
+          {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              contents: [{ parts: [{ text: prompt }] }],
+              generationConfig: {
+                responseMimeType: 'application/json',
+                temperature: 0.8,
+                maxOutputTokens: 8192,
+              },
+            }),
+          }
+        );
+
+        if (response.ok) break;
+
+        const errBody = await response.text();
+        lastError = `${model}: ${response.status}`;
+
+        if (response.status === 429) {
+          await new Promise((r) => setTimeout(r, (attempt + 1) * 2000));
+          continue;
+        }
+
+        if (response.status === 404) break;
+        console.error('Gemini error:', model, response.status, errBody);
+        break;
+      }
+      if (response?.ok) break;
+    }
+
+    if (!response || !response.ok) {
       return NextResponse.json(
-        { error: `Gemini API error: ${response.status}`, details: errorBody },
-        { status: 502 }
+        { error: 'Rate limit reached. Please wait a moment and try again.', details: lastError },
+        { status: 429 }
       );
     }
 
