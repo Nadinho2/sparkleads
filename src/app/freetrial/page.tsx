@@ -10,17 +10,15 @@ import {
   Globe,
   Mail,
   Lock,
-  MessageCircle,
   Zap,
   ArrowRight,
   X,
   Check,
   BarChart3,
 } from 'lucide-react';
-import { v4 as uuidv4 } from 'uuid';
 import { Spinner } from '@/components/ui';
 import { useSearchStream } from '@/hooks/useSearchStream';
-import type { Lead } from '@/types';
+import { toast } from 'sonner';
 
 const suggestedSearches = [
   'restaurants in Lagos Nigeria',
@@ -30,34 +28,11 @@ const suggestedSearches = [
   'hotels in Dubai UAE',
 ];
 
-function getSessionId(): string {
-  if (typeof window === 'undefined') return '';
-  let id = localStorage.getItem('sparkleads_session_id');
-  if (!id) {
-    id = uuidv4();
-    localStorage.setItem('sparkleads_session_id', id);
-  }
-  return id;
-}
-
-function getSearchCount(): number {
-  if (typeof window === 'undefined') return 0;
-  return parseInt(localStorage.getItem('sparkleads_search_count') || '0', 10);
-}
-
-function incrementSearchCount(): number {
-  const count = getSearchCount() + 1;
-  localStorage.setItem('sparkleads_search_count', String(count));
-  return count;
-}
-
-function cleanPhone(phone: string | null): string | null {
-  if (!phone) return null;
-  return phone.replace(/[^+\d]/g, '');
-}
-
 export default function FreeTrialPage() {
-  const isFreeAccess = process.env.NEXT_PUBLIC_FREE_ACCESS === 'true';
+  const [isSignedUp, setIsSignedUp] = useState(false);
+  const [signupEmail, setSignupEmail] = useState('');
+  const [signupPassword, setSignupPassword] = useState('');
+  const [signupLoading, setSignupLoading] = useState(false);
   const [sessionId, setSessionId] = useState('');
   const [searchCount, setSearchCount] = useState(0);
   const [query, setQuery] = useState('');
@@ -70,8 +45,22 @@ export default function FreeTrialPage() {
   });
 
   useEffect(() => {
-    setSessionId(getSessionId());
-    setSearchCount(getSearchCount());
+    // Check if user already has an account (cookie exists)
+    const hasToken = document.cookie.includes('sparkleads_token');
+    if (hasToken) {
+      setIsSignedUp(true);
+    }
+
+    // Generate session ID for search tracking
+    if (typeof window !== 'undefined') {
+      let sid = localStorage.getItem('sparkleads_session_id');
+      if (!sid) {
+        sid = crypto.randomUUID?.() || Math.random().toString(36).slice(2);
+        localStorage.setItem('sparkleads_session_id', sid);
+      }
+      setSessionId(sid);
+      setSearchCount(parseInt(localStorage.getItem('sparkleads_search_count') || '0', 10));
+    }
   }, []);
 
   useEffect(() => {
@@ -80,16 +69,59 @@ export default function FreeTrialPage() {
     }
   }, [error]);
 
+  const handleSignup = async (e: React.FormEvent) => {
+    e.preventDefault();
+
+    if (!signupEmail.trim() || !signupEmail.includes('@')) {
+      toast.error('Please enter a valid email');
+      return;
+    }
+
+    if (!signupPassword.trim() || signupPassword.trim().length < 6) {
+      toast.error('Password must be at least 6 characters');
+      return;
+    }
+
+    setSignupLoading(true);
+    try {
+      const res = await fetch('/api/auth/signup-trial', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          email: signupEmail.trim().toLowerCase(),
+          password: signupPassword.trim(),
+        }),
+      });
+
+      const data = await res.json();
+
+      if (data.success) {
+        setIsSignedUp(true);
+        toast.success(data.message || 'Account created! You have 3 free searches.');
+      } else {
+        toast.error(data.error || 'Signup failed');
+      }
+    } catch {
+      toast.error('Something went wrong');
+    } finally {
+      setSignupLoading(false);
+    }
+  };
+
   const handleSearch = useCallback(async () => {
     if (!query.trim() || isSearching) return;
-    if (getSearchCount() >= 3) {
+
+    const currentCount = parseInt(localStorage.getItem('sparkleads_search_count') || '0', 10);
+    if (currentCount >= 3) {
       setShowPaywall(true);
       return;
     }
 
     setHasSearched(true);
     await search(query);
-    const newCount = incrementSearchCount();
+
+    const newCount = currentCount + 1;
+    localStorage.setItem('sparkleads_search_count', String(newCount));
     setSearchCount(newCount);
 
     if (newCount >= 3) {
@@ -108,7 +140,88 @@ export default function FreeTrialPage() {
     [handleSearch]
   );
 
+  const handleCopy = useCallback((text: string) => {
+    navigator.clipboard.writeText(text);
+    toast.success('Copied to clipboard');
+  }, []);
+
   const remaining = Math.max(0, 3 - searchCount);
+
+  // Show signup form if not signed up
+  if (!isSignedUp) {
+    return (
+      <main className="min-h-screen bg-background text-text flex items-center justify-center px-4">
+        <div className="w-full max-w-md">
+          <div className="text-center mb-8">
+            <Zap className="w-10 h-10 text-primary mx-auto mb-4" />
+            <h1 className="text-2xl sm:text-3xl font-bold text-text mb-2">
+              Try SparkLeads Free
+            </h1>
+            <p className="text-muted">
+              Create a free account to get 3 lead searches. No payment required.
+            </p>
+          </div>
+
+          <form onSubmit={handleSignup} className="space-y-4">
+            <div>
+              <label className="block text-sm font-medium text-text mb-1.5">Email</label>
+              <div className="relative">
+                <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted" />
+                <input
+                  type="email"
+                  value={signupEmail}
+                  onChange={(e) => setSignupEmail(e.target.value)}
+                  placeholder="you@business.com"
+                  required
+                  autoFocus
+                  className="w-full pl-10 pr-4 py-3 bg-surface border border-border rounded-xl text-text placeholder:text-muted focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary"
+                />
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-text mb-1.5">Password</label>
+              <div className="relative">
+                <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted" />
+                <input
+                  type="password"
+                  value={signupPassword}
+                  onChange={(e) => setSignupPassword(e.target.value)}
+                  placeholder="Min. 6 characters"
+                  minLength={6}
+                  required
+                  className="w-full pl-10 pr-4 py-3 bg-surface border border-border rounded-xl text-text placeholder:text-muted focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary"
+                />
+              </div>
+            </div>
+
+            <button
+              type="submit"
+              disabled={signupLoading}
+              className="w-full py-3.5 bg-primary text-white font-semibold rounded-xl hover:bg-primary/90 transition-all disabled:opacity-50 flex items-center justify-center gap-2"
+            >
+              {signupLoading ? 'Creating account...' : 'Start Free Trial'}
+              {!signupLoading && <ArrowRight className="w-4 h-4" />}
+            </button>
+          </form>
+
+          <p className="mt-4 text-center text-sm text-muted">
+            Already have an account?{' '}
+            <Link href="/login" className="text-primary hover:underline">Log in</Link>
+          </p>
+
+          <div className="mt-8 flex flex-col gap-2">
+            {['3 free lead searches', 'Full contact details included', 'No credit card required'].map((text) => (
+              <div key={text} className="flex items-center gap-2 text-xs text-muted">
+                <Check className="w-3.5 h-3.5 text-primary shrink-0" />
+                <span>{text}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      </main>
+    );
+  }
 
   return (
     <main className="min-h-screen bg-background text-text">
@@ -119,7 +232,7 @@ export default function FreeTrialPage() {
             See it work before you pay.
           </h1>
           <p className="text-lg text-muted mb-6">
-            Run a real search. Get real results. No signup needed.
+            Run a real search. Get real results.
           </p>
           <div
             className={`inline-flex items-center gap-2 px-4 py-2 rounded-full border text-sm font-medium ${
@@ -164,265 +277,213 @@ export default function FreeTrialPage() {
                 </>
               ) : (
                 <>
-                  Search — Free Preview
-                  <ArrowRight className="w-5 h-5" />
+                  Search
+                  <ArrowRight className="w-4 h-4" />
                 </>
               )}
             </button>
           </div>
 
-          <div className="flex flex-wrap gap-2 mt-4">
-            {suggestedSearches.map((chip) => (
+          <div className="mt-4 flex flex-wrap gap-2">
+            {suggestedSearches.map((s) => (
               <button
-                key={chip}
-                onClick={() => handleChipClick(chip)}
+                key={s}
+                onClick={() => handleChipClick(s)}
                 disabled={isSearching || remaining <= 0}
-                className="px-3 py-1.5 rounded-full border border-border bg-surface2 text-sm text-muted hover:text-text hover:border-primary/50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                className="px-3 py-1.5 rounded-full bg-surface2 text-muted text-xs hover:text-text hover:bg-surface transition-colors disabled:opacity-50"
               >
-                {chip}
+                {s}
               </button>
             ))}
           </div>
         </div>
       </section>
 
-      {/* ==================== RESULTS AREA ==================== */}
-      <section className="pb-32">
-        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
-          {!hasSearched && (
-            <div className="text-center py-20">
-              <div className="w-20 h-20 rounded-2xl bg-surface2 flex items-center justify-center mx-auto mb-6">
-                <Search className="w-10 h-10 text-muted" />
-              </div>
-              <p className="text-lg text-muted">
-                Type a business type and city above to start searching
-              </p>
-            </div>
-          )}
-
-          {hasSearched && (
-            <>
-              {leads.length > 0 && (
-                <div className="mb-6">
-                  <span className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-primary/10 text-primary text-sm font-medium">
-                    <BarChart3 className="w-4 h-4" />
-                    Showing {leads.length} businesses
-                  </span>
-                </div>
-              )}
-
-              <div className="space-y-4">
-                {leads.map((lead, i) => (
-                  <ResultCard key={lead.id} lead={lead} index={i} />
-                ))}
-              </div>
-
-              {isSearching && leads.length === 0 && (
-                <div className="text-center py-16">
-                  <Spinner size="lg" className="mx-auto mb-4 text-primary" />
-                  <p className="text-muted">Searching for businesses...</p>
-                </div>
-              )}
-
-              {isSearching && leads.length > 0 && (
-                <div className="text-center py-8">
-                  <Spinner size="sm" className="mx-auto text-primary" />
-                  <p className="text-sm text-muted mt-2">More results coming in...</p>
-                </div>
-              )}
-            </>
-          )}
-        </div>
-      </section>
-
-      {/* ==================== STICKY BOTTOM BAR ==================== */}
-      {hasSearched && leads.length > 0 && !showPaywall && (
-        <div className="fixed bottom-0 left-0 right-0 z-30 bg-surface/95 backdrop-blur-xl border-t border-border">
-          <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-3 flex items-center justify-between gap-4">
-            <p className="text-sm text-muted hidden sm:block">
-              Get emails + unlimited searches — ₦19,900 lifetime
-            </p>
-            <Link
-              href="/checkout"
-              className="px-5 py-2.5 rounded-lg bg-primary text-white text-sm font-medium hover:bg-primary/90 transition-colors flex items-center gap-2 whitespace-nowrap"
-            >
-              Get Full Access — ₦19,900 lifetime
-              <ArrowRight className="w-4 h-4" />
-            </Link>
+      {/* ==================== ERROR ==================== */}
+      {error && error !== 'free_limit_reached' && (
+        <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 pb-4">
+          <div className="rounded-xl border border-danger/30 bg-danger/10 p-4 text-sm text-danger">
+            {error}
           </div>
         </div>
+      )}
+
+      {/* ==================== RESULTS ==================== */}
+      {hasSearched && !isSearching && leads.length === 0 && !error && (
+        <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 pb-8">
+          <div className="rounded-xl border border-border bg-surface p-8 text-center">
+            <Search className="w-10 h-10 text-muted mx-auto mb-3" />
+            <p className="text-text font-medium mb-1">No results found</p>
+            <p className="text-sm text-muted">Try a different search term</p>
+          </div>
+        </div>
+      )}
+
+      {leads.length > 0 && (
+        <section className="pb-12">
+          <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div className="flex items-center justify-between mb-6">
+              <p className="text-sm text-muted">
+                Found <span className="text-text font-semibold">{leads.length}</span> results
+              </p>
+              <button
+                onClick={() => handleCopy(leads.map((l) => `${l.name}\t${l.phone || l.email || l.website || ''}`).join('\n'))}
+                className="flex items-center gap-1.5 text-xs text-muted hover:text-text transition-colors"
+              >
+                <BarChart3 className="w-3.5 h-3.5" />
+                Copy all
+              </button>
+            </div>
+
+            <div className="space-y-3">
+              {leads.map((lead) => (
+                <div
+                  key={lead.place_id}
+                  className="rounded-xl border border-border bg-surface p-4 sm:p-5 hover:border-primary/30 transition-colors"
+                >
+                  <div className="flex flex-col sm:flex-row sm:items-start gap-4">
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 mb-1">
+                        <h3 className="text-base font-semibold text-text truncate">
+                          {lead.name}
+                        </h3>
+                        {lead.rating && (
+                          <span className="flex items-center gap-0.5 text-xs text-yellow-400 shrink-0">
+                            <Star className="w-3 h-3 fill-current" />
+                            {lead.rating}
+                          </span>
+                        )}
+                      </div>
+                      {lead.address && (
+                        <p className="text-xs text-muted flex items-center gap-1.5 mb-3">
+                          <MapPin className="w-3 h-3 shrink-0" />
+                          {lead.address}
+                        </p>
+                      )}
+
+                      <div className="flex flex-wrap gap-2">
+                        {lead.phone && (
+                          <button
+                            onClick={() => handleCopy(lead.phone!)}
+                            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-surface2 text-xs text-text hover:bg-primary/10 hover:text-primary transition-colors"
+                          >
+                            <Phone className="w-3 h-3" />
+                            {lead.phone}
+                          </button>
+                        )}
+                        {lead.email && (
+                          <button
+                            onClick={() => handleCopy(lead.email!)}
+                            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-surface2 text-xs text-text hover:bg-primary/10 hover:text-primary transition-colors"
+                          >
+                            <Mail className="w-3 h-3" />
+                            {lead.email}
+                          </button>
+                        )}
+                        {lead.website && (
+                          <a
+                            href={lead.website}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-surface2 text-xs text-text hover:bg-primary/10 hover:text-primary transition-colors"
+                          >
+                            <Globe className="w-3 h-3" />
+                            Website
+                          </a>
+                        )}
+
+                      </div>
+                    </div>
+
+
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            {isSearching && (
+              <div className="mt-4 flex items-center gap-2 text-sm text-muted">
+                <Spinner size="sm" />
+                Fetching more results...
+              </div>
+            )}
+          </div>
+        </section>
       )}
 
       {/* ==================== PAYWALL MODAL ==================== */}
       {showPaywall && (
-        <PaywallModal
-          leadCount={leads.length}
-          onClose={() => setShowPaywall(false)}
-          isFreeAccess={isFreeAccess}
-        />
-      )}
-    </main>
-  );
-}
-
-function ResultCard({ lead, index }: { lead: Lead; index: number }) {
-  const phoneClean = cleanPhone(lead.phone);
-
-  return (
-    <div
-      className="p-5 rounded-xl border border-border bg-surface hover:border-primary/30 transition-all duration-300 animate-fade-in-up"
-      style={{ animationDelay: `${index * 50}ms`, animationFillMode: 'both' }}
-    >
-      <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4">
-        <div className="flex-1 min-w-0">
-          <h3 className="text-base font-semibold text-text mb-2">{lead.name}</h3>
-
-          <div className="flex items-center gap-4 flex-wrap text-sm">
-            <span className="flex items-center gap-1.5">
-              {lead.rating ? (
-                <>
-                  <Star className="w-4 h-4 fill-warning text-warning" />
-                  <span className="text-text">{lead.rating}</span>
-                </>
-              ) : (
-                <span className="text-muted">No rating</span>
-              )}
-            </span>
-
-            {lead.phone && (
-              <span className="flex items-center gap-1.5 text-muted">
-                <Phone className="w-4 h-4" />
-                {lead.phone}
-              </span>
-            )}
-          </div>
-
-          {lead.address && (
-            <p className="flex items-start gap-1.5 text-sm text-muted mt-2">
-              <MapPin className="w-4 h-4 flex-shrink-0 mt-0.5" />
-              {lead.address}
-            </p>
-          )}
-
-          {lead.website && (
-            <a
-              href={lead.website}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="flex items-center gap-1.5 text-sm text-primary hover:underline mt-1"
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+          <div className="relative w-full max-w-md rounded-2xl border border-border bg-surface p-6 sm:p-8 text-center">
+            <button
+              onClick={() => setShowPaywall(false)}
+              className="absolute top-4 right-4 text-muted hover:text-text"
             >
-              <Globe className="w-4 h-4" />
-              {lead.website.replace(/^https?:\/\/(www\.)?/, '').slice(0, 40)}
-            </a>
-          )}
+              <X className="w-5 h-5" />
+            </button>
 
-          <div className="flex items-center gap-1.5 text-sm mt-2 relative">
-            <Mail className="w-4 h-4 text-muted" />
-            {lead.email ? (
-              <span className="blur-[6px] select-none text-muted">{lead.email}</span>
-            ) : (
-              <span className="blur-[6px] select-none text-muted">name@example.com</span>
-            )}
-            <div className="absolute left-6 flex items-center gap-1 text-xs text-muted bg-surface/80 px-2 py-0.5 rounded">
-              <Lock className="w-3 h-3" />
-              Unlock with full access
+            <Zap className="w-12 h-12 text-primary mx-auto mb-4" />
+            <h2 className="text-xl sm:text-2xl font-bold text-text mb-2">
+              Free searches used up
+            </h2>
+            <p className="text-muted mb-6">
+              Unlock unlimited searches, email extraction, and AI ad tools for a one-time payment.
+            </p>
+
+            <div className="flex flex-col gap-3 mb-6">
+              {['Unlimited lead searches', 'Email + WhatsApp extraction', 'AI ad planner & content generator'].map((f) => (
+                <div key={f} className="flex items-center gap-2 text-sm text-text">
+                  <Check className="w-4 h-4 text-primary shrink-0" />
+                  {f}
+                </div>
+              ))}
+            </div>
+
+            <Link
+              href="/checkout"
+              className="w-full inline-flex items-center justify-center gap-2 px-6 py-3.5 rounded-xl bg-primary text-white font-semibold hover:bg-primary/90 transition-colors"
+            >
+              Get Full Access — ₦19,900
+              <ArrowRight className="w-4 h-4" />
+            </Link>
+
+            <p className="mt-3 text-xs text-muted">
+              One-time payment. Lifetime access. No subscription.
+            </p>
+          </div>
+        </div>
+      )}
+
+      {/* ==================== BOTTOM BAR ==================== */}
+      {hasSearched && (
+        <div className="fixed bottom-0 left-0 right-0 bg-surface border-t border-border p-3 sm:p-4 z-40">
+          <div className="max-w-5xl mx-auto flex items-center justify-between gap-3">
+            <div className="flex items-center gap-2">
+              <Zap className="w-4 h-4 text-primary" />
+              <span className="text-sm text-text font-medium">
+                {remaining > 0 ? `${remaining} search${remaining !== 1 ? 'es' : ''} left` : 'Upgrade to continue'}
+              </span>
+            </div>
+            <div className="flex items-center gap-3">
+              {remaining <= 0 && (
+                <Link
+                  href="/dashboard"
+                  className="text-sm text-muted hover:text-text transition-colors"
+                >
+                  Go to Dashboard
+                </Link>
+              )}
+              <Link
+                href="/checkout"
+                className="px-5 py-2.5 rounded-lg bg-primary text-white text-sm font-medium hover:bg-primary/90 transition-colors flex items-center gap-2 whitespace-nowrap"
+              >
+                Get Full Access — ₦19,900
+                <ArrowRight className="w-4 h-4" />
+              </Link>
             </div>
           </div>
         </div>
-
-        {phoneClean && (
-          <a
-            href={`https://wa.me/${phoneClean}`}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="flex items-center gap-2 px-4 py-2 rounded-lg bg-success/10 text-success text-sm font-medium hover:bg-success/20 transition-colors whitespace-nowrap self-start"
-          >
-            <MessageCircle className="w-4 h-4" />
-            WhatsApp
-          </a>
-        )}
-      </div>
-    </div>
-  );
-}
-
-function PaywallModal({
-  leadCount,
-  onClose,
-  isFreeAccess,
-}: {
-  leadCount: number;
-  onClose: () => void;
-  isFreeAccess: boolean;
-}) {
-  useEffect(() => {
-    const handleEscape = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') onClose();
-    };
-    document.addEventListener('keydown', handleEscape);
-    document.body.style.overflow = 'hidden';
-    return () => {
-      document.removeEventListener('keydown', handleEscape);
-      document.body.style.overflow = 'unset';
-    };
-  }, [onClose]);
-
-  const features = [
-    'Unlimited searches forever',
-    'Real phone numbers + emails',
-    'One-click CSV export',
-    'Lead status tracking',
-    '195+ countries supported',
-    'Lifetime updates',
-  ];
-
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-      <div
-        className="fixed inset-0 bg-black/70 backdrop-blur-sm"
-        onClick={onClose}
-      />
-      <div className="relative z-50 w-full max-w-md rounded-2xl border border-border bg-surface p-8 shadow-2xl animate-fade-in-up">
-        <button
-          onClick={onClose}
-          className="absolute top-4 right-4 p-1.5 rounded-lg text-muted hover:text-text hover:bg-surface2 transition-colors"
-        >
-          <X className="w-5 h-5" />
-        </button>
-
-        <div className="text-center mb-6">
-          <div className="w-16 h-16 rounded-2xl bg-primary/10 flex items-center justify-center mx-auto mb-4">
-            <Zap className="w-8 h-8 text-primary" />
-          </div>
-          <h2 className="text-2xl font-bold text-text mb-2">
-            You&apos;ve used your 2 free searches
-          </h2>
-          <p className="text-muted">
-            You found <span className="text-primary font-semibold">{leadCount} businesses</span>{' '}
-            with phone numbers
-          </p>
-        </div>
-
-        <ul className="space-y-3 mb-8">
-          {features.map((feature) => (
-            <li key={feature} className="flex items-center gap-3 text-sm">
-              <Check className="w-5 h-5 text-success flex-shrink-0" />
-              <span className="text-text">{feature}</span>
-            </li>
-          ))}
-        </ul>
-
-        <Link
-          href="/checkout"
-          className="block w-full text-center px-6 py-4 text-lg font-semibold text-white bg-primary rounded-xl hover:bg-primary/90 transition-all hover:shadow-lg hover:shadow-primary/25 mb-3"
-        >
-          {isFreeAccess ? 'Go to Dashboard →' : 'Get Full Access — ₦19,900 →'}
-        </Link>
-
-        <p className="text-center text-sm text-muted">
-          Lifetime access. One payment. No monthly fees.
-        </p>
-      </div>
-    </div>
+      )}
+    </main>
   );
 }
