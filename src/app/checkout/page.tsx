@@ -57,9 +57,25 @@ export default function CheckoutPage() {
   const [referralCode, setReferralCode] = useState('');
   const [processing, setProcessing] = useState(false);
   const [scriptLoaded, setScriptLoaded] = useState(false);
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const [loadingAuth, setLoadingAuth] = useState(true);
   const referenceRef = useRef('');
 
   const [activating, setActivating] = useState(false);
+
+  // Check if user is already logged in
+  useEffect(() => {
+    fetch('/api/auth/me')
+      .then((res) => res.json())
+      .then((data) => {
+        if (data.authenticated && data.email) {
+          setIsLoggedIn(true);
+          setEmail(data.email);
+        }
+      })
+      .catch(() => {})
+      .finally(() => setLoadingAuth(false));
+  }, []);
 
   const handleFreeActivation = async () => {
     if (!email.trim() || !email.includes('@')) {
@@ -186,14 +202,16 @@ export default function CheckoutPage() {
   }, []);
 
   const handlePayment = useCallback(async () => {
-    if (!email.trim() || !email.includes('@')) {
-      toast.error('Please enter a valid email address');
-      return;
-    }
+    if (!isLoggedIn) {
+      if (!email.trim() || !email.includes('@')) {
+        toast.error('Please enter a valid email address');
+        return;
+      }
 
-    if (!password.trim() || password.trim().length < 6) {
-      toast.error('Password must be at least 6 characters');
-      return;
+      if (!password.trim() || password.trim().length < 6) {
+        toast.error('Password must be at least 6 characters');
+        return;
+      }
     }
 
     const paystackKey = process.env.NEXT_PUBLIC_PAYSTACK_PUBLIC_KEY;
@@ -202,7 +220,9 @@ export default function CheckoutPage() {
 
     // Store email and password for redirect callback verification
     localStorage.setItem('sparkleads_checkout_email', email.trim().toLowerCase());
-    localStorage.setItem('sparkleads_checkout_password', password.trim());
+    if (!isLoggedIn) {
+      localStorage.setItem('sparkleads_checkout_password', password.trim());
+    }
 
     try {
       const initRes = await fetch('/api/paystack/initialize', {
@@ -254,7 +274,7 @@ export default function CheckoutPage() {
       setProcessing(false);
       toast.error('Something went wrong. Please try again.');
     }
-  }, [email, password, referralCode, scriptLoaded, verifyPayment]);
+  }, [email, password, referralCode, scriptLoaded, verifyPayment, isLoggedIn]);
 
   if (isFreeAccess) {
     return (
@@ -373,50 +393,65 @@ export default function CheckoutPage() {
               </h2>
 
               <div className="space-y-5">
-                <div>
-                  <label className="block text-sm font-medium text-text mb-2">
-                    <Mail className="w-4 h-4 inline mr-1.5" />
-                    Email Address
-                  </label>
-                  <input
-                    type="email"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    placeholder="you@example.com"
-                    required
-                    className="w-full px-4 py-3 rounded-xl border border-border bg-surface2 text-text placeholder:text-muted focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition-colors"
-                  />
-                  <p className="mt-1.5 text-xs text-muted">
-                    We&apos;ll send your activation link to this email
-                  </p>
-                </div>
+                {!isLoggedIn && (
+                  <>
+                    <div>
+                      <label className="block text-sm font-medium text-text mb-2">
+                        <Mail className="w-4 h-4 inline mr-1.5" />
+                        Email Address
+                      </label>
+                      <input
+                        type="email"
+                        value={email}
+                        onChange={(e) => setEmail(e.target.value)}
+                        placeholder="you@example.com"
+                        required
+                        className="w-full px-4 py-3 rounded-xl border border-border bg-surface2 text-text placeholder:text-muted focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition-colors"
+                      />
+                      <p className="mt-1.5 text-xs text-muted">
+                        We&apos;ll send your activation link to this email
+                      </p>
+                    </div>
 
-                <div>
-                  <label className="block text-sm font-medium text-text mb-2">
-                    <Lock className="w-4 h-4 inline mr-1.5" />
-                    Create Password
-                  </label>
-                  <div className="relative">
-                    <input
-                      type={showPassword ? 'text' : 'password'}
-                      value={password}
-                      onChange={(e) => setPassword(e.target.value)}
-                      placeholder="Min. 6 characters"
-                      required
-                      className="w-full px-4 pr-10 py-3 rounded-xl border border-border bg-surface2 text-text placeholder:text-muted focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition-colors"
-                    />
-                    <button
-                      type="button"
-                      onClick={() => setShowPassword(!showPassword)}
-                      className="absolute right-3 top-1/2 -translate-y-1/2 text-muted hover:text-text"
-                    >
-                      {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                    </button>
+                    <div>
+                      <label className="block text-sm font-medium text-text mb-2">
+                        <Lock className="w-4 h-4 inline mr-1.5" />
+                        Create Password
+                      </label>
+                      <div className="relative">
+                        <input
+                          type={showPassword ? 'text' : 'password'}
+                          value={password}
+                          onChange={(e) => setPassword(e.target.value)}
+                          placeholder="Min. 6 characters"
+                          required
+                          className="w-full px-4 pr-10 py-3 rounded-xl border border-border bg-surface2 text-text placeholder:text-muted focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition-colors"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => setShowPassword(!showPassword)}
+                          className="absolute right-3 top-1/2 -translate-y-1/2 text-muted hover:text-text"
+                        >
+                          {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                        </button>
+                      </div>
+                      <p className="mt-1.5 text-xs text-muted">
+                        You&apos;ll use this to log in to your account
+                      </p>
+                    </div>
+                  </>
+                )}
+
+                {isLoggedIn && (
+                  <div className="p-4 rounded-xl bg-primary/10 border border-primary/30">
+                    <p className="text-sm text-text">
+                      <span className="font-medium">Upgrading account:</span> {email}
+                    </p>
+                    <p className="text-xs text-muted mt-1">
+                      Your lifetime access will be added to your existing account.
+                    </p>
                   </div>
-                  <p className="mt-1.5 text-xs text-muted">
-                    You&apos;ll use this to log in to your account
-                  </p>
-                </div>
+                )}
 
                 <div>
                   <label className="block text-sm font-medium text-text mb-2">
@@ -436,7 +471,7 @@ export default function CheckoutPage() {
                 <div className="pt-2">
                   <button
                     onClick={handlePayment}
-                    disabled={processing || !email.trim()}
+                    disabled={processing || (!isLoggedIn && !email.trim()) || loadingAuth}
                     className="w-full px-6 py-4 rounded-xl bg-primary text-white text-lg font-semibold hover:bg-primary/90 transition-all hover:shadow-lg hover:shadow-primary/25 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
                   >
                     {processing ? (
