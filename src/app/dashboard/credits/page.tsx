@@ -32,17 +32,11 @@ export default function CreditsPage() {
 
   const loadCredits = useCallback(async () => {
     try {
-      const res = await fetch('/api/credits/ensure');
+      const res = await fetch('/api/credits');
       const data = await res.json();
-      setBalance(data.balance || 0);
-
-      const sessionId = localStorage.getItem('sparkleads_session_id');
-      if (sessionId) {
-        const txRes = await fetch(`/api/credits?user_token=${encodeURIComponent(sessionId)}`);
-        const txData = await txRes.json();
-        setTotalPurchased(txData.total_purchased || 0);
-        setTransactions(txData.transactions || []);
-      }
+      setBalance(Number(data.balance || 0));
+      setTotalPurchased(Number(data.total_purchased || 0));
+      setTransactions(data.transactions || []);
     } catch (err) {
       console.error('Failed to load credits:', err);
     } finally {

@@ -1,13 +1,14 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { NextResponse } from 'next/server';
 import { createSupabaseAdmin } from '@/lib/supabase';
+import { getToken } from '@/lib/auth';
 
 export const runtime = 'nodejs';
 
-export async function GET(request: NextRequest) {
-  const userToken = request.nextUrl.searchParams.get('user_token');
+export async function GET() {
+  const userToken = getToken();
 
   if (!userToken) {
-    return NextResponse.json({ error: 'user_token is required' }, { status: 400 });
+    return NextResponse.json({ error: 'Not authenticated' }, { status: 401 });
   }
 
   const supabase = createSupabaseAdmin();
@@ -26,8 +27,8 @@ export async function GET(request: NextRequest) {
     .limit(50);
 
   return NextResponse.json({
-    balance: credits?.balance || 0,
-    total_purchased: credits?.total_purchased || 0,
+    balance: Number(credits?.balance || 0),
+    total_purchased: Number(credits?.total_purchased || 0),
     transactions: transactions || [],
   });
 }
