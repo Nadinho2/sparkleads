@@ -111,16 +111,34 @@ export default function CheckoutPage() {
     if (typeof window === 'undefined') return;
     const params = new URLSearchParams(window.location.search);
     const ref = params.get('reference') || params.get('trxref');
-    if (ref) {
+    if (ref && !processing) {
       setProcessing(true);
       toast.info('Verifying your payment...');
-      // Get email from localStorage or prompt
       const storedEmail = localStorage.getItem('sparkleads_checkout_email') || '';
-      verifyPayment(ref, storedEmail).then((ok) => {
-        if (ok) {
-          window.history.replaceState({}, '', '/checkout');
-        }
-      });
+
+      fetch('/api/paystack/verify', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ reference: ref, email: storedEmail }),
+      })
+        .then((res) => res.json())
+        .then((data) => {
+          if (data.success) {
+            toast.success('Payment successful! Welcome to SparkLeads!');
+            localStorage.removeItem('sparkleads_checkout_email');
+            // Use window.location for reliable redirect after page reload
+            window.location.href = '/dashboard';
+          } else {
+            toast.error('Verification failed', {
+              description: data.error || 'Please contact support.',
+            });
+            setProcessing(false);
+          }
+        })
+        .catch(() => {
+          toast.error('Verification failed. Please contact support.');
+          setProcessing(false);
+        });
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -138,7 +156,7 @@ export default function CheckoutPage() {
       if (data.success) {
         toast.success('Payment successful! Welcome to SparkLeads!');
         localStorage.removeItem('sparkleads_checkout_email');
-        router.push('/dashboard');
+        window.location.href = '/dashboard';
         return true;
       }
 
@@ -154,7 +172,7 @@ export default function CheckoutPage() {
     } finally {
       setProcessing(false);
     }
-  }, [router]);
+  }, []);
 
   const handlePayment = useCallback(async () => {
     if (!email.trim() || !email.includes('@')) {
