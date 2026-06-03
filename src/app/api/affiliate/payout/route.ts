@@ -26,7 +26,7 @@ export async function POST(request: NextRequest) {
 
   if (amount < 10) {
     return NextResponse.json(
-      { error: 'Minimum payout is $10' },
+      { error: 'Minimum payout is ₦13,300' },
       { status: 400 }
     );
   }

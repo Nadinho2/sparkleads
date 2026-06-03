@@ -91,7 +91,7 @@ export default function OGImage() {
         >
           Real phone numbers, emails, addresses instantly.
           <br />
-          One-time $15. No monthly fees.
+          One-time ₦19,900. No monthly fees.
         </div>
       </div>
     ),

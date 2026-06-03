@@ -66,7 +66,7 @@ const stats = [
   { value: '200+', label: 'leads per search' },
   { value: '60s', label: 'to first result' },
   { value: '195+', label: 'countries' },
-  { value: '$0', label: 'monthly fee' },
+  { value: '₦0', label: 'monthly fee' },
 ];
 
 const steps = [
@@ -159,7 +159,7 @@ const faqItems = [
   },
   {
     question: 'Is this a subscription?',
-    answer: 'No! It\'s a one-time payment of $15 for lifetime access. No monthly fees, no hidden charges, no upsells. Pay once, use forever.',
+    answer: 'No! It\'s a one-time payment of ₦19,900 for lifetime access. No monthly fees, no hidden charges, no upsells. Pay once, use forever.',
   },
   {
     question: 'Where does the data come from?',
@@ -323,7 +323,7 @@ export default function Home() {
                     href="#pricing"
                     className="px-4 py-2 text-sm font-medium text-white bg-primary rounded-lg hover:bg-primary/90 transition-colors"
                   >
-                    Get Access $15
+                    Get Access ₦19,900
                   </a>
                 </>
               )}
@@ -374,7 +374,7 @@ export default function Home() {
                       className="block w-full text-center px-4 py-2 text-sm font-medium text-white bg-primary rounded-lg hover:bg-primary/90"
                       onClick={() => setMobileMenuOpen(false)}
                     >
-                      Get Access $15
+                      Get Access ₦19,900
                     </a>
                   </>
                 )}
@@ -718,8 +718,8 @@ export default function Home() {
 
                   <div className="text-center mt-4 mb-8">
                     <div className="flex items-center justify-center gap-3 mb-2">
-                      <span className="text-2xl text-muted line-through">$45</span>
-                      <span className="text-5xl font-bold text-text">$15</span>
+                      <span className="text-2xl text-muted line-through">₦59,700</span>
+                      <span className="text-5xl font-bold text-text">₦19,900</span>
                     </div>
                     <p className="text-sm text-muted">One-time payment &bull; Lifetime access</p>
                   </div>
@@ -737,7 +737,7 @@ export default function Home() {
                     href="/checkout"
                     className="block w-full text-center px-6 py-4 text-lg font-semibold text-white bg-primary rounded-xl hover:bg-primary/90 transition-all hover:shadow-lg hover:shadow-primary/25 mb-4"
                   >
-                    Pay with Card — $15
+                    Pay with Card — ₦19,900
                   </Link>
 
                   <p className="text-center text-sm text-muted">
@@ -780,7 +780,7 @@ export default function Home() {
                   Earn 50% Commission
                 </h2>
                 <p className="text-lg text-muted mb-6">
-                  Share SparkLeads with your audience and earn $7.50 for every sale. It&apos;s that simple.
+                  Share SparkLeads with your audience and earn ₦9,950 for every sale. It&apos;s that simple.
                 </p>
                 <Link
                   href={isAuthenticated ? '/dashboard/affiliate' : '#pricing'}
@@ -797,7 +797,7 @@ export default function Home() {
                   <div className="text-xs sm:text-sm text-muted">Commission</div>
                 </div>
                 <div className="p-4 sm:p-6 rounded-xl bg-surface2 text-center">
-                  <div className="text-2xl sm:text-3xl font-bold text-primary mb-1">$7.50</div>
+                  <div className="text-2xl sm:text-3xl font-bold text-primary mb-1">₦9,950</div>
                   <div className="text-xs sm:text-sm text-muted">Per Referral</div>
                 </div>
               </div>

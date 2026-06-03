@@ -6,10 +6,10 @@ import { v4 as uuidv4 } from 'uuid';
 export const runtime = 'nodejs';
 
 const CREDIT_PACKS: Record<string, { credits: number; amount: number; label: string }> = {
-  starter: { credits: 50, amount: 500, label: '50 Credits' },
-  growth: { credits: 150, amount: 1000, label: '150 Credits' },
-  pro: { credits: 500, amount: 2500, label: '500 Credits' },
-  mega: { credits: 1000, amount: 4500, label: '1000 Credits' },
+  starter: { credits: 50, amount: 660000, label: '50 Credits' },    // ₦6,600 in kobo
+  growth: { credits: 150, amount: 1330000, label: '150 Credits' },   // ₦13,300 in kobo
+  pro: { credits: 500, amount: 3320000, label: '500 Credits' },      // ₦33,200 in kobo
+  mega: { credits: 1000, amount: 5970000, label: '1000 Credits' },   // ₦59,700 in kobo
 };
 
 export async function POST(request: NextRequest) {
@@ -89,7 +89,7 @@ export async function POST(request: NextRequest) {
       body: JSON.stringify({
         email: email.trim().toLowerCase(),
         amount: pack.amount,
-        currency: 'USD',
+        currency: 'NGN',
         reference,
         callback_url: `${origin}/dashboard/credits`,
         metadata: {

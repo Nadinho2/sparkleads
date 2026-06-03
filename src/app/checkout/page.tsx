@@ -194,7 +194,7 @@ export default function CheckoutPage() {
         const handler = window.PaystackPop.setup({
           key: paystackKey,
           email: email.trim().toLowerCase(),
-          amount: 1500,
+          amount: 1990000,
           ref: initData.reference,
           onClose: () => {
             setProcessing(false);
@@ -311,8 +311,8 @@ export default function CheckoutPage() {
 
               <div className="text-center mt-4 mb-8">
                 <div className="flex items-center justify-center gap-3 mb-2">
-                  <span className="text-2xl text-muted line-through">$45</span>
-                  <span className="text-5xl font-bold text-text">$15</span>
+                  <span className="text-2xl text-muted line-through">₦59,700</span>
+                  <span className="text-5xl font-bold text-text">₦19,900</span>
                 </div>
                 <p className="text-sm text-muted">One-time payment</p>
               </div>
@@ -385,7 +385,7 @@ export default function CheckoutPage() {
                     ) : (
                       <>
                         <CreditCard className="w-5 h-5" />
-                        Pay with Card — $15
+                        Pay with Card — ₦19,900
                       </>
                     )}
                   </button>

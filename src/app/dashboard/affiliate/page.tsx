@@ -56,7 +56,7 @@ export default function AffiliatePage() {
     : '';
 
   const tweetTemplate = affiliate
-    ? `I've been using @SparkLeads to find 200+ business leads in 60 seconds. Real phone numbers, emails, addresses — all for a one-time $15. No monthly fees. Check it out: ${referralLink}`
+    ? `I've been using @SparkLeads to find 200+ business leads in 60 seconds. Real phone numbers, emails, addresses — all for a one-time ₦19,900. No monthly fees. Check it out: ${referralLink}`
     : '';
 
   useEffect(() => {
@@ -299,13 +299,13 @@ export default function AffiliatePage() {
               <DollarSign className="w-6 h-6 text-primary" />
             </div>
             <h4 className="font-semibold text-text mb-1">Get paid</h4>
-            <p className="text-sm text-muted">Earn $7.50 for every sale. No cap on earnings.</p>
+            <p className="text-sm text-muted">Earn ₦9,950 for every sale. No cap on earnings.</p>
           </div>
         </div>
         <div className="mt-4 flex items-center gap-2">
           <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-primary/10 text-primary text-sm font-medium">
             <Zap className="w-4 h-4" />
-            50% commission = $7.50 per sale
+            50% commission = ₦9,950 per sale
           </span>
           <span className="inline-flex items-center px-3 py-1.5 rounded-full bg-success/10 text-success text-sm font-medium">
             No cap on earnings
@@ -410,7 +410,7 @@ export default function AffiliatePage() {
 
         {affiliate.total_earnings < 10 && !showPayoutForm && (
           <p className="mt-2 text-xs text-muted">
-            Minimum payout is $10. You need ${(10 - affiliate.total_earnings).toFixed(2)} more.
+            Minimum payout is ₦13,300. You need ${(10 - affiliate.total_earnings).toFixed(2)} more.
           </p>
         )}
       </div>

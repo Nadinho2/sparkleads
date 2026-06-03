@@ -240,13 +240,13 @@ export default function FreeTrialPage() {
         <div className="fixed bottom-0 left-0 right-0 z-30 bg-surface/95 backdrop-blur-xl border-t border-border">
           <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-3 flex items-center justify-between gap-4">
             <p className="text-sm text-muted hidden sm:block">
-              Get emails + unlimited searches — $15 lifetime
+              Get emails + unlimited searches — ₦19,900 lifetime
             </p>
             <Link
               href="/checkout"
               className="px-5 py-2.5 rounded-lg bg-primary text-white text-sm font-medium hover:bg-primary/90 transition-colors flex items-center gap-2 whitespace-nowrap"
             >
-              Get Full Access — $15 lifetime
+              Get Full Access — ₦19,900 lifetime
               <ArrowRight className="w-4 h-4" />
             </Link>
           </div>
@@ -416,7 +416,7 @@ function PaywallModal({
           href="/checkout"
           className="block w-full text-center px-6 py-4 text-lg font-semibold text-white bg-primary rounded-xl hover:bg-primary/90 transition-all hover:shadow-lg hover:shadow-primary/25 mb-3"
         >
-          {isFreeAccess ? 'Go to Dashboard →' : 'Get Full Access — $15 →'}
+          {isFreeAccess ? 'Go to Dashboard →' : 'Get Full Access — ₦19,900 →'}
         </Link>
 
         <p className="text-center text-sm text-muted">

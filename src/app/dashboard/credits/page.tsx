@@ -8,10 +8,10 @@ import { Spinner } from '@/components/ui';
 const isFreeAccess = process.env.NEXT_PUBLIC_FREE_ACCESS === 'true';
 
 const creditPacks = [
-  { id: 'starter', name: 'Starter', credits: 50, price: 5, currency: 'USD', description: '50 credits — great for testing', popular: false },
-  { id: 'growth', name: 'Growth', credits: 150, price: 10, currency: 'USD', description: '150 credits — best value', popular: true },
-  { id: 'pro', name: 'Pro', credits: 500, price: 25, currency: 'USD', description: '500 credits — for power users', popular: false },
-  { id: 'mega', name: 'Mega', credits: 1000, price: 45, currency: 'USD', description: '1000 credits — for agencies', popular: false },
+  { id: 'starter', name: 'Starter', credits: 50, price: 6600, currency: 'NGN', description: '50 credits — great for testing', popular: false },
+  { id: 'growth', name: 'Growth', credits: 150, price: 13300, currency: 'NGN', description: '150 credits — best value', popular: true },
+  { id: 'pro', name: 'Pro', credits: 500, price: 33200, currency: 'NGN', description: '500 credits — for power users', popular: false },
+  { id: 'mega', name: 'Mega', credits: 1000, price: 59700, currency: 'NGN', description: '1000 credits — for agencies', popular: false },
 ];
 
 interface Transaction {
@@ -251,7 +251,7 @@ export default function CreditsPage() {
               )}
               <h4 className="text-lg font-semibold text-text">{pack.name}</h4>
               <div className="mt-2">
-                <span className="text-3xl font-bold text-text">{isFreeAccess ? 'Free' : `$${pack.price}`}</span>
+                <span className="text-3xl font-bold text-text">{isFreeAccess ? 'Free' : `₦${pack.price.toLocaleString()}`}</span>
               </div>
               <p className="text-2xl font-bold text-primary mt-1">{pack.credits} credits</p>
               <p className="text-sm text-muted mt-2">{pack.description}</p>

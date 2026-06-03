@@ -54,7 +54,7 @@ const gettingStarted = [
     icon: CreditCard,
     title: 'Activate your account',
     steps: [
-      'Purchase SparkLeads from the checkout page ($15 one-time)',
+      'Purchase SparkLeads from the checkout page (₦19,900 one-time)',
       'Check your email for the activation link',
       'Click the link to activate your account',
       'You\'ll be redirected to the dashboard — ready to search',
@@ -67,7 +67,7 @@ const gettingStarted = [
       'After activation, go to the Affiliate page in your dashboard',
       'Copy your unique referral link',
       'Share it on social media, WhatsApp, or with friends',
-      'Earn $7.50 (50%) for every sale made through your link',
+      'Earn ₦9,950 (50%) for every sale made through your link',
     ],
   },
 ];
@@ -99,7 +99,7 @@ const faqSections = [
     items: [
       {
         q: 'Is this a subscription?',
-        a: 'No. SparkLeads is a one-time payment of $15 for lifetime access. No monthly fees, no hidden charges.',
+        a: 'No. SparkLeads is a one-time payment of ₦19,900 for lifetime access. No monthly fees, no hidden charges.',
       },
       {
         q: 'What payment methods do you accept?',
@@ -132,7 +132,7 @@ const faqSections = [
       },
       {
         q: 'How do affiliate payouts work?',
-        a: 'Once you reach $10 in earnings, you can request a payout from the Affiliate page. We process payouts within 24-48 hours to your bank account.',
+        a: 'Once you reach ₦13,300 in earnings, you can request a payout from the Affiliate page. We process payouts within 24-48 hours to your bank account.',
       },
     ],
   },

@@ -17,7 +17,7 @@ export const metadata: Metadata = {
     template: '%s | SparkLeads',
   },
   description:
-    'Type any business type and city. Get real phone numbers, emails, addresses instantly. Start outreach today. One-time $15. No monthly fees.',
+    'Type any business type and city. Get real phone numbers, emails, addresses instantly. Start outreach today. One-time ₦19,900. No monthly fees.',
   keywords: [
     'business leads',
     'lead generation',
@@ -40,14 +40,14 @@ export const metadata: Metadata = {
     siteName: 'SparkLeads',
     title: 'SparkLeads — Find 200+ Business Leads in 60 Seconds',
     description:
-      'Type any business type and city. Get real phone numbers, emails, addresses instantly. One-time $15.',
+      'Type any business type and city. Get real phone numbers, emails, addresses instantly. One-time ₦19,900.',
     images: ['/opengraph-image'],
   },
   twitter: {
     card: 'summary_large_image',
     title: 'SparkLeads — Find 200+ Business Leads in 60 Seconds',
     description:
-      'Type any business type and city. Get real phone numbers, emails, addresses instantly. One-time $15.',
+      'Type any business type and city. Get real phone numbers, emails, addresses instantly. One-time ₦19,900.',
     images: ['/opengraph-image'],
   },
   robots: {

@@ -103,7 +103,7 @@ export default function LoginPage() {
           <p className="text-sm text-muted">
             Don&apos;t have an account?{' '}
             <Link href="/#pricing" className="text-primary hover:underline font-medium">
-              Get access for $15
+              Get access for ₦19,900
             </Link>
           </p>
           <p className="text-xs text-muted">

@@ -44,8 +44,8 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'Valid email is required' }, { status: 400 });
   }
 
-  const amount = 1500; // $15 USD = 1500 cents
-  const currency = 'USD';
+  const amount = 1990000; // ₦19,900 in kobo
+  const currency = 'NGN';
   const reference = `sparkleads_${uuidv4().slice(0, 12)}_${Date.now()}`;
 
   // Use the request origin for callback URL (works in both localhost and production)
