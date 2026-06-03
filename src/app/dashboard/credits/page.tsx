@@ -90,6 +90,7 @@ export default function CreditsPage() {
     const params = new URLSearchParams(window.location.search);
     const ref = params.get('reference');
     if (ref) {
+      toast.info('Verifying your payment...');
       fetch('/api/credits/verify', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -98,17 +99,19 @@ export default function CreditsPage() {
         .then((r) => r.json())
         .then((data) => {
           if (data.success) {
-            setBalance(data.balance);
+            setBalance(Number(data.balance));
             toast.success(`${data.credits_added} credits added to your account!`);
-            loadCredits();
             window.history.replaceState({}, '', '/dashboard/credits');
+            // Delay reload to let Supabase propagate
+            setTimeout(() => loadCredits(), 1000);
           } else {
             toast.error(data.error || 'Payment verification failed');
           }
         })
         .catch(() => toast.error('Failed to verify payment'));
     }
-  }, [loadCredits]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const usageStats = transactions.filter((tx) => tx.amount < 0);
   const totalUsed = usageStats.reduce((sum, tx) => sum + Math.abs(tx.amount), 0);
