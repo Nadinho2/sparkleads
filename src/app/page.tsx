@@ -319,12 +319,12 @@ export default function Home() {
                   >
                     Log in
                   </Link>
-                  <a
-                    href="#pricing"
+                  <Link
+                    href="/freetrial"
                     className="px-4 py-2 text-sm font-medium text-white bg-primary rounded-lg hover:bg-primary/90 transition-colors"
                   >
-                    Get Access ₦19,900
-                  </a>
+                    Sign Up Free
+                  </Link>
                 </>
               )}
             </div>
@@ -369,13 +369,13 @@ export default function Home() {
                     >
                       Log in
                     </Link>
-                    <a
-                      href="#pricing"
+                    <Link
+                      href="/freetrial"
                       className="block w-full text-center px-4 py-2 text-sm font-medium text-white bg-primary rounded-lg hover:bg-primary/90"
                       onClick={() => setMobileMenuOpen(false)}
                     >
-                      Get Access ₦19,900
-                    </a>
+                      Sign Up Free
+                    </Link>
                   </>
                 )}
               </div>
@@ -416,13 +416,13 @@ export default function Home() {
               </Link>
             ) : (
               <>
-                <a
-                  href="#pricing"
+                <Link
+                  href="/freetrial"
                   className="px-8 py-3.5 text-base font-medium text-white bg-primary rounded-xl hover:bg-primary/90 transition-all hover:shadow-lg hover:shadow-primary/25 flex items-center gap-2"
                 >
                   Try it free
                   <ArrowRight className="w-5 h-5" />
-                </a>
+                </Link>
                 <a
                   href="#how-it-works"
                   className="px-8 py-3.5 text-base font-medium text-muted hover:text-text border border-border rounded-xl hover:bg-surface2 transition-colors"
@@ -494,10 +494,10 @@ export default function Home() {
                   {isAuthenticated ? 'Search live from your dashboard →' : 'Try the live version below →'}
                 </p>
                 <Link
-                  href={isAuthenticated ? '/dashboard' : '#pricing'}
+                  href={isAuthenticated ? '/dashboard' : '/freetrial'}
                   className="inline-flex items-center gap-2 px-6 py-3 text-sm font-medium text-white bg-primary rounded-xl hover:bg-primary/90 transition-colors"
                 >
-                  {isAuthenticated ? 'Go to Dashboard' : 'Get Full Access'}
+                  {isAuthenticated ? 'Go to Dashboard' : 'Try Free Now'}
                   <ArrowRight className="w-4 h-4" />
                 </Link>
               </div>
@@ -734,10 +734,10 @@ export default function Home() {
                   </ul>
 
                   <Link
-                    href="/checkout"
+                    href="/freetrial"
                     className="block w-full text-center px-6 py-4 text-lg font-semibold text-white bg-primary rounded-xl hover:bg-primary/90 transition-all hover:shadow-lg hover:shadow-primary/25 mb-4"
                   >
-                    Pay with Card — ₦19,900
+                    Sign Up Free
                   </Link>
 
                   <p className="text-center text-sm text-muted">
@@ -783,7 +783,7 @@ export default function Home() {
                   Share SparkLeads with your audience and earn ₦9,950 for every sale. It&apos;s that simple.
                 </p>
                 <Link
-                  href={isAuthenticated ? '/dashboard/affiliate' : '#pricing'}
+                  href={isAuthenticated ? '/dashboard/affiliate' : '/freetrial'}
                   className="inline-flex items-center gap-2 px-6 py-3 text-base font-medium text-white bg-primary rounded-xl hover:bg-primary/90 transition-colors"
                 >
                   {isAuthenticated ? 'Open Affiliate Dashboard' : 'Join Affiliate Program'}
@@ -869,13 +869,13 @@ export default function Home() {
                 </Link>
               ) : (
                 <>
-                  <a
-                    href="#pricing"
+                  <Link
+                    href="/freetrial"
                     className="w-full sm:w-auto px-8 py-3.5 text-base font-medium text-white bg-primary rounded-xl hover:bg-primary/90 transition-all hover:shadow-lg hover:shadow-primary/25 flex items-center justify-center gap-2"
                   >
                     Get Started Now
                     <ArrowRight className="w-5 h-5" />
-                  </a>
+                  </Link>
                   <a
                     href="#how-it-works"
                     className="w-full sm:w-auto px-8 py-3.5 text-base font-medium text-muted hover:text-text border border-border rounded-xl hover:bg-surface2 transition-colors text-center"
