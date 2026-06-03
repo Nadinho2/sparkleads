@@ -89,7 +89,7 @@ export async function POST(request: NextRequest) {
     .eq('user_token', userToken)
     .single();
 
-  if (!credits || credits.balance < creditCost) {
+  if (!credits || Number(credits.balance) < creditCost) {
     return NextResponse.json({ error: 'insufficient_credits', required: creditCost, available: credits?.balance || 0 }, { status: 402 });
   }
 
@@ -210,7 +210,7 @@ export async function POST(request: NextRequest) {
     }
   }
 
-  const newBalance = credits.balance - creditCost;
+  const newBalance = Number(credits.balance) - creditCost;
   await supabase
     .from('user_credits')
     .update({ balance: newBalance, updated_at: new Date().toISOString() })

@@ -30,14 +30,14 @@ export async function POST(request: NextRequest) {
     .eq('user_token', userToken)
     .single();
 
-  if (!credits || credits.balance < 1) {
+  if (!credits || Number(credits.balance) < 1) {
     return NextResponse.json(
-      { error: 'insufficient_credits', balance: credits?.balance ?? 0 },
+      { error: 'insufficient_credits', balance: Number(credits?.balance ?? 0) },
       { status: 403 }
     );
   }
 
-  const newBalance = credits.balance - 1;
+  const newBalance = Number(credits.balance) - 1;
 
   await supabase
     .from('user_credits')

@@ -64,7 +64,7 @@ export async function POST(request: NextRequest) {
       varCount
     );
 
-    const newBalance = credits.balance - creditCost;
+    const newBalance = Number(credits.balance) - creditCost;
     await supabase
       .from('user_credits')
       .update({ balance: newBalance, updated_at: new Date().toISOString() })

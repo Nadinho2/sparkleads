@@ -39,8 +39,8 @@ export async function POST(request: NextRequest) {
       .eq('user_token', userToken)
       .single();
 
-    const newBalance = (existing?.balance || 0) + pack.credits;
-    const newTotalPurchased = (existing?.total_purchased || 0) + pack.credits;
+    const newBalance = Number(existing?.balance || 0) + pack.credits;
+    const newTotalPurchased = Number(existing?.total_purchased || 0) + pack.credits;
 
     if (existing) {
       await supabase

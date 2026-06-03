@@ -83,7 +83,7 @@ export async function POST(request: NextRequest) {
   try {
     const plan = await generateAdPlan({ ...body, resolvedLocation, businessContext });
 
-    const newBalance = credits.balance - 5;
+    const newBalance = Number(credits.balance) - 5;
     await supabase
       .from('user_credits')
       .update({ balance: newBalance, updated_at: new Date().toISOString() })

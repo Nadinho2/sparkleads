@@ -70,7 +70,7 @@ export async function POST(request: NextRequest) {
       approach: approach || platformResult.variations[0].approach,
     };
 
-    const newBalance = credits.balance - 1;
+    const newBalance = Number(credits.balance) - 1;
     await supabase
       .from('user_credits')
       .update({ balance: newBalance, updated_at: new Date().toISOString() })
