@@ -72,14 +72,7 @@ export default function CreditsPage() {
           toast.error(data.error || 'Failed to add credits');
         }
       } else {
-        const email = localStorage.getItem('sparkleads_email') || '';
-        if (!email) {
-          toast.error('Email required for payment. Please set your email in settings.');
-          setPurchasing(null);
-          return;
-        }
-
-        const res = await fetch(`/api/credits/purchase?email=${encodeURIComponent(email)}`, {
+        const res = await fetch('/api/credits/purchase', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ pack: packId }),

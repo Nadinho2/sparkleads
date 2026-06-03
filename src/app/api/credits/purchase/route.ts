@@ -66,7 +66,21 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ success: true, balance: newBalance, free: true });
   }
 
-  const email = request.nextUrl.searchParams.get('email') || '';
+  let email = request.nextUrl.searchParams.get('email') || '';
+
+  // If no email provided, look up from the user's activation record
+  if (!email) {
+    const { data: activation } = await supabase
+      .from('activations')
+      .select('email')
+      .eq('user_token', userToken)
+      .eq('used', true)
+      .limit(1)
+      .single();
+
+    email = activation?.email || '';
+  }
+
   if (!email) {
     return NextResponse.json({ error: 'Email is required for paid purchases' }, { status: 400 });
   }
