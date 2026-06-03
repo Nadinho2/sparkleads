@@ -82,7 +82,7 @@ export default function FreeTrialPage() {
 
   const handleSearch = useCallback(async () => {
     if (!query.trim() || isSearching) return;
-    if (getSearchCount() >= 2) {
+    if (getSearchCount() >= 3) {
       setShowPaywall(true);
       return;
     }
@@ -92,7 +92,7 @@ export default function FreeTrialPage() {
     const newCount = incrementSearchCount();
     setSearchCount(newCount);
 
-    if (newCount >= 2) {
+    if (newCount >= 3) {
       setShowPaywall(true);
     }
   }, [query, isSearching, search]);
@@ -108,7 +108,7 @@ export default function FreeTrialPage() {
     [handleSearch]
   );
 
-  const remaining = Math.max(0, 2 - searchCount);
+  const remaining = Math.max(0, 3 - searchCount);
 
   return (
     <main className="min-h-screen bg-background text-text">

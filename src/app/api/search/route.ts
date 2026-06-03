@@ -79,7 +79,7 @@ export async function POST(request: NextRequest) {
       .eq('session_id', sessionId)
       .single();
 
-    if (trialRecord && trialRecord.count >= 2) {
+    if (trialRecord && trialRecord.count >= 3) {
       return new Response(JSON.stringify({ error: 'free_limit_reached' }), {
         status: 403,
         headers: { 'Content-Type': 'application/json' },
