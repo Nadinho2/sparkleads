@@ -44,8 +44,12 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'Valid email is required' }, { status: 400 });
   }
 
-  const amount = 1500;
+  const amount = 1500; // $15 USD = 1500 cents
+  const currency = 'USD';
   const reference = `sparkleads_${uuidv4().slice(0, 12)}_${Date.now()}`;
+
+  // Use the request origin for callback URL (works in both localhost and production)
+  const origin = request.headers.get('origin') || process.env.NEXT_PUBLIC_APP_URL || '';
 
   try {
     const paystackRes = await fetch(
@@ -59,8 +63,9 @@ export async function POST(request: NextRequest) {
         body: JSON.stringify({
           email: email.trim().toLowerCase(),
           amount,
+          currency,
           reference,
-          callback_url: `${process.env.NEXT_PUBLIC_APP_URL}/checkout`,
+          callback_url: `${origin}/checkout`,
           metadata: {
             referral_code: referral_code || null,
           },

@@ -77,6 +77,7 @@ export async function POST(request: NextRequest) {
   }
 
   const reference = `credits_${uuidv4().slice(0, 12)}_${Date.now()}`;
+  const origin = request.headers.get('origin') || process.env.NEXT_PUBLIC_APP_URL || '';
 
   try {
     const paystackRes = await fetch('https://api.paystack.co/transaction/initialize', {
@@ -88,8 +89,9 @@ export async function POST(request: NextRequest) {
       body: JSON.stringify({
         email: email.trim().toLowerCase(),
         amount: pack.amount,
+        currency: 'USD',
         reference,
-        callback_url: `${process.env.NEXT_PUBLIC_APP_URL}/dashboard/credits`,
+        callback_url: `${origin}/dashboard/credits`,
         metadata: {
           type: 'credit_topup',
           pack: body.pack,
