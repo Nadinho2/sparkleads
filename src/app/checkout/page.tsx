@@ -254,7 +254,7 @@ export default function CheckoutPage() {
       setProcessing(false);
       toast.error('Something went wrong. Please try again.');
     }
-  }, [email, referralCode, scriptLoaded, verifyPayment]);
+  }, [email, password, referralCode, scriptLoaded, verifyPayment]);
 
   if (isFreeAccess) {
     return (
