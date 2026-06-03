@@ -95,6 +95,7 @@ export default function CheckoutPage() {
     script.src = 'https://js.paystack.co/v1/inline.js';
     script.async = true;
     script.onload = () => setScriptLoaded(true);
+    script.onerror = () => setScriptLoaded(false);
     document.body.appendChild(script);
 
     return () => {
@@ -103,6 +104,25 @@ export default function CheckoutPage() {
         existing.remove();
       }
     };
+  }, []);
+
+  // Handle Paystack redirect callback (when inline popup redirects back)
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const params = new URLSearchParams(window.location.search);
+    const ref = params.get('reference') || params.get('trxref');
+    if (ref) {
+      setProcessing(true);
+      toast.info('Verifying your payment...');
+      // Get email from localStorage or prompt
+      const storedEmail = localStorage.getItem('sparkleads_checkout_email') || '';
+      verifyPayment(ref, storedEmail).then((ok) => {
+        if (ok) {
+          window.history.replaceState({}, '', '/checkout');
+        }
+      });
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const verifyPayment = useCallback(async (reference: string, customerEmail: string) => {
@@ -143,18 +163,12 @@ export default function CheckoutPage() {
       return;
     }
 
-    if (!scriptLoaded || !window.PaystackPop) {
-      toast.error('Payment system is loading. Please try again.');
-      return;
-    }
-
     const paystackKey = process.env.NEXT_PUBLIC_PAYSTACK_PUBLIC_KEY;
-    if (!paystackKey) {
-      toast.error('Payment is not configured. Please contact support.');
-      return;
-    }
 
     setProcessing(true);
+
+    // Store email for redirect callback verification
+    localStorage.setItem('sparkleads_checkout_email', email.trim().toLowerCase());
 
     try {
       const initRes = await fetch('/api/paystack/initialize', {
@@ -176,24 +190,32 @@ export default function CheckoutPage() {
 
       referenceRef.current = initData.reference;
 
-      const handler = window.PaystackPop.setup({
-        key: paystackKey,
-        email: email.trim().toLowerCase(),
-        amount: 1500,
-        ref: initData.reference,
-        onClose: () => {
-          setProcessing(false);
-          toast.info('Payment cancelled', {
-            description: 'You can retry when you\'re ready.',
-          });
-        },
-        callback: (response: { reference: string }) => {
-          toast.success('Verifying payment...');
-          verifyPayment(response.reference, email.trim().toLowerCase());
-        },
-      });
-
-      handler.openIframe();
+      // Try inline popup first
+      if (scriptLoaded && window.PaystackPop && paystackKey) {
+        const handler = window.PaystackPop.setup({
+          key: paystackKey,
+          email: email.trim().toLowerCase(),
+          amount: 1500,
+          ref: initData.reference,
+          onClose: () => {
+            setProcessing(false);
+            toast.info('Payment cancelled', {
+              description: 'You can retry when you\'re ready.',
+            });
+          },
+          callback: (response: { reference: string }) => {
+            toast.success('Verifying payment...');
+            verifyPayment(response.reference, email.trim().toLowerCase());
+          },
+        });
+        handler.openIframe();
+      } else if (initData.authorization_url) {
+        // Fallback: redirect to Paystack hosted page
+        window.location.href = initData.authorization_url;
+      } else {
+        setProcessing(false);
+        toast.error('Payment system not available. Please check your configuration.');
+      }
     } catch {
       setProcessing(false);
       toast.error('Something went wrong. Please try again.');
@@ -353,7 +375,7 @@ export default function CheckoutPage() {
                 <div className="pt-2">
                   <button
                     onClick={handlePayment}
-                    disabled={processing || !email.trim() || !scriptLoaded}
+                    disabled={processing || !email.trim()}
                     className="w-full px-6 py-4 rounded-xl bg-primary text-white text-lg font-semibold hover:bg-primary/90 transition-all hover:shadow-lg hover:shadow-primary/25 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
                   >
                     {processing ? (

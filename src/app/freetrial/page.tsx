@@ -243,7 +243,7 @@ export default function FreeTrialPage() {
               Get emails + unlimited searches — $15 lifetime
             </p>
             <Link
-              href="/#pricing"
+              href="/checkout"
               className="px-5 py-2.5 rounded-lg bg-primary text-white text-sm font-medium hover:bg-primary/90 transition-colors flex items-center gap-2 whitespace-nowrap"
             >
               Get Full Access — $15 lifetime
