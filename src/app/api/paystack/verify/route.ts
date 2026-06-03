@@ -46,44 +46,93 @@ export async function POST(request: NextRequest) {
     }
 
     const supabase = createSupabaseAdmin();
+    const customerEmail = (email || paystackData.data.customer?.email || '').trim().toLowerCase();
+    const referralCode = paystackData.data.metadata?.referral_code || null;
 
+    // Check if this email already has an activated account
+    const { data: existingUser } = await supabase
+      .from('activations')
+      .select('user_token')
+      .eq('email', customerEmail)
+      .eq('used', true)
+      .limit(1)
+      .single();
+
+    if (existingUser?.user_token) {
+      // Already activated — just set cookie and return
+      const response = NextResponse.json({
+        success: true,
+        message: 'Account already activated',
+      });
+      response.cookies.set('sparkleads_token', existingUser.user_token, {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === 'production',
+        sameSite: 'lax',
+        maxAge: 60 * 60 * 24 * 365,
+        path: '/',
+      });
+      return response;
+    }
+
+    // New user — activate directly
+    const userToken = uuidv4();
+
+    // Check if there's a pending activation record for this reference
     const { data: existingActivation } = await supabase
       .from('activations')
       .select('*')
       .eq('token', reference)
       .single();
 
-    if (existingActivation && existingActivation.used) {
-      return NextResponse.json({
-        success: true,
-        message: 'Payment already verified. Check your email for the activation link.',
-      });
-    }
-
-    const activationToken = uuidv4();
-    const customerEmail = (email || paystackData.data.customer?.email || '').trim().toLowerCase();
-    const referralCode = paystackData.data.metadata?.referral_code || null;
-
     if (existingActivation) {
+      // Update existing record to activated
       await supabase
         .from('activations')
         .update({
-          token: activationToken,
+          used: true,
+          user_token: userToken,
           email: customerEmail,
-          used: false,
           affiliate_ref: referralCode,
         })
         .eq('id', existingActivation.id);
     } else {
+      // Create new activated record
       await supabase.from('activations').insert({
         id: uuidv4(),
-        token: activationToken,
+        token: userToken,
         email: customerEmail,
-        used: false,
+        used: true,
+        user_token: userToken,
         affiliate_ref: referralCode,
       });
     }
 
+    // Create user credits (20 welcome credits)
+    await supabase.from('user_credits').insert({
+      user_token: userToken,
+      balance: 20,
+      total_purchased: 0,
+    });
+
+    await supabase.from('credit_transactions').insert({
+      user_token: userToken,
+      type: 'bonus',
+      amount: 20,
+      description: 'Welcome bonus — 20 free outreach credits',
+      balance_after: 20,
+    });
+
+    // Create affiliate record
+    const referralCodeGen = userToken.slice(0, 8);
+    await supabase.from('affiliates').insert({
+      id: uuidv4(),
+      user_token: userToken,
+      referral_code: referralCodeGen,
+      total_referrals: 0,
+      total_earnings: 0,
+    });
+
+    // Track affiliate referral if applicable
     if (referralCode) {
       const { data: affiliate } = await supabase
         .from('affiliates')
@@ -102,6 +151,7 @@ export async function POST(request: NextRequest) {
       }
     }
 
+    // Also send activation email as backup (non-blocking)
     try {
       await fetch(
         `${process.env.NEXT_PUBLIC_APP_URL}/api/send-activation-email`,
@@ -110,18 +160,28 @@ export async function POST(request: NextRequest) {
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             email: customerEmail,
-            token: activationToken,
+            token: userToken,
           }),
         }
       );
-    } catch (emailError) {
-      console.error('Failed to send activation email:', emailError);
+    } catch {
+      // Email failure is non-critical — user is already activated
     }
 
-    return NextResponse.json({
+    // Set auth cookie and return success
+    const response = NextResponse.json({
       success: true,
-      message: 'Check your email for the activation link',
+      message: 'Account activated successfully',
     });
+    response.cookies.set('sparkleads_token', userToken, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'lax',
+      maxAge: 60 * 60 * 24 * 365,
+      path: '/',
+    });
+
+    return response;
   } catch (error) {
     console.error('Paystack verify error:', error);
     return NextResponse.json(

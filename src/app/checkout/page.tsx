@@ -136,10 +136,9 @@ export default function CheckoutPage() {
       const data = await response.json();
 
       if (data.success) {
-        toast.success('Payment successful!', {
-          description: 'Check your email for the activation link.',
-          duration: 8000,
-        });
+        toast.success('Payment successful! Welcome to SparkLeads!');
+        localStorage.removeItem('sparkleads_checkout_email');
+        router.push('/dashboard');
         return true;
       }
 
@@ -155,7 +154,7 @@ export default function CheckoutPage() {
     } finally {
       setProcessing(false);
     }
-  }, []);
+  }, [router]);
 
   const handlePayment = useCallback(async () => {
     if (!email.trim() || !email.includes('@')) {
