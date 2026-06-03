@@ -11,6 +11,7 @@ import {
   Loader2,
   ArrowRight,
   Mail,
+  Lock,
   Tag,
 } from 'lucide-react';
 import { toast } from 'sonner';
@@ -49,6 +50,7 @@ const isFreeAccess = process.env.NEXT_PUBLIC_FREE_ACCESS === 'true';
 export default function CheckoutPage() {
   const router = useRouter();
   const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
   const [referralCode, setReferralCode] = useState('');
   const [processing, setProcessing] = useState(false);
   const [scriptLoaded, setScriptLoaded] = useState(false);
@@ -62,12 +64,17 @@ export default function CheckoutPage() {
       return;
     }
 
+    if (!password.trim() || password.trim().length < 6) {
+      toast.error('Password must be at least 6 characters');
+      return;
+    }
+
     setActivating(true);
     try {
       const res = await fetch('/api/activate-free', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email: email.trim().toLowerCase() }),
+        body: JSON.stringify({ email: email.trim().toLowerCase(), password: password.trim() }),
       });
 
       if (res.ok) {
@@ -115,18 +122,19 @@ export default function CheckoutPage() {
       setProcessing(true);
       toast.info('Verifying your payment...');
       const storedEmail = localStorage.getItem('sparkleads_checkout_email') || '';
+      const storedPassword = localStorage.getItem('sparkleads_checkout_password') || '';
 
       fetch('/api/paystack/verify', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ reference: ref, email: storedEmail }),
+        body: JSON.stringify({ reference: ref, email: storedEmail, password: storedPassword }),
       })
         .then((res) => res.json())
         .then((data) => {
           if (data.success) {
             toast.success('Payment successful! Welcome to SparkLeads!');
             localStorage.removeItem('sparkleads_checkout_email');
-            // Use window.location for reliable redirect after page reload
+            localStorage.removeItem('sparkleads_checkout_password');
             window.location.href = '/dashboard';
           } else {
             toast.error('Verification failed', {
@@ -143,12 +151,12 @@ export default function CheckoutPage() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const verifyPayment = useCallback(async (reference: string, customerEmail: string) => {
+  const verifyPayment = useCallback(async (reference: string, customerEmail: string, customerPassword?: string) => {
     try {
       const response = await fetch('/api/paystack/verify', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ reference, email: customerEmail }),
+        body: JSON.stringify({ reference, email: customerEmail, password: customerPassword }),
       });
 
       const data = await response.json();
@@ -180,12 +188,18 @@ export default function CheckoutPage() {
       return;
     }
 
+    if (!password.trim() || password.trim().length < 6) {
+      toast.error('Password must be at least 6 characters');
+      return;
+    }
+
     const paystackKey = process.env.NEXT_PUBLIC_PAYSTACK_PUBLIC_KEY;
 
     setProcessing(true);
 
-    // Store email for redirect callback verification
+    // Store email and password for redirect callback verification
     localStorage.setItem('sparkleads_checkout_email', email.trim().toLowerCase());
+    localStorage.setItem('sparkleads_checkout_password', password.trim());
 
     try {
       const initRes = await fetch('/api/paystack/initialize', {
@@ -221,9 +235,9 @@ export default function CheckoutPage() {
             });
           },
           callback: (response: { reference: string }) => {
-            toast.success('Verifying payment...');
-            verifyPayment(response.reference, email.trim().toLowerCase());
-          },
+          toast.success('Verifying payment...');
+          verifyPayment(response.reference, email.trim().toLowerCase(), password.trim());
+        },
         });
         handler.openIframe();
       } else if (initData.authorization_url) {
@@ -371,6 +385,25 @@ export default function CheckoutPage() {
                   />
                   <p className="mt-1.5 text-xs text-muted">
                     We&apos;ll send your activation link to this email
+                  </p>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-text mb-2">
+                    <Lock className="w-4 h-4 inline mr-1.5" />
+                    Create Password
+                  </label>
+                  <input
+                    type="password"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    placeholder="Min. 6 characters"
+                    required
+                    minLength={6}
+                    className="w-full px-4 py-3 rounded-xl border border-border bg-surface2 text-text placeholder:text-muted focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition-colors"
+                  />
+                  <p className="mt-1.5 text-xs text-muted">
+                    You&apos;ll use this to log in to your account
                   </p>
                 </div>
 

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createSupabaseAdmin } from '@/lib/supabase';
+import { hashPassword } from '@/lib/password';
 import { v4 as uuidv4 } from 'uuid';
 
 export const runtime = 'nodejs';
@@ -13,14 +14,14 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  let body: { reference?: string; email?: string };
+  let body: { reference?: string; email?: string; password?: string };
   try {
     body = await request.json();
   } catch {
     return NextResponse.json({ error: 'Invalid request body' }, { status: 400 });
   }
 
-  const { reference, email } = body;
+  const { reference, email, password } = body;
 
   if (!reference) {
     return NextResponse.json({ error: 'Reference is required' }, { status: 400 });
@@ -84,27 +85,35 @@ export async function POST(request: NextRequest) {
       .eq('token', reference)
       .single();
 
+    const passwordHash = password ? await hashPassword(password) : null;
+
     if (existingActivation) {
       // Update existing record to activated
+      const updateData: Record<string, unknown> = {
+        used: true,
+        user_token: userToken,
+        email: customerEmail,
+        affiliate_ref: referralCode,
+      };
+      if (passwordHash) updateData.password_hash = passwordHash;
+
       await supabase
         .from('activations')
-        .update({
-          used: true,
-          user_token: userToken,
-          email: customerEmail,
-          affiliate_ref: referralCode,
-        })
+        .update(updateData)
         .eq('id', existingActivation.id);
     } else {
       // Create new activated record
-      await supabase.from('activations').insert({
+      const insertData: Record<string, unknown> = {
         id: uuidv4(),
         token: userToken,
         email: customerEmail,
         used: true,
         user_token: userToken,
         affiliate_ref: referralCode,
-      });
+      };
+      if (passwordHash) insertData.password_hash = passwordHash;
+
+      await supabase.from('activations').insert(insertData);
     }
 
     // Create user credits (20 welcome credits)

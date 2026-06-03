@@ -1,62 +1,71 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createSupabaseAdmin } from '@/lib/supabase';
-import { setTokenCookie } from '@/lib/auth';
+import { verifyPassword } from '@/lib/password';
 
 export const runtime = 'nodejs';
 
 export async function POST(request: NextRequest) {
-  let body: { email?: string };
+  let body: { email?: string; password?: string };
   try {
     body = await request.json();
   } catch {
     return NextResponse.json({ error: 'Invalid request body' }, { status: 400 });
   }
 
-  const { email } = body;
+  const email = body.email?.trim().toLowerCase();
+  const password = body.password?.trim();
 
-  if (!email || typeof email !== 'string') {
+  if (!email) {
     return NextResponse.json({ error: 'Email is required' }, { status: 400 });
   }
 
-  const normalizedEmail = email.trim().toLowerCase();
+  if (!password) {
+    return NextResponse.json({ error: 'Password is required' }, { status: 400 });
+  }
+
   const supabase = createSupabaseAdmin();
 
   const { data: activation } = await supabase
     .from('activations')
     .select('*')
-    .eq('email', normalizedEmail)
+    .eq('email', email)
     .eq('used', true)
-    .order('created_at', { ascending: false })
     .limit(1)
     .single();
 
-  if (!activation) {
+  if (!activation?.user_token) {
     return NextResponse.json(
-      { error: 'No account found with this email' },
+      { error: 'Account not found. Please purchase access first.' },
       { status: 404 }
     );
   }
 
-  const userToken = activation.user_token;
-
-  if (!userToken) {
-    return NextResponse.json(
-      {
-        error:
-          'Your account was created before multi-device login was available. Please activate again using your original activation link, or contact support.',
-      },
-      { status: 400 }
-    );
+  // Verify password if hash exists
+  if (activation.password_hash) {
+    const isValid = await verifyPassword(password, activation.password_hash);
+    if (!isValid) {
+      return NextResponse.json(
+        { error: 'Incorrect password' },
+        { status: 401 }
+      );
+    }
+  } else {
+    // Legacy account without password — hash the provided password for future logins
+    const { hashPassword } = await import('@/lib/password');
+    const passwordHash = await hashPassword(password);
+    await supabase
+      .from('activations')
+      .update({ password_hash: passwordHash })
+      .eq('id', activation.id);
   }
 
   const response = NextResponse.json({ success: true });
-  const cookie = setTokenCookie(userToken);
-  response.cookies.set(cookie.name, cookie.value, {
-    httpOnly: cookie.httpOnly,
-    secure: cookie.secure,
-    sameSite: cookie.sameSite,
-    maxAge: cookie.maxAge,
-    path: cookie.path,
+  response.cookies.set('sparkleads_token', activation.user_token, {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === 'production',
+    sameSite: 'lax',
+    maxAge: 60 * 60 * 24 * 365,
+    path: '/',
   });
 
   return response;

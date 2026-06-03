@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createSupabaseAdmin } from '@/lib/supabase';
+import { hashPassword } from '@/lib/password';
 import { v4 as uuidv4 } from 'uuid';
 
 export const runtime = 'nodejs';
@@ -9,7 +10,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'Not available' }, { status: 403 });
   }
 
-  let body: { email?: string };
+  let body: { email?: string; password?: string };
   try {
     body = await request.json();
   } catch {
@@ -17,6 +18,7 @@ export async function POST(request: NextRequest) {
   }
 
   const email = body.email?.trim().toLowerCase();
+  const password = body.password?.trim();
   if (!email || !email.includes('@')) {
     return NextResponse.json({ error: 'A valid email is required' }, { status: 400 });
   }
@@ -46,13 +48,18 @@ export async function POST(request: NextRequest) {
   const userToken = uuidv4();
   const referralCode = userToken.slice(0, 8);
 
-  await supabase.from('activations').insert({
+  const passwordHash = password ? await hashPassword(password) : null;
+
+  const activationRecord: Record<string, unknown> = {
     id: uuidv4(),
     token: userToken,
     email,
     used: true,
     user_token: userToken,
-  });
+  };
+  if (passwordHash) activationRecord.password_hash = passwordHash;
+
+  await supabase.from('activations').insert(activationRecord);
 
   await supabase.from('affiliates').insert({
     id: uuidv4(),
