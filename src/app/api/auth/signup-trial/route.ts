@@ -1,11 +1,27 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createSupabaseAdmin } from '@/lib/supabase';
 import { hashPassword } from '@/lib/password';
+import { checkRateLimit } from '@/lib/rate-limit';
 import { v4 as uuidv4 } from 'uuid';
 
 export const runtime = 'nodejs';
 
 export async function POST(request: NextRequest) {
+  const ip =
+    request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ||
+    request.headers.get('x-real-ip') ||
+    'unknown';
+
+  const rateLimit = checkRateLimit(`signup:${ip}`, {
+    maxRequests: 5,
+    windowMs: 60 * 60 * 1000, // 1 hour
+  });
+  if (!rateLimit.allowed) {
+    return NextResponse.json(
+      { error: 'Too many signup attempts. Try again later.' },
+      { status: 429 }
+    );
+  }
   let body: { email?: string; password?: string };
   try {
     body = await request.json();

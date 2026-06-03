@@ -26,6 +26,23 @@ export async function POST(request: NextRequest) {
 
   const supabase = createSupabaseAdmin();
 
+  // Verify the lead belongs to the authenticated user
+  const { data: lead } = await supabase
+    .from('leads')
+    .select('id, searches!inner(user_token)')
+    .eq('id', lead_id)
+    .single();
+
+  if (!lead) {
+    return NextResponse.json({ error: 'Lead not found' }, { status: 404 });
+  }
+
+  // Type-safe access to the joined search record
+  const searchRecord = lead.searches as unknown as { user_token: string } | null;
+  if (!searchRecord || searchRecord.user_token !== token) {
+    return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+  }
+
   const { error } = await supabase
     .from('leads')
     .update({ status })

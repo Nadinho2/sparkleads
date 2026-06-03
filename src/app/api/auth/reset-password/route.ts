@@ -1,10 +1,26 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createSupabaseAdmin } from '@/lib/supabase';
 import { hashPassword } from '@/lib/password';
+import { checkRateLimit } from '@/lib/rate-limit';
 
 export const runtime = 'nodejs';
 
 export async function POST(request: NextRequest) {
+  const ip =
+    request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ||
+    request.headers.get('x-real-ip') ||
+    'unknown';
+
+  const rateLimit = checkRateLimit(`reset-pw:${ip}`, {
+    maxRequests: 5,
+    windowMs: 15 * 60 * 1000,
+  });
+  if (!rateLimit.allowed) {
+    return NextResponse.json(
+      { error: 'Too many requests. Try again later.' },
+      { status: 429 }
+    );
+  }
   let body: { token?: string; password?: string };
   try {
     body = await request.json();

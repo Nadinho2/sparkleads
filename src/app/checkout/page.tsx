@@ -141,19 +141,17 @@ export default function CheckoutPage() {
       setProcessing(true);
       toast.info('Verifying your payment...');
       const storedEmail = localStorage.getItem('sparkleads_checkout_email') || '';
-      const storedPassword = localStorage.getItem('sparkleads_checkout_password') || '';
 
       fetch('/api/paystack/verify', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ reference: ref, email: storedEmail, password: storedPassword }),
+        body: JSON.stringify({ reference: ref, email: storedEmail }),
       })
         .then((res) => res.json())
         .then((data) => {
           if (data.success) {
             toast.success('Payment successful! Welcome to SparkLeads!');
             localStorage.removeItem('sparkleads_checkout_email');
-            localStorage.removeItem('sparkleads_checkout_password');
             window.location.href = '/dashboard';
           } else {
             toast.error('Verification failed', {
@@ -170,12 +168,12 @@ export default function CheckoutPage() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const verifyPayment = useCallback(async (reference: string, customerEmail: string, customerPassword?: string) => {
+  const verifyPayment = useCallback(async (reference: string, customerEmail: string) => {
     try {
       const response = await fetch('/api/paystack/verify', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ reference, email: customerEmail, password: customerPassword }),
+        body: JSON.stringify({ reference, email: customerEmail }),
       });
 
       const data = await response.json();
@@ -218,11 +216,8 @@ export default function CheckoutPage() {
 
     setProcessing(true);
 
-    // Store email and password for redirect callback verification
+    // Store email for redirect callback verification
     localStorage.setItem('sparkleads_checkout_email', email.trim().toLowerCase());
-    if (!isLoggedIn) {
-      localStorage.setItem('sparkleads_checkout_password', password.trim());
-    }
 
     try {
       const initRes = await fetch('/api/paystack/initialize', {
@@ -259,7 +254,7 @@ export default function CheckoutPage() {
           },
           callback: (response: { reference: string }) => {
           toast.success('Verifying payment...');
-          verifyPayment(response.reference, email.trim().toLowerCase(), password.trim());
+          verifyPayment(response.reference, email.trim().toLowerCase());
         },
         });
         handler.openIframe();

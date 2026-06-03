@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createSupabaseAdmin } from '@/lib/supabase';
+import { checkRateLimit } from '@/lib/rate-limit';
 
 export const runtime = 'nodejs';
 
@@ -10,6 +11,19 @@ export async function POST(request: NextRequest) {
   const adminKey = request.headers.get('x-admin-key');
   if (adminKey !== process.env.ADMIN_SECRET_KEY) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
+
+  // Rate limit admin endpoint by IP
+  const ip =
+    request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ||
+    request.headers.get('x-real-ip') ||
+    'unknown';
+  const rateLimit = checkRateLimit(`admin-reset:${ip}`, {
+    maxRequests: 20,
+    windowMs: 60 * 60 * 1000,
+  });
+  if (!rateLimit.allowed) {
+    return NextResponse.json({ error: 'Rate limit exceeded' }, { status: 429 });
   }
 
   let body: { email?: string; user_token?: string; balance?: number };

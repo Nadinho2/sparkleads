@@ -2,14 +2,13 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
-import { Zap, Mail, ArrowRight, Copy, CheckCircle } from 'lucide-react';
+import { Zap, Mail, ArrowRight, CheckCircle } from 'lucide-react';
 import { toast } from 'sonner';
 
 export default function ForgotPasswordPage() {
   const [email, setEmail] = useState('');
   const [loading, setLoading] = useState(false);
-  const [resetUrl, setResetUrl] = useState('');
-  const [copied, setCopied] = useState(false);
+  const [sent, setSent] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -30,11 +29,7 @@ export default function ForgotPasswordPage() {
       const data = await res.json();
 
       if (data.success) {
-        if (data.reset_url) {
-          setResetUrl(data.reset_url);
-        } else {
-          toast.success('If an account exists, a reset link has been sent to your email.');
-        }
+        setSent(true);
       } else {
         toast.error(data.error || 'Something went wrong');
       }
@@ -45,14 +40,7 @@ export default function ForgotPasswordPage() {
     }
   };
 
-  const copyUrl = () => {
-    navigator.clipboard.writeText(resetUrl);
-    setCopied(true);
-    toast.success('Reset link copied!');
-    setTimeout(() => setCopied(false), 2000);
-  };
-
-  if (resetUrl) {
+  if (sent) {
     return (
       <div className="min-h-screen bg-background text-text flex flex-col">
         <div className="p-4 sm:p-6">
@@ -65,36 +53,21 @@ export default function ForgotPasswordPage() {
         <div className="flex-1 flex items-center justify-center px-4 pb-12">
           <div className="w-full max-w-md text-center">
             <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center mx-auto mb-6">
-              <Mail className="w-8 h-8 text-primary" />
+              <CheckCircle className="w-8 h-8 text-primary" />
             </div>
-            <h1 className="text-2xl font-bold text-text mb-2">Reset link generated</h1>
+            <h1 className="text-2xl font-bold text-text mb-2">Check your email</h1>
             <p className="text-muted mb-6 text-sm">
-              Click the button below to reset your password. This link expires in 1 hour.
+              If an account exists with <span className="text-text font-medium">{email}</span>,
+              we&apos;ve sent a password reset link. It expires in 1 hour.
             </p>
 
-            <a
-              href={resetUrl}
-              className="inline-flex items-center gap-2 px-6 py-3 bg-primary text-white rounded-xl font-medium hover:bg-primary/90 transition-colors mb-4"
+            <Link
+              href="/login"
+              className="inline-flex items-center gap-2 px-6 py-3 bg-primary text-white rounded-xl font-medium hover:bg-primary/90 transition-colors"
             >
-              Reset Password
+              Back to Login
               <ArrowRight className="w-4 h-4" />
-            </a>
-
-            <div className="mt-4">
-              <button
-                onClick={copyUrl}
-                className="inline-flex items-center gap-2 text-sm text-muted hover:text-text transition-colors"
-              >
-                {copied ? <CheckCircle className="w-4 h-4 text-success" /> : <Copy className="w-4 h-4" />}
-                {copied ? 'Copied!' : 'Copy link'}
-              </button>
-            </div>
-
-            <div className="mt-8">
-              <Link href="/login" className="text-sm text-primary hover:underline">
-                Back to login
-              </Link>
-            </div>
+            </Link>
           </div>
         </div>
       </div>

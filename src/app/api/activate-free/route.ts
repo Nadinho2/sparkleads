@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createSupabaseAdmin } from '@/lib/supabase';
 import { hashPassword } from '@/lib/password';
+import { checkRateLimit } from '@/lib/rate-limit';
 import { v4 as uuidv4 } from 'uuid';
 
 export const runtime = 'nodejs';
@@ -8,6 +9,22 @@ export const runtime = 'nodejs';
 export async function POST(request: NextRequest) {
   if (process.env.NEXT_PUBLIC_FREE_ACCESS !== 'true') {
     return NextResponse.json({ error: 'Not available' }, { status: 403 });
+  }
+
+  const ip =
+    request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ||
+    request.headers.get('x-real-ip') ||
+    'unknown';
+
+  const rateLimit = checkRateLimit(`activate-free:${ip}`, {
+    maxRequests: 5,
+    windowMs: 60 * 60 * 1000,
+  });
+  if (!rateLimit.allowed) {
+    return NextResponse.json(
+      { error: 'Too many attempts. Try again later.' },
+      { status: 429 }
+    );
   }
 
   let body: { email?: string; password?: string };
