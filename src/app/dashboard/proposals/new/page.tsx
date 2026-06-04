@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { FileText, Loader2, ChevronRight, ChevronLeft, Plus, X, Check } from 'lucide-react';
+import { FileText, Loader2, ChevronRight, ChevronLeft, Plus, Check } from 'lucide-react';
 import { toast } from 'sonner';
 
 const AVAILABLE_SERVICES = [

@@ -57,9 +57,6 @@ export default function ProposalsPage() {
   const accepted = proposals.filter((p) => p.status === 'accepted').length;
   const pending = proposals.filter((p) => ['sent', 'viewed'].includes(p.status)).length;
   const conversionRate = totalSent > 0 ? Math.round((accepted / totalSent) * 100) : 0;
-  const totalValue = proposals
-    .filter((p) => p.status === 'accepted')
-    .reduce((sum, p) => sum + (p.pricing?.reduce((s, pr) => s + pr.price, 0) || 0), 0);
 
   return (
     <div className="max-w-6xl mx-auto">
