@@ -60,10 +60,32 @@ export async function POST(request: NextRequest) {
       .single();
 
     if (existingUser?.user_token) {
-      // Already activated — just set cookie and return
+      // Already activated — add subscription credits to their account
+      const { data: existingCredits } = await supabase
+        .from('user_credits')
+        .select('balance')
+        .eq('user_token', existingUser.user_token)
+        .single();
+
+      const currentBalance = existingCredits?.balance ?? 0;
+      const newBalance = currentBalance + 20;
+
+      await supabase
+        .from('user_credits')
+        .update({ balance: newBalance, updated_at: new Date().toISOString() })
+        .eq('user_token', existingUser.user_token);
+
+      await supabase.from('credit_transactions').insert({
+        user_token: existingUser.user_token,
+        type: 'bonus',
+        amount: 20,
+        description: 'Subscription bonus — 20 welcome credits',
+        balance_after: newBalance,
+      });
+
       const response = NextResponse.json({
         success: true,
-        message: 'Account already activated',
+        message: 'Account upgraded! 20 credits added.',
       });
       response.cookies.set('sparkleads_token', existingUser.user_token, {
         httpOnly: true,
