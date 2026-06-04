@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { usePathname } from 'next/navigation';
 import Link from 'next/link';
-import { Zap, Search, History, BarChart3, Users, Settings, LogOut, Bell, Megaphone, Target, Bookmark, ChevronDown, PenTool, BookOpen, CalendarDays, Sparkles, BarChart2, MapPin } from 'lucide-react';
+import { Zap, Search, History, BarChart3, Users, Settings, LogOut, Bell, Megaphone, Target, Bookmark, ChevronDown, PenTool, BookOpen, CalendarDays, Sparkles, BarChart2, MapPin, FileText } from 'lucide-react';
 
 const navItems = [
   { label: 'New Search', href: '/dashboard', icon: Search },
@@ -34,6 +34,7 @@ const navItems = [
       { label: 'Website Grader', href: '/dashboard/audit/grade', icon: BarChart2 },
       { label: 'GBP Auditor', href: '/dashboard/audit/gbp', icon: MapPin },
       { label: 'Competitors', href: '/dashboard/audit/competitors', icon: Users },
+      { label: 'Audit Report', href: '/dashboard/audit/report', icon: FileText },
     ],
   },
   { label: 'Credits', href: '/dashboard/credits', icon: Zap },
