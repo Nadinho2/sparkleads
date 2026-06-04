@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Globe, Zap, BarChart2, Loader2, CheckCircle, AlertTriangle, XCircle, ChevronDown } from 'lucide-react';
+import { Globe, BarChart2, Loader2, CheckCircle, AlertTriangle, XCircle, ChevronDown } from 'lucide-react';
 import { toast } from 'sonner';
 
 interface CheckResult {
