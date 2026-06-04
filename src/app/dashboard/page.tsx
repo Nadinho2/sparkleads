@@ -19,6 +19,7 @@ import {
   Plus,
   Sparkles,
   BarChart2,
+  MapPin,
 } from 'lucide-react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { toast } from 'sonner';
@@ -802,6 +803,21 @@ export default function DashboardPage() {
                             <span className="hidden xl:inline">Grade</span>
                           </button>
                         )}
+                        <button
+                          onClick={() => {
+                            localStorage.setItem('sparkleads_gbp_check', JSON.stringify({
+                              businessName: lead.name,
+                              location: lead.address,
+                              leadId: lead.id,
+                            }));
+                            router.push('/dashboard/audit/gbp');
+                          }}
+                          className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-500 text-white text-xs font-medium transition-colors"
+                          title="Check Google Business Profile"
+                        >
+                          <MapPin size={12} />
+                          <span className="hidden xl:inline">GBP</span>
+                        </button>
                       </div>
                     </td>
                   </tr>

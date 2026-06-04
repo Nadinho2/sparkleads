@@ -32,6 +32,7 @@ const navItems = [
     icon: BarChart2,
     children: [
       { label: 'Website Grader', href: '/dashboard/audit/grade', icon: BarChart2 },
+      { label: 'GBP Auditor', href: '/dashboard/audit/gbp', icon: MapPin },
     ],
   },
   { label: 'Credits', href: '/dashboard/credits', icon: Zap },
