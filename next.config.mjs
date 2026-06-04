@@ -22,7 +22,6 @@ const nextConfig = {
   },
 
   experimental: {
-    serverComponentsExternalPackages: ['puppeteer'],
   },
 
   async headers() {
