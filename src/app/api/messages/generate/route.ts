@@ -226,14 +226,19 @@ Each must be genuinely different based on that business's specific details.`;
 
   // Update template usage count
   if (savedTemplateId) {
-    await supabase.rpc('increment_template_count', { template_id: savedTemplateId }).catch(() => {
-      // RPC might not exist, update manually
-      supabase
+    try {
+      const { data: tmpl } = await supabase
         .from('ai_message_templates')
-        .update({ generated_count: supabase.rpc ? undefined : 1 })
+        .select('generated_count')
         .eq('id', savedTemplateId)
-        .catch(() => {});
-    });
+        .single();
+      if (tmpl) {
+        await supabase
+          .from('ai_message_templates')
+          .update({ generated_count: (tmpl.generated_count || 0) + 1 })
+          .eq('id', savedTemplateId);
+      }
+    } catch { /* ignore */ }
   }
 
   // Deduct credits
