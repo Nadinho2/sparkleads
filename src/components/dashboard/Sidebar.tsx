@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { usePathname } from 'next/navigation';
 import Link from 'next/link';
-import { Zap, Search, History, BarChart3, Users, Settings, LogOut, Bell, Megaphone, Target, Bookmark, ChevronDown, PenTool, BookOpen, CalendarDays, Sparkles, BarChart2 } from 'lucide-react';
+import { Zap, Search, History, BarChart3, Users, Settings, LogOut, Bell, Megaphone, Target, Bookmark, ChevronDown, PenTool, BookOpen, CalendarDays, Sparkles, BarChart2, MapPin } from 'lucide-react';
 
 const navItems = [
   { label: 'New Search', href: '/dashboard', icon: Search },
