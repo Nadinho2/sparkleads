@@ -21,6 +21,8 @@ import {
   BarChart2,
   MapPin,
   Users,
+  Loader2,
+  Wand2,
 } from 'lucide-react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { toast } from 'sonner';
@@ -109,6 +111,20 @@ export default function DashboardPage() {
   const lastCheckedCountRef = useRef(0);
   const [notesPanel, setNotesPanel] = useState<{ isOpen: boolean; lead: Lead | null }>({ isOpen: false, lead: null });
   const [filterHasNotes, setFilterHasNotes] = useState(false);
+
+  // AI Write modal
+  const [aiModal, setAiModal] = useState<{ isOpen: boolean; lead: Lead | null }>({ isOpen: false, lead: null });
+  const [aiServiceDesc, setAiServiceDesc] = useState('');
+  const [aiTone, setAiTone] = useState('friendly');
+  const [aiMsgType, setAiMsgType] = useState('whatsapp');
+  const [aiGenerating, setAiGenerating] = useState(false);
+  const [aiResult, setAiResult] = useState<{
+    whatsappMessage: string;
+    emailSubject: string;
+    emailBody: string;
+    personalizationHook: string;
+  } | null>(null);
+  const [aiTemplates, setAiTemplates] = useState<{ id: string; name: string; service_description: string; tone: string; message_type: string }[]>([]);
 
   const { leads, isSearching, error, search, reset, updateLead } = useSearchStream({
     sessionId,
@@ -359,6 +375,74 @@ export default function DashboardPage() {
       // Silent fail
     }
   }, [leads, currentQuery]);
+
+  // AI Write modal functions
+  const openAIModal = useCallback(async (lead: Lead) => {
+    setAiModal({ isOpen: true, lead });
+    setAiResult(null);
+    setAiGenerating(false);
+    // Load templates
+    try {
+      const res = await fetch('/api/messages/templates');
+      const data = await res.json();
+      if (data.templates) setAiTemplates(data.templates);
+    } catch { /* ignore */ }
+  }, []);
+
+  const handleAIGenerate = useCallback(async () => {
+    if (!aiModal.lead) return;
+    if (!aiServiceDesc.trim()) { toast.error('Describe your service'); return; }
+
+    setAiGenerating(true);
+    setAiResult(null);
+
+    try {
+      const lead = aiModal.lead;
+      const res = await fetch('/api/messages/generate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          leads: [{
+            id: lead.id,
+            name: lead.name,
+            type: lead.type,
+            address: lead.address,
+            rating: lead.rating,
+            website: lead.website,
+            email: lead.email,
+            phone: lead.phone,
+          }],
+          serviceDescription: aiServiceDesc.trim(),
+          tone: aiTone,
+          messageType: aiMsgType,
+        }),
+      });
+
+      const data = await res.json();
+      if (!res.ok) {
+        if (data.error === 'Insufficient credits') {
+          toast.error(`Need ${data.required} credits. You have ${data.balance}.`);
+        } else {
+          toast.error(data.error || 'Failed to generate');
+        }
+        return;
+      }
+
+      if (data.messages?.length > 0) {
+        setAiResult(data.messages[0]);
+        toast.success(`Message generated! (${data.creditsUsed} credits)`);
+      }
+    } catch {
+      toast.error('Something went wrong');
+    } finally {
+      setAiGenerating(false);
+    }
+  }, [aiModal.lead, aiServiceDesc, aiTone, aiMsgType]);
+
+  function copyText(text: string) {
+    navigator.clipboard.writeText(text);
+    toast.success('Copied!');
+  }
 
   return (
     <div className="space-y-6">
@@ -835,6 +919,14 @@ export default function DashboardPage() {
                           <Users size={12} />
                           <span className="hidden xl:inline">Compete</span>
                         </button>
+                        <button
+                          onClick={() => openAIModal(lead)}
+                          className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-500 hover:to-pink-500 text-white text-xs font-medium transition-all"
+                          title="AI message writer"
+                        >
+                          <Sparkles size={12} />
+                          <span className="hidden xl:inline">AI Write</span>
+                        </button>
                       </div>
                     </td>
                   </tr>
@@ -954,6 +1046,226 @@ export default function DashboardPage() {
             >
               <X size={16} />
             </button>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* AI Write Modal */}
+      <AnimatePresence>
+        {aiModal.isOpen && aiModal.lead && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm"
+            onClick={() => { if (!aiGenerating) setAiModal({ isOpen: false, lead: null }); }}
+          >
+            <motion.div
+              initial={{ scale: 0.95, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.95, opacity: 0 }}
+              className="w-full max-w-2xl max-h-[90vh] overflow-y-auto bg-surface border border-border rounded-2xl shadow-2xl"
+              onClick={(e) => e.stopPropagation()}
+            >
+              {/* Header */}
+              <div className="flex items-center justify-between p-5 border-b border-border">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-purple-600 to-pink-600 flex items-center justify-center">
+                    <Sparkles size={20} className="text-white" />
+                  </div>
+                  <div>
+                    <h3 className="text-lg font-bold text-text">AI Message for {aiModal.lead.name}</h3>
+                    <p className="text-xs text-muted">{aiModal.lead.type} · {aiModal.lead.address}</p>
+                  </div>
+                </div>
+                <button onClick={() => setAiModal({ isOpen: false, lead: null })} className="p-2 rounded-lg hover:bg-surface2 text-muted">
+                  <X size={18} />
+                </button>
+              </div>
+
+              <div className="p-5 space-y-4">
+                {/* Business Info */}
+                <div className="flex flex-wrap gap-2">
+                  {aiModal.lead.rating && (
+                    <span className="text-xs px-2 py-1 rounded-full bg-yellow-500/10 text-yellow-400">
+                      {aiModal.lead.rating} ★
+                    </span>
+                  )}
+                  {!aiModal.lead.website && (
+                    <span className="text-xs px-2 py-1 rounded-full bg-red-500/10 text-red-400">No website</span>
+                  )}
+                  {aiModal.lead.email && (
+                    <span className="text-xs px-2 py-1 rounded-full bg-blue-500/10 text-blue-400">Has email</span>
+                  )}
+                  {aiModal.lead.phone && (
+                    <span className="text-xs px-2 py-1 rounded-full bg-green-500/10 text-green-400">Has phone</span>
+                  )}
+                </div>
+
+                {/* Templates */}
+                {aiTemplates.length > 0 && (
+                  <div>
+                    <label className="text-xs text-muted mb-1.5 block">Load from template</label>
+                    <div className="flex flex-wrap gap-1.5">
+                      {aiTemplates.map((t) => (
+                        <button
+                          key={t.id}
+                          onClick={() => {
+                            setAiServiceDesc(t.service_description);
+                            setAiTone(t.tone);
+                            setAiMsgType(t.message_type);
+                          }}
+                          className="px-3 py-1.5 rounded-lg bg-surface2 text-text text-xs border border-border hover:border-primary transition-colors"
+                        >
+                          {t.name}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Service Description */}
+                <div>
+                  <label className="text-xs text-muted mb-1.5 block">Your Service Description</label>
+                  <textarea
+                    value={aiServiceDesc}
+                    onChange={(e) => setAiServiceDesc(e.target.value)}
+                    placeholder="e.g. I build professional websites for local businesses in Lagos. Sites include WhatsApp button, Google Maps, contact form..."
+                    rows={3}
+                    className="w-full px-3 py-2.5 rounded-xl border border-border bg-surface2 text-text text-sm placeholder:text-muted focus:outline-none focus:ring-2 focus:ring-primary/50 resize-none"
+                  />
+                </div>
+
+                {/* Tone + Type */}
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="text-xs text-muted mb-1.5 block">Tone</label>
+                    <div className="grid grid-cols-2 gap-1">
+                      {[
+                        { value: 'friendly', label: '😊 Friendly' },
+                        { value: 'professional', label: '💼 Professional' },
+                        { value: 'bold', label: '⚡ Bold' },
+                        { value: 'conversational', label: '💬 Conversational' },
+                      ].map((t) => (
+                        <button
+                          key={t.value}
+                          onClick={() => setAiTone(t.value)}
+                          className={`px-2 py-1.5 rounded-lg text-[11px] font-medium transition-colors ${
+                            aiTone === t.value ? 'bg-primary text-white' : 'bg-surface2 text-text border border-border'
+                          }`}
+                        >
+                          {t.label}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                  <div>
+                    <label className="text-xs text-muted mb-1.5 block">Message Type</label>
+                    <div className="grid grid-cols-3 gap-1">
+                      {[
+                        { value: 'whatsapp', label: '📱 WA' },
+                        { value: 'email', label: '📧 Email' },
+                        { value: 'both', label: '📱📧 Both' },
+                      ].map((mt) => (
+                        <button
+                          key={mt.value}
+                          onClick={() => setAiMsgType(mt.value)}
+                          className={`px-2 py-1.5 rounded-lg text-[11px] font-medium transition-colors ${
+                            aiMsgType === mt.value ? 'bg-primary text-white' : 'bg-surface2 text-text border border-border'
+                          }`}
+                        >
+                          {mt.label}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Generate Button */}
+                <button
+                  onClick={handleAIGenerate}
+                  disabled={aiGenerating || !aiServiceDesc.trim()}
+                  className="w-full py-3 bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-500 hover:to-pink-500 text-white font-semibold rounded-xl transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                >
+                  {aiGenerating ? (
+                    <><Loader2 className="w-5 h-5 animate-spin" /> Writing message...</>
+                  ) : (
+                    <><Wand2 className="w-5 h-5" /> Write Message — 2 Credits</>
+                  )}
+                </button>
+
+                {/* Results */}
+                {aiResult && (
+                  <div className="space-y-3 pt-2">
+                    <div className="p-2.5 rounded-lg bg-primary/5 border border-primary/20">
+                      <p className="text-[10px] text-primary font-medium mb-0.5">Personalized because:</p>
+                      <p className="text-xs text-muted">{aiResult.personalizationHook}</p>
+                    </div>
+
+                    {(aiMsgType === 'whatsapp' || aiMsgType === 'both') && (
+                      <div className="p-3 rounded-lg bg-green-500/5 border border-green-500/20">
+                        <div className="flex items-center justify-between mb-2">
+                          <span className="text-xs font-medium text-green-400 flex items-center gap-1">
+                            <MessageCircle size={12} /> WhatsApp
+                          </span>
+                          <div className="flex gap-1.5">
+                            <button onClick={() => copyText(aiResult.whatsappMessage)} className="text-[10px] text-muted hover:text-text flex items-center gap-1">
+                              <Copy size={10} /> Copy
+                            </button>
+                            {aiModal.lead?.phone && (
+                              <button
+                                onClick={() => {
+                                  const phone = aiModal.lead!.phone?.replace(/[^0-9+]/g, '') || '';
+                                  window.open(`https://wa.me/${phone}?text=${encodeURIComponent(aiResult.whatsappMessage)}`, '_blank');
+                                }}
+                                className="text-[10px] text-green-400 hover:underline flex items-center gap-1"
+                              >
+                                <ExternalLink size={10} /> Send
+                              </button>
+                            )}
+                          </div>
+                        </div>
+                        <p className="text-xs text-text whitespace-pre-line">{aiResult.whatsappMessage}</p>
+                      </div>
+                    )}
+
+                    {(aiMsgType === 'email' || aiMsgType === 'both') && (
+                      <div className="p-3 rounded-lg bg-blue-500/5 border border-blue-500/20">
+                        <div className="flex items-center justify-between mb-2">
+                          <span className="text-xs font-medium text-blue-400 flex items-center gap-1">
+                            <Mail size={12} /> Email
+                          </span>
+                          <div className="flex gap-1.5">
+                            <button onClick={() => copyText(`Subject: ${aiResult.emailSubject}\n\n${aiResult.emailBody}`)} className="text-[10px] text-muted hover:text-text flex items-center gap-1">
+                              <Copy size={10} /> Copy
+                            </button>
+                            {aiModal.lead?.email && (
+                              <button
+                                onClick={() => {
+                                  window.open(`mailto:${aiModal.lead!.email}?subject=${encodeURIComponent(aiResult.emailSubject)}&body=${encodeURIComponent(aiResult.emailBody)}`);
+                                }}
+                                className="text-[10px] text-blue-400 hover:underline flex items-center gap-1"
+                              >
+                                <ExternalLink size={10} /> Send
+                              </button>
+                            )}
+                          </div>
+                        </div>
+                        <p className="text-xs font-medium text-text mb-1">Subject: {aiResult.emailSubject}</p>
+                        <p className="text-xs text-muted whitespace-pre-line">{aiResult.emailBody}</p>
+                      </div>
+                    )}
+
+                    <button
+                      onClick={() => router.push('/dashboard/messages')}
+                      className="w-full text-center text-xs text-primary hover:underline py-1"
+                    >
+                      View all messages →
+                    </button>
+                  </div>
+                )}
+              </div>
+            </motion.div>
           </motion.div>
         )}
       </AnimatePresence>

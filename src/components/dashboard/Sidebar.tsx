@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { usePathname } from 'next/navigation';
 import Link from 'next/link';
-import { Zap, Search, History, BarChart3, Users, Settings, LogOut, Bell, Megaphone, Target, Bookmark, ChevronDown, PenTool, BookOpen, CalendarDays, Sparkles, BarChart2, MapPin, FileText } from 'lucide-react';
+import { Zap, Search, History, BarChart3, Users, Settings, LogOut, Bell, Megaphone, Target, Bookmark, ChevronDown, PenTool, BookOpen, CalendarDays, Sparkles, BarChart2, MapPin, FileText, MessageSquare, Briefcase, PieChart } from 'lucide-react';
 
 const navItems = [
   { label: 'New Search', href: '/dashboard', icon: Search },
@@ -36,8 +36,18 @@ const navItems = [
       { label: 'Competitors', href: '/dashboard/audit/competitors', icon: Users },
       { label: 'Audit Report', href: '/dashboard/audit/report', icon: FileText },
       { label: 'Proposals', href: '/dashboard/proposals', icon: FileText },
+      { label: 'Creative Briefs', href: '/dashboard/briefs', icon: Briefcase },
     ],
   },
+  {
+    label: 'AI Messages',
+    icon: Sparkles,
+    children: [
+      { label: 'Write Messages', href: '/dashboard/messages', icon: MessageSquare },
+      { label: 'Message History', href: '/dashboard/messages/history', icon: History },
+    ],
+  },
+  { label: 'Analytics', href: '/dashboard/analytics', icon: PieChart },
   { label: 'Credits', href: '/dashboard/credits', icon: Zap },
   { label: 'Affiliate', href: '/dashboard/affiliate', icon: Users },
   { label: 'Settings', href: '/dashboard/settings', icon: Settings },
@@ -53,7 +63,8 @@ export function Sidebar({ userToken }: SidebarProps) {
   const [reminderCount, setReminderCount] = useState(0);
   const [adsExpanded, setAdsExpanded] = useState(pathname.startsWith('/dashboard/ads'));
   const [contentExpanded, setContentExpanded] = useState(pathname.startsWith('/dashboard/content'));
-  const [agencyExpanded, setAgencyExpanded] = useState(pathname.startsWith('/dashboard/audit'));
+  const [agencyExpanded, setAgencyExpanded] = useState(pathname.startsWith('/dashboard/audit') || pathname.startsWith('/dashboard/proposals') || pathname.startsWith('/dashboard/briefs'));
+  const [messagesExpanded, setMessagesExpanded] = useState(pathname.startsWith('/dashboard/messages'));
 
   useEffect(() => {
     fetch('/api/credits/ensure')
@@ -98,12 +109,16 @@ export function Sidebar({ userToken }: SidebarProps) {
               ? contentExpanded
               : item.label === 'Agency Tools'
                 ? agencyExpanded
-                : adsExpanded;
+                : item.label === 'AI Messages'
+                  ? messagesExpanded
+                  : adsExpanded;
             const toggle = item.label === 'Content'
               ? () => setContentExpanded(!contentExpanded)
               : item.label === 'Agency Tools'
                 ? () => setAgencyExpanded(!agencyExpanded)
-                : () => setAdsExpanded(!adsExpanded);
+                : item.label === 'AI Messages'
+                  ? () => setMessagesExpanded(!messagesExpanded)
+                  : () => setAdsExpanded(!adsExpanded);
             return (
               <div key={item.label}>
                 <button

@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { useRouter, useParams } from 'next/navigation';
-import { ArrowLeft } from 'lucide-react';
+import { ArrowLeft, FileText } from 'lucide-react';
 import { Spinner } from '@/components/ui';
 import { AdPlanResults } from '@/components/dashboard/AdPlanResults';
 import type { AdPlan } from '@/lib/ad-plan-generator';
@@ -78,13 +78,25 @@ export default function AdPlanDetailPage() {
 
   return (
     <div className="space-y-6">
-      <button
-        onClick={() => router.push('/dashboard/ads/history')}
-        className="flex items-center gap-2 text-sm text-muted hover:text-text transition-colors"
-      >
-        <ArrowLeft className="w-4 h-4" />
-        Back to Saved Plans
-      </button>
+      <div className="flex items-center justify-between">
+        <button
+          onClick={() => router.push('/dashboard/ads/history')}
+          className="flex items-center gap-2 text-sm text-muted hover:text-text transition-colors"
+        >
+          <ArrowLeft className="w-4 h-4" />
+          Back to Saved Plans
+        </button>
+        <button
+          onClick={() => {
+            localStorage.setItem('sparkleads_brief_plan', planId);
+            router.push('/dashboard/briefs/new');
+          }}
+          className="flex items-center gap-2 px-4 py-2 rounded-lg bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-500 hover:to-pink-500 text-white text-sm font-medium transition-all"
+        >
+          <FileText size={15} />
+          Generate Creative Brief
+        </button>
+      </div>
 
       <AdPlanResults
         plan={planData.plan}
