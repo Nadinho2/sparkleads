@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { usePathname } from 'next/navigation';
 import Link from 'next/link';
-import { Zap, Search, History, BarChart3, Users, Settings, LogOut, Bell, Megaphone, Target, Bookmark, ChevronDown, PenTool, BookOpen, CalendarDays, Sparkles } from 'lucide-react';
+import { Zap, Search, History, BarChart3, Users, Settings, LogOut, Bell, Megaphone, Target, Bookmark, ChevronDown, PenTool, BookOpen, CalendarDays, Sparkles, BarChart2 } from 'lucide-react';
 
 const navItems = [
   { label: 'New Search', href: '/dashboard', icon: Search },
@@ -27,6 +27,13 @@ const navItems = [
       { label: 'Calendar', href: '/dashboard/content/calendar', icon: CalendarDays },
     ],
   },
+  {
+    label: 'Agency Tools',
+    icon: BarChart2,
+    children: [
+      { label: 'Website Grader', href: '/dashboard/audit/grade', icon: BarChart2 },
+    ],
+  },
   { label: 'Credits', href: '/dashboard/credits', icon: Zap },
   { label: 'Affiliate', href: '/dashboard/affiliate', icon: Users },
   { label: 'Settings', href: '/dashboard/settings', icon: Settings },
@@ -42,6 +49,7 @@ export function Sidebar({ userToken }: SidebarProps) {
   const [reminderCount, setReminderCount] = useState(0);
   const [adsExpanded, setAdsExpanded] = useState(pathname.startsWith('/dashboard/ads'));
   const [contentExpanded, setContentExpanded] = useState(pathname.startsWith('/dashboard/content'));
+  const [agencyExpanded, setAgencyExpanded] = useState(pathname.startsWith('/dashboard/audit'));
 
   useEffect(() => {
     fetch('/api/credits/ensure')
@@ -82,10 +90,16 @@ export function Sidebar({ userToken }: SidebarProps) {
         {navItems.map((item) => {
           if ('children' in item && item.children) {
             const isSectionActive = item.children.some((child) => pathname.startsWith(child.href));
-            const isExpanded = item.label === 'Content' ? contentExpanded : adsExpanded;
+            const isExpanded = item.label === 'Content'
+              ? contentExpanded
+              : item.label === 'Agency Tools'
+                ? agencyExpanded
+                : adsExpanded;
             const toggle = item.label === 'Content'
               ? () => setContentExpanded(!contentExpanded)
-              : () => setAdsExpanded(!adsExpanded);
+              : item.label === 'Agency Tools'
+                ? () => setAgencyExpanded(!agencyExpanded)
+                : () => setAdsExpanded(!adsExpanded);
             return (
               <div key={item.label}>
                 <button

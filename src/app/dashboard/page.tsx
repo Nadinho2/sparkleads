@@ -18,6 +18,7 @@ import {
   StickyNote,
   Plus,
   Sparkles,
+  BarChart2,
 } from 'lucide-react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { toast } from 'sonner';
@@ -784,6 +785,23 @@ export default function DashboardPage() {
                           <Sparkles size={12} />
                           <span className="hidden xl:inline">Content</span>
                         </button>
+                        {lead.website && (
+                          <button
+                            onClick={() => {
+                              localStorage.setItem('sparkleads_grade_url', JSON.stringify({
+                                url: lead.website,
+                                businessName: lead.name,
+                                leadId: lead.id,
+                              }));
+                              router.push('/dashboard/audit/grade');
+                            }}
+                            className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-orange-600 hover:bg-orange-500 text-white text-xs font-medium transition-colors"
+                            title="Grade website"
+                          >
+                            <BarChart2 size={12} />
+                            <span className="hidden xl:inline">Grade</span>
+                          </button>
+                        )}
                       </div>
                     </td>
                   </tr>
