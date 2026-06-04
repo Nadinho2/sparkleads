@@ -1,5 +1,6 @@
 import { safeJsonParse } from './safe-json';
 import { buildFocusedPrompt, AD_PLAN_SYSTEM_INSTRUCTION, type AdPlanInput } from './ad-plan-prompt';
+import { aiGenerateJSON } from './ai-client';
 
 export type { AdPlanInput } from './ad-plan-prompt';
 
@@ -111,13 +112,6 @@ export interface AdPlan {
   warnings: string[];
 }
 
-function geminiTextFromResponse(data: unknown): string {
-  const d = data as { candidates?: { content?: { parts?: { text?: string }[] } }[] };
-  const parts = d?.candidates?.[0]?.content?.parts;
-  if (!Array.isArray(parts)) return '';
-  return parts.map((p) => p?.text || '').join('').trim();
-}
-
 function resolveInput(input: AdPlanInput): AdPlanInput & { resolvedLocation: string; businessContext: string } {
   return {
     ...input,
@@ -126,38 +120,14 @@ function resolveInput(input: AdPlanInput): AdPlanInput & { resolvedLocation: str
   };
 }
 
-async function generateAdPlanWithGemini(input: AdPlanInput): Promise<AdPlan> {
-  const apiKey = process.env.GEMINI_API_KEY!;
+async function generateAdPlanWithAI(input: AdPlanInput): Promise<AdPlan> {
   const prompt = buildFocusedPrompt(resolveInput(input));
-
-  const response = await fetch(
-    `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`,
-    {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        systemInstruction: {
-          parts: [{ text: AD_PLAN_SYSTEM_INSTRUCTION }],
-        },
-        contents: [{ role: 'user', parts: [{ text: prompt }] }],
-        generationConfig: {
-          temperature: 0.6,
-          maxOutputTokens: 8192,
-          responseMimeType: 'application/json',
-        },
-      }),
-    }
-  );
-
-  if (!response.ok) {
-    const errBody = await response.text();
-    throw new Error(`Gemini API error: ${response.status} - ${errBody}`);
-  }
-
-  const data = await response.json();
-  const text = geminiTextFromResponse(data);
-  if (!text) throw new Error('No content in Gemini response');
-  const rawPlan = safeJsonParse<AdPlan>(text);
+  const rawPlan = await aiGenerateJSON<AdPlan>({
+    prompt,
+    systemInstruction: AD_PLAN_SYSTEM_INSTRUCTION,
+    temperature: 0.6,
+    maxOutputTokens: 8192,
+  });
   return validateAndFix(rawPlan, input);
 }
 
@@ -404,11 +374,12 @@ function generateFallbackAdPlan(input: AdPlanInput): AdPlan {
 }
 
 export async function generateAdPlan(input: AdPlanInput): Promise<AdPlan> {
-  if (process.env.GEMINI_API_KEY) {
+  // Try DeepSeek or Gemini (via shared client) first
+  if (process.env.DEEPSEEK_API_KEY || process.env.GEMINI_API_KEY) {
     try {
-      return await generateAdPlanWithGemini(input);
+      return await generateAdPlanWithAI(input);
     } catch (err) {
-      console.error('Gemini failed, falling back:', err);
+      console.error('AI (DeepSeek/Gemini) failed, falling back:', err);
     }
   }
 

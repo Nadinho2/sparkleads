@@ -3,6 +3,7 @@ import { createSupabaseAdmin } from '@/lib/supabase';
 import { getToken } from '@/lib/auth';
 import { getJson } from 'serpapi';
 import { v4 as uuidv4 } from 'uuid';
+import { aiGenerateJSON } from '@/lib/ai-client';
 
 export const runtime = 'nodejs';
 
@@ -15,12 +16,7 @@ interface CheckResult {
   weight: number;
 }
 
-function geminiTextFromResponse(data: unknown): string {
-  const d = data as { candidates?: { content?: { parts?: { text?: string }[] } }[] };
-  const parts = d?.candidates?.[0]?.content?.parts;
-  if (!Array.isArray(parts)) return '';
-  return parts.map((p) => p?.text || '').join('').trim();
-}
+
 
 export async function POST(request: NextRequest) {
   const userToken = getToken();
@@ -140,9 +136,7 @@ export async function POST(request: NextRequest) {
   let recommendations: { priority: string; title: string; description: string; impact: string }[] = [];
 
   try {
-    const apiKey = process.env.GEMINI_API_KEY;
-    if (apiKey) {
-      const prompt = `Google Business Profile audit for "${businessName}" ${location ? `in ${location}` : ''}:
+    const prompt = `Google Business Profile audit for "${businessName}" ${location ? `in ${location}` : ''}:
 Overall score: ${overallScore}/100
 ${business ? `Profile found with ${business.reviews || 0} reviews and ${business.rating || 'no'} rating` : 'No Google Business Profile found'}
 
@@ -153,30 +147,12 @@ Return a JSON array with this exact format:
 [{ "priority": "high|medium|low", "title": "Short title", "description": "What to do and why", "impact": "+X points if fixed" }]
 Only return the JSON array, no other text.`;
 
-      const aiResponse = await fetch(
-        `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`,
-        {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            contents: [{ role: 'user', parts: [{ text: prompt }] }],
-            generationConfig: {
-              temperature: 0.5,
-              maxOutputTokens: 4096,
-              responseMimeType: 'application/json',
-            },
-          }),
-        }
-      );
-
-      if (aiResponse.ok) {
-        const aiData = await aiResponse.json();
-        const text = geminiTextFromResponse(aiData);
-        if (text) {
-          recommendations = JSON.parse(text);
-        }
-      }
-    }
+    recommendations = await aiGenerateJSON<typeof recommendations>({
+      prompt,
+      systemInstruction: 'You are a Google Business Profile optimization expert. Return ONLY valid JSON array.',
+      temperature: 0.5,
+      maxOutputTokens: 4096,
+    });
   } catch (err) {
     console.error('AI recommendations failed:', err);
     recommendations = [

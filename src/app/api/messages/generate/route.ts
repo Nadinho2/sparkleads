@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createSupabaseAdmin } from '@/lib/supabase';
 import { getToken } from '@/lib/auth';
 import { v4 as uuidv4 } from 'uuid';
+import { aiGenerateJSON } from '@/lib/ai-client';
 
 export const runtime = 'nodejs';
 
@@ -14,13 +15,6 @@ interface LeadInput {
   website?: string | null;
   email?: string | null;
   phone?: string | null;
-}
-
-function geminiTextFromResponse(data: unknown): string {
-  const d = data as { candidates?: { content?: { parts?: { text?: string }[] } }[] };
-  const parts = d?.candidates?.[0]?.content?.parts;
-  if (!Array.isArray(parts)) return '';
-  return parts.map((p) => p?.text || '').join('').trim();
 }
 
 function calculateCreditCost(leadCount: number): number {
@@ -134,55 +128,12 @@ Each must be genuinely different based on that business's specific details.`;
   }[] = [];
 
   try {
-    const apiKey = process.env.GEMINI_API_KEY;
-    if (!apiKey) {
-      return NextResponse.json({ error: 'AI service not configured' }, { status: 500 });
-    }
-
-    const requestBody = JSON.stringify({
-      contents: [{ role: 'user', parts: [{ text: prompt }] }],
-      generationConfig: {
-        temperature: 0.8,
-        maxOutputTokens: 8192,
-        responseMimeType: 'application/json',
-      },
+    messages = await aiGenerateJSON<typeof messages>({
+      prompt,
+      systemInstruction: 'You write personalized cold outreach messages. Every message must feel handcrafted for that specific business. Return ONLY valid JSON.',
+      temperature: 0.8,
+      maxOutputTokens: 8192,
     });
-
-    let aiData: unknown = null;
-    let lastError = '';
-
-    for (let attempt = 0; attempt < 3; attempt++) {
-      if (attempt > 0) {
-        await new Promise((r) => setTimeout(r, (attempt * 2000) + Math.random() * 1000));
-      }
-
-      const aiResponse = await fetch(
-        `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`,
-        { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: requestBody }
-      );
-
-      if (aiResponse.ok) {
-        aiData = await aiResponse.json();
-        break;
-      }
-
-      lastError = `Gemini API error: ${aiResponse.status}`;
-      const errBody = await aiResponse.text().catch(() => '');
-      console.error(`Gemini attempt ${attempt + 1} failed:`, aiResponse.status, errBody.slice(0, 200));
-
-      if (aiResponse.status !== 429 && aiResponse.status !== 503) break;
-    }
-
-    if (!aiData) {
-      throw new Error(lastError || 'AI service temporarily unavailable. Please try again.');
-    }
-
-    const text = geminiTextFromResponse(aiData);
-    if (text) {
-      messages = JSON.parse(text);
-    } else {
-      throw new Error('AI returned empty response');
-    }
   } catch (err) {
     const errMsg = err instanceof Error ? err.message : String(err);
     console.error('AI message generation failed:', errMsg);

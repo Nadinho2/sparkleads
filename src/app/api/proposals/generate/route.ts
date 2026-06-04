@@ -2,17 +2,13 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createSupabaseAdmin } from '@/lib/supabase';
 import { getToken } from '@/lib/auth';
 import { v4 as uuidv4 } from 'uuid';
+import { aiGenerateJSON } from '@/lib/ai-client';
 
 export const runtime = 'nodejs';
 
 const CREDIT_COST = 5;
 
-function geminiTextFromResponse(data: unknown): string {
-  const d = data as { candidates?: { content?: { parts?: { text?: string }[] } }[] };
-  const parts = d?.candidates?.[0]?.content?.parts;
-  if (!Array.isArray(parts)) return '';
-  return parts.map((p) => p?.text || '').join('').trim();
-}
+
 
 export async function POST(request: NextRequest) {
   const userToken = getToken();
@@ -88,9 +84,7 @@ export async function POST(request: NextRequest) {
   let proposalContent: Record<string, unknown> | null = null;
 
   try {
-    const apiKey = process.env.GEMINI_API_KEY;
-    if (apiKey) {
-      const prompt = `Generate a professional agency proposal for "${businessName}".
+    const prompt = `Generate a professional agency proposal for "${businessName}".
 
 AGENCY: ${agencyName}
 CONTACT: ${agencyContact || 'Not provided'}
@@ -143,30 +137,12 @@ Return JSON with this exact format:
 }
 Only return the JSON object, no other text.`;
 
-      const aiResponse = await fetch(
-        `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`,
-        {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            contents: [{ role: 'user', parts: [{ text: prompt }] }],
-            generationConfig: {
-              temperature: 0.7,
-              maxOutputTokens: 8192,
-              responseMimeType: 'application/json',
-            },
-          }),
-        }
-      );
-
-      if (aiResponse.ok) {
-        const aiData = await aiResponse.json();
-        const text = geminiTextFromResponse(aiData);
-        if (text) {
-          proposalContent = JSON.parse(text);
-        }
-      }
-    }
+    proposalContent = await aiGenerateJSON<Record<string, unknown>>({
+      prompt,
+      systemInstruction: 'You are a premium digital marketing agency. Write professional proposals that win clients. Return ONLY valid JSON.',
+      temperature: 0.7,
+      maxOutputTokens: 8192,
+    });
   } catch (err) {
     console.error('AI proposal generation failed:', err);
   }

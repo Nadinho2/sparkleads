@@ -3,17 +3,13 @@ import { createSupabaseAdmin } from '@/lib/supabase';
 import { getToken } from '@/lib/auth';
 import { getJson } from 'serpapi';
 import { v4 as uuidv4 } from 'uuid';
+import { aiGenerateJSON } from '@/lib/ai-client';
 
 export const runtime = 'nodejs';
 
 const CREDIT_COST = 5;
 
-function geminiTextFromResponse(data: unknown): string {
-  const d = data as { candidates?: { content?: { parts?: { text?: string }[] } }[] };
-  const parts = d?.candidates?.[0]?.content?.parts;
-  if (!Array.isArray(parts)) return '';
-  return parts.map((p) => p?.text || '').join('').trim();
-}
+
 
 interface ScoredBusiness {
   name: string;
@@ -152,9 +148,7 @@ export async function POST(request: NextRequest) {
   } | null = null;
 
   try {
-    const apiKey = process.env.GEMINI_API_KEY;
-    if (apiKey) {
-      const prompt = `Analyze this competitive landscape for "${businessName}" (${businessType || 'business'}) in ${location}.
+    const prompt = `Analyze this competitive landscape for "${businessName}" (${businessType || 'business'}) in ${location}.
 
 Subject business: ${JSON.stringify(subjectScored, null, 2)}
 Competitors (top 5): ${JSON.stringify(competitors, null, 2)}
@@ -172,30 +166,12 @@ Provide a thorough competitive analysis. Return JSON with this exact format:
 }
 Only return the JSON object, no other text.`;
 
-      const aiResponse = await fetch(
-        `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`,
-        {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            contents: [{ role: 'user', parts: [{ text: prompt }] }],
-            generationConfig: {
-              temperature: 0.5,
-              maxOutputTokens: 4096,
-              responseMimeType: 'application/json',
-            },
-          }),
-        }
-      );
-
-      if (aiResponse.ok) {
-        const aiData = await aiResponse.json();
-        const text = geminiTextFromResponse(aiData);
-        if (text) {
-          analysis = JSON.parse(text);
-        }
-      }
-    }
+    analysis = await aiGenerateJSON<typeof analysis>({
+      prompt,
+      systemInstruction: 'You are a business strategy consultant analyzing competitive landscapes. Return ONLY valid JSON.',
+      temperature: 0.5,
+      maxOutputTokens: 4096,
+    });
   } catch (err) {
     console.error('AI analysis failed:', err);
   }

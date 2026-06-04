@@ -2,17 +2,13 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createSupabaseAdmin } from '@/lib/supabase';
 import { getToken } from '@/lib/auth';
 import { v4 as uuidv4 } from 'uuid';
+import { aiGenerateJSON } from '@/lib/ai-client';
 
 export const runtime = 'nodejs';
 
 const CREDIT_COST = 10;
 
-function geminiTextFromResponse(data: unknown): string {
-  const d = data as { candidates?: { content?: { parts?: { text?: string }[] } }[] };
-  const parts = d?.candidates?.[0]?.content?.parts;
-  if (!Array.isArray(parts)) return '';
-  return parts.map((p) => p?.text || '').join('').trim();
-}
+
 
 interface ReportContent {
   executive_summary: string;
@@ -155,9 +151,7 @@ export async function POST(request: NextRequest) {
   let reportContent: ReportContent | null = null;
 
   try {
-    const apiKey = process.env.GEMINI_API_KEY;
-    if (apiKey) {
-      const prompt = `Generate a professional digital audit report for "${businessName}".
+    const prompt = `Generate a professional digital audit report for "${businessName}".
 
 WEBSITE AUDIT:
 Score: ${websiteGrade?.overallScore || 'No website'}/100
@@ -199,30 +193,12 @@ Return JSON with this exact format:
 }
 Only return the JSON object, no other text.`;
 
-      const aiResponse = await fetch(
-        `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`,
-        {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            contents: [{ role: 'user', parts: [{ text: prompt }] }],
-            generationConfig: {
-              temperature: 0.5,
-              maxOutputTokens: 8192,
-              responseMimeType: 'application/json',
-            },
-          }),
-        }
-      );
-
-      if (aiResponse.ok) {
-        const aiData = await aiResponse.json();
-        const text = geminiTextFromResponse(aiData);
-        if (text) {
-          reportContent = JSON.parse(text);
-        }
-      }
-    }
+    reportContent = await aiGenerateJSON<ReportContent>({
+      prompt,
+      systemInstruction: 'You are a professional digital marketing consultant generating audit reports. Return ONLY valid JSON.',
+      temperature: 0.5,
+      maxOutputTokens: 8192,
+    });
   } catch (err) {
     console.error('AI report generation failed:', err);
   }

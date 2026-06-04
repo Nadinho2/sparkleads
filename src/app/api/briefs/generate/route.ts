@@ -2,15 +2,9 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createSupabaseAdmin } from '@/lib/supabase';
 import { getToken } from '@/lib/auth';
 import { v4 as uuidv4 } from 'uuid';
+import { aiGenerateJSON } from '@/lib/ai-client';
 
 export const runtime = 'nodejs';
-
-function geminiTextFromResponse(data: unknown): string {
-  const d = data as { candidates?: { content?: { parts?: { text?: string }[] } }[] };
-  const parts = d?.candidates?.[0]?.content?.parts;
-  if (!Array.isArray(parts)) return '';
-  return parts.map((p) => p?.text || '').join('').trim();
-}
 
 export async function POST(request: NextRequest) {
   const userToken = getToken();
@@ -210,55 +204,12 @@ Return ONLY valid JSON:
   let briefData: Record<string, unknown> = {};
 
   try {
-    const apiKey = process.env.GEMINI_API_KEY;
-    if (!apiKey) {
-      return NextResponse.json({ error: 'AI service not configured' }, { status: 500 });
-    }
-
-    const requestBody = JSON.stringify({
-      contents: [{ role: 'user', parts: [{ text: prompt }] }],
-      generationConfig: {
-        temperature: 0.7,
-        maxOutputTokens: 8192,
-        responseMimeType: 'application/json',
-      },
+    briefData = await aiGenerateJSON<Record<string, unknown>>({
+      prompt,
+      systemInstruction: 'You are a senior creative director. Generate extremely detailed, production-ready creative briefs. Return ONLY valid JSON.',
+      temperature: 0.7,
+      maxOutputTokens: 8192,
     });
-
-    let aiData: unknown = null;
-    let lastError = '';
-
-    for (let attempt = 0; attempt < 3; attempt++) {
-      if (attempt > 0) {
-        await new Promise((r) => setTimeout(r, (attempt * 2000) + Math.random() * 1000));
-      }
-
-      const aiResponse = await fetch(
-        `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`,
-        { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: requestBody }
-      );
-
-      if (aiResponse.ok) {
-        aiData = await aiResponse.json();
-        break;
-      }
-
-      lastError = `Gemini API error: ${aiResponse.status}`;
-      const errBody = await aiResponse.text().catch(() => '');
-      console.error(`Gemini attempt ${attempt + 1} failed:`, aiResponse.status, errBody.slice(0, 200));
-
-      if (aiResponse.status !== 429 && aiResponse.status !== 503) break;
-    }
-
-    if (!aiData) {
-      throw new Error(lastError || 'AI service temporarily unavailable. Please try again.');
-    }
-
-    const text = geminiTextFromResponse(aiData);
-    if (text) {
-      briefData = JSON.parse(text);
-    } else {
-      throw new Error('AI returned empty response');
-    }
   } catch (err) {
     const errMsg = err instanceof Error ? err.message : String(err);
     console.error('Brief generation failed:', errMsg);
