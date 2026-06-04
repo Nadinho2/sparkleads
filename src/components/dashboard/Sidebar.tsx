@@ -35,6 +35,7 @@ const navItems = [
       { label: 'GBP Auditor', href: '/dashboard/audit/gbp', icon: MapPin },
       { label: 'Competitors', href: '/dashboard/audit/competitors', icon: Users },
       { label: 'Audit Report', href: '/dashboard/audit/report', icon: FileText },
+      { label: 'Proposals', href: '/dashboard/proposals', icon: FileText },
     ],
   },
   { label: 'Credits', href: '/dashboard/credits', icon: Zap },
