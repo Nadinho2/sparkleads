@@ -13,7 +13,6 @@ export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url);
   const type = searchParams.get('type');
   const status = searchParams.get('status');
-  const search = searchParams.get('search');
   const limit = parseInt(searchParams.get('limit') || '100');
 
   const supabase = createSupabaseAdmin();

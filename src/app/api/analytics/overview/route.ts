@@ -37,7 +37,6 @@ export async function GET(request: NextRequest) {
 
   const [
     searchesResult,
-    leadsResult,
     outreachResult,
     contentResult,
     creditsResult,
@@ -52,12 +51,6 @@ export async function GET(request: NextRequest) {
       .select('id, query, result_count, created_at')
       .eq('user_token', userToken)
       .gte('created_at', startDate),
-    supabase
-      .from('leads')
-      .select('id, created_at, search_id')
-      .in('search_id',
-        (await supabase.from('searches').select('id').eq('user_token', userToken)).data?.map(s => s.id) || []
-      ),
     supabase
       .from('outreach_messages')
       .select('id, type, status, created_at')
@@ -101,7 +94,6 @@ export async function GET(request: NextRequest) {
   ]);
 
   const searches = searchesResult.data || [];
-  const leads = leadsResult.data || [];
   const outreach = outreachResult.data || [];
   const content = contentResult.data || [];
   const credits = creditsResult.data || [];
