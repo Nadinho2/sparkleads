@@ -20,6 +20,7 @@ import {
   Sparkles,
   BarChart2,
   MapPin,
+  Users,
 } from 'lucide-react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { toast } from 'sonner';
@@ -817,6 +818,22 @@ export default function DashboardPage() {
                         >
                           <MapPin size={12} />
                           <span className="hidden xl:inline">GBP</span>
+                        </button>
+                        <button
+                          onClick={() => {
+                            localStorage.setItem('sparkleads_competitor_check', JSON.stringify({
+                              businessName: lead.name,
+                              businessType: lead.type,
+                              location: lead.address,
+                              leadId: lead.id,
+                            }));
+                            router.push('/dashboard/audit/competitors');
+                          }}
+                          className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-teal-600 hover:bg-teal-500 text-white text-xs font-medium transition-colors"
+                          title="Competitor analysis"
+                        >
+                          <Users size={12} />
+                          <span className="hidden xl:inline">Compete</span>
                         </button>
                       </div>
                     </td>
