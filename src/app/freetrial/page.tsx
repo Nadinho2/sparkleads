@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
+import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import {
   Search,
@@ -31,6 +32,7 @@ const suggestedSearches = [
 ];
 
 export default function FreeTrialPage() {
+  const router = useRouter();
   const [isSignedUp, setIsSignedUp] = useState(false);
   const [signupEmail, setSignupEmail] = useState('');
   const [signupPassword, setSignupPassword] = useState('');
@@ -99,8 +101,8 @@ export default function FreeTrialPage() {
       const data = await res.json();
 
       if (data.success) {
-        setIsSignedUp(true);
-        toast.success(data.message || 'Account created! You have 3 free searches.');
+        toast.success(data.message || 'Account created! You have 5 free credits.');
+        router.push('/dashboard');
       } else {
         toast.error(data.error || 'Signup failed');
       }
