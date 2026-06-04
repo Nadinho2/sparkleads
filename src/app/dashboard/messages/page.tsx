@@ -83,7 +83,9 @@ export default function AIMessagesPage() {
 
   const loadLeads = useCallback(async () => {
     try {
-      const res = await fetch('/api/search/history?limit=200');
+      const sessionId = localStorage.getItem('sparkleads_session_id');
+      if (!sessionId) return;
+      const res = await fetch(`/api/search/history?session_id=${sessionId}&limit=200`);
       const data = await res.json();
       if (data.leads) {
         const unique = new Map<string, Lead>();

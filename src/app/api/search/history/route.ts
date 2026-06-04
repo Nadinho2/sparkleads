@@ -1,13 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createSupabaseAdmin } from '@/lib/supabase';
-import { getToken } from '@/lib/auth';
 
 export const runtime = 'nodejs';
 
 export async function GET(request: NextRequest) {
-  const userToken = getToken();
-  if (!userToken) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  const sessionId = request.nextUrl.searchParams.get('session_id');
+  if (!sessionId) {
+    return NextResponse.json({ error: 'session_id is required' }, { status: 400 });
   }
 
   const limit = parseInt(request.nextUrl.searchParams.get('limit') || '200');
@@ -16,7 +15,7 @@ export async function GET(request: NextRequest) {
   const { data: searches } = await supabase
     .from('searches')
     .select('id')
-    .eq('user_token', userToken)
+    .eq('user_token', sessionId)
     .order('created_at', { ascending: false })
     .limit(50);
 
