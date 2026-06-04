@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import {
   FileText, Loader2, AlertTriangle, CheckCircle, TrendingUp, Printer,
-  Target, DollarSign, Zap, Globe, MapPin, Phone as PhoneIcon, BarChart2,
+  Target, DollarSign, Zap, Globe, MapPin, Phone as PhoneIcon,
 } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -178,8 +178,6 @@ export default function AuditReportPage() {
   function handlePrint() {
     window.print();
   }
-
-  const circumference = 2 * Math.PI * 45;
 
   return (
     <>

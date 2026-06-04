@@ -290,6 +290,7 @@ export default function GBPAuditPage() {
                 <div className="p-6 rounded-2xl border border-green-500/30 bg-green-500/5">
                   <div className="flex items-start gap-4">
                     {result.business.thumbnail && (
+                      /* eslint-disable-next-line @next/next/no-img-element */
                       <img
                         src={result.business.thumbnail}
                         alt={result.business.name}
