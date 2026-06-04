@@ -222,11 +222,6 @@ Return ONLY valid JSON:
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           contents: [{ role: 'user', parts: [{ text: prompt }] }],
-          systemInstruction: {
-            parts: [{
-              text: `You are a senior creative director. Generate extremely detailed, production-ready creative briefs. Every deliverable must have specific dimensions, every video script must have scene-by-scene breakdowns, every image must have composition and lighting direction. The brief must be so detailed that a freelancer could execute it without any questions.`,
-            }],
-          },
           generationConfig: {
             temperature: 0.7,
             maxOutputTokens: 8192,
@@ -237,6 +232,8 @@ Return ONLY valid JSON:
     );
 
     if (!aiResponse.ok) {
+      const errBody = await aiResponse.text().catch(() => '');
+      console.error('Gemini API error:', aiResponse.status, errBody);
       throw new Error(`Gemini API error: ${aiResponse.status}`);
     }
 
@@ -244,10 +241,14 @@ Return ONLY valid JSON:
     const text = geminiTextFromResponse(aiData);
     if (text) {
       briefData = JSON.parse(text);
+    } else {
+      console.error('Empty response from Gemini:', JSON.stringify(aiData).slice(0, 500));
+      throw new Error('AI returned empty response');
     }
   } catch (err) {
-    console.error('Brief generation failed:', err);
-    return NextResponse.json({ error: 'AI generation failed. Please try again.' }, { status: 500 });
+    const errMsg = err instanceof Error ? err.message : String(err);
+    console.error('Brief generation failed:', errMsg);
+    return NextResponse.json({ error: `AI generation failed: ${errMsg}` }, { status: 500 });
   }
 
   // Save to database

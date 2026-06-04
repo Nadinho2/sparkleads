@@ -134,8 +134,8 @@ export default function NewBriefPage() {
 
       toast.success('Creative brief generated! (5 credits)');
       router.push(`/dashboard/briefs/${data.briefId}`);
-    } catch {
-      toast.error('Something went wrong');
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : 'Something went wrong');
     } finally {
       setGenerating(false);
     }

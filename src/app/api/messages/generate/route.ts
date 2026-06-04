@@ -146,11 +146,6 @@ Each must be genuinely different based on that business's specific details.`;
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           contents: [{ role: 'user', parts: [{ text: prompt }] }],
-          systemInstruction: {
-            parts: [{
-              text: `You write personalized cold outreach messages. Every message must feel handcrafted for that specific business. Reference their actual business details. Never use generic templates or corporate language.`,
-            }],
-          },
           generationConfig: {
             temperature: 0.8,
             maxOutputTokens: 8192,
@@ -161,6 +156,8 @@ Each must be genuinely different based on that business's specific details.`;
     );
 
     if (!aiResponse.ok) {
+      const errBody = await aiResponse.text().catch(() => '');
+      console.error('Gemini API error:', aiResponse.status, errBody);
       throw new Error(`Gemini API error: ${aiResponse.status}`);
     }
 
@@ -168,10 +165,14 @@ Each must be genuinely different based on that business's specific details.`;
     const text = geminiTextFromResponse(aiData);
     if (text) {
       messages = JSON.parse(text);
+    } else {
+      console.error('Empty response from Gemini:', JSON.stringify(aiData).slice(0, 500));
+      throw new Error('AI returned empty response');
     }
   } catch (err) {
-    console.error('AI message generation failed:', err);
-    return NextResponse.json({ error: 'AI generation failed. Please try again.' }, { status: 500 });
+    const errMsg = err instanceof Error ? err.message : String(err);
+    console.error('AI message generation failed:', errMsg);
+    return NextResponse.json({ error: `AI generation failed: ${errMsg}` }, { status: 500 });
   }
 
   // Map messages back to leads
@@ -205,9 +206,9 @@ Each must be genuinely different based on that business's specific details.`;
     if (tmpl) savedTemplateId = tmpl.id;
   }
 
-  // Save generated messages
+  // Save generated messages (skip manual leads that don't exist in DB)
   const messageRecords = result
-    .filter((r) => r.leadId)
+    .filter((r) => r.leadId && !String(r.leadId).startsWith('manual-'))
     .map((r) => ({
       id: uuidv4(),
       user_token: userToken,

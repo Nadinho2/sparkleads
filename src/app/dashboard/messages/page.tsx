@@ -63,6 +63,8 @@ export default function AIMessagesPage() {
   const [leads, setLeads] = useState<Lead[]>([]);
   const [selectedLeadIds, setSelectedLeadIds] = useState<Set<string>>(new Set());
   const [filter, setFilter] = useState('all');
+  const [showManualInput, setShowManualInput] = useState(false);
+  const [manualLead, setManualLead] = useState({ name: '', type: '', address: '', phone: '', email: '', website: '' });
 
   // Generation
   const [generating, setGenerating] = useState(false);
@@ -125,6 +127,26 @@ export default function AIMessagesPage() {
     setSelectedLeadIds(new Set());
   }
 
+  function addManualLead() {
+    if (!manualLead.name.trim()) { toast.error('Business name is required'); return; }
+    const id = 'manual-' + crypto.randomUUID();
+    const newLead: Lead = {
+      id,
+      name: manualLead.name.trim(),
+      type: manualLead.type.trim() || null,
+      address: manualLead.address.trim() || null,
+      rating: null,
+      website: manualLead.website.trim() || null,
+      email: manualLead.email.trim() || null,
+      phone: manualLead.phone.trim() || null,
+    };
+    setLeads((prev) => [newLead, ...prev]);
+    setSelectedLeadIds((prev) => new Set(prev).add(id));
+    setManualLead({ name: '', type: '', address: '', phone: '', email: '', website: '' });
+    setShowManualInput(false);
+    toast.success('Lead added');
+  }
+
   function getFilteredLeads() {
     switch (filter) {
       case 'no-website': return leads.filter((l) => !l.website);
@@ -172,8 +194,8 @@ export default function AIMessagesPage() {
       setMessages(data.messages);
       toast.success(`${data.messages.length} messages generated! (${data.creditsUsed} credits)`);
       if (saveAsTemplate) loadTemplates();
-    } catch {
-      toast.error('Something went wrong');
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : 'Something went wrong');
     } finally {
       setGenerating(false);
     }
@@ -402,7 +424,66 @@ export default function AIMessagesPage() {
             <div className="flex gap-2 mb-3">
               <button onClick={selectAll} className="text-xs text-primary hover:underline">Select All</button>
               <button onClick={deselectAll} className="text-xs text-muted hover:underline">Deselect</button>
+              <button onClick={() => setShowManualInput(!showManualInput)} className="text-xs text-primary hover:underline ml-auto">+ Add Lead Manually</button>
             </div>
+
+            {/* Manual Lead Input */}
+            {showManualInput && (
+              <div className="mb-3 p-3 rounded-lg bg-surface2 border border-border space-y-2">
+                <input
+                  type="text"
+                  value={manualLead.name}
+                  onChange={(e) => setManualLead({ ...manualLead, name: e.target.value })}
+                  placeholder="Business name *"
+                  className="w-full px-3 py-2 rounded-lg border border-border bg-surface text-text text-xs placeholder:text-muted focus:outline-none focus:ring-2 focus:ring-primary/50"
+                />
+                <div className="grid grid-cols-2 gap-2">
+                  <input
+                    type="text"
+                    value={manualLead.type}
+                    onChange={(e) => setManualLead({ ...manualLead, type: e.target.value })}
+                    placeholder="Type (e.g. Restaurant)"
+                    className="px-3 py-2 rounded-lg border border-border bg-surface text-text text-xs placeholder:text-muted focus:outline-none focus:ring-2 focus:ring-primary/50"
+                  />
+                  <input
+                    type="text"
+                    value={manualLead.address}
+                    onChange={(e) => setManualLead({ ...manualLead, address: e.target.value })}
+                    placeholder="Location"
+                    className="px-3 py-2 rounded-lg border border-border bg-surface text-text text-xs placeholder:text-muted focus:outline-none focus:ring-2 focus:ring-primary/50"
+                  />
+                </div>
+                <div className="grid grid-cols-3 gap-2">
+                  <input
+                    type="text"
+                    value={manualLead.phone}
+                    onChange={(e) => setManualLead({ ...manualLead, phone: e.target.value })}
+                    placeholder="Phone"
+                    className="px-3 py-2 rounded-lg border border-border bg-surface text-text text-xs placeholder:text-muted focus:outline-none focus:ring-2 focus:ring-primary/50"
+                  />
+                  <input
+                    type="text"
+                    value={manualLead.email}
+                    onChange={(e) => setManualLead({ ...manualLead, email: e.target.value })}
+                    placeholder="Email"
+                    className="px-3 py-2 rounded-lg border border-border bg-surface text-text text-xs placeholder:text-muted focus:outline-none focus:ring-2 focus:ring-primary/50"
+                  />
+                  <input
+                    type="text"
+                    value={manualLead.website}
+                    onChange={(e) => setManualLead({ ...manualLead, website: e.target.value })}
+                    placeholder="Website"
+                    className="px-3 py-2 rounded-lg border border-border bg-surface text-text text-xs placeholder:text-muted focus:outline-none focus:ring-2 focus:ring-primary/50"
+                  />
+                </div>
+                <button
+                  onClick={addManualLead}
+                  className="w-full py-2 rounded-lg bg-primary text-white text-xs font-medium hover:bg-primary/90 transition-colors"
+                >
+                  Add Lead
+                </button>
+              </div>
+            )}
 
             <div className="max-h-80 overflow-y-auto space-y-1.5">
               {filteredLeads.map((lead) => (
@@ -429,7 +510,15 @@ export default function AIMessagesPage() {
                 </button>
               ))}
               {filteredLeads.length === 0 && (
-                <p className="text-xs text-muted text-center py-4">No leads found</p>
+                <div className="text-center py-4">
+                  <p className="text-xs text-muted mb-2">No leads from search history</p>
+                  <button
+                    onClick={() => setShowManualInput(true)}
+                    className="text-xs text-primary hover:underline"
+                  >
+                    + Add a lead manually to get started
+                  </button>
+                </div>
               )}
             </div>
 
