@@ -75,6 +75,9 @@ function getPriorityColor(priority: string): string {
 export default function WebsiteGradePage() {
   const [url, setUrl] = useState('');
   const [businessName, setBusinessName] = useState('');
+  const [leadLocation, setLeadLocation] = useState('');
+  const [leadPhone, setLeadPhone] = useState('');
+  const [leadId, setLeadId] = useState('');
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<GradeResult | null>(null);
   const [pastGrades, setPastGrades] = useState<PastGrade[]>([]);
@@ -88,6 +91,9 @@ export default function WebsiteGradePage() {
         const data = JSON.parse(stored);
         if (data.url) setUrl(data.url);
         if (data.businessName) setBusinessName(data.businessName);
+        if (data.location) setLeadLocation(data.location);
+        if (data.phone) setLeadPhone(data.phone);
+        if (data.leadId) setLeadId(data.leadId);
         localStorage.removeItem('sparkleads_grade_url');
       } catch { /* ignore */ }
     }
@@ -360,6 +366,15 @@ export default function WebsiteGradePage() {
                   businessName: businessName || url,
                   websiteScore: result.overallScore,
                   gradeId: result.gradeId,
+                  leadId: leadId || undefined,
+                }}
+                onBeforeNavigate={() => {
+                  localStorage.setItem('sparkleads_report_data', JSON.stringify({
+                    businessName: businessName || url,
+                    websiteUrl: url,
+                    location: leadLocation,
+                    phone: leadPhone,
+                  }));
                 }}
               />
             </div>

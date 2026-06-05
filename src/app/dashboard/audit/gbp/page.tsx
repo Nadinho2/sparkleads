@@ -149,7 +149,7 @@ export default function GBPAuditPage() {
       }
 
       setResult(data);
-      toast.success('GBP audit complete!');
+      toast.success('Google Profile audit complete!');
       fetchPastAudits();
     } catch {
       toast.error('Something went wrong. Please try again.');
@@ -243,7 +243,7 @@ export default function GBPAuditPage() {
               ) : (
                 <>
                   <MapPin className="w-5 h-5" />
-                  Audit GBP — 2 Credits
+                  Audit Google Profile — 2 Credits
                 </>
               )}
             </button>
@@ -479,6 +479,14 @@ export default function GBPAuditPage() {
                   businessName,
                   gbpScore: result.overallScore,
                   gbpId: result.auditId,
+                }}
+                onBeforeNavigate={() => {
+                  localStorage.setItem('sparkleads_report_data', JSON.stringify({
+                    businessName,
+                    websiteUrl: result.business?.website || '',
+                    location: result.business?.address || location,
+                    phone: result.business?.phone || '',
+                  }));
                 }}
               />
 

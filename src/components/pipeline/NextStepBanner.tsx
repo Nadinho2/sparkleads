@@ -19,6 +19,7 @@ interface NextStepBannerProps {
   currentStep: 'grade' | 'gbp' | 'audit' | 'competitor' | 'proposal';
   data: PipelineData;
   onWhatsApp?: () => void;
+  onBeforeNavigate?: () => void;
 }
 
 const PIPELINE_STEPS: Record<string, {
@@ -99,7 +100,7 @@ const PIPELINE_STEPS: Record<string, {
 
 const PIPELINE_ORDER = ['grade', 'audit', 'proposal', 'whatsapp'];
 
-export default function NextStepBanner({ currentStep, data, onWhatsApp }: NextStepBannerProps) {
+export default function NextStepBanner({ currentStep, data, onWhatsApp, onBeforeNavigate }: NextStepBannerProps) {
   const router = useRouter();
   const step = PIPELINE_STEPS[currentStep];
   if (!step) return null;
@@ -134,6 +135,7 @@ export default function NextStepBanner({ currentStep, data, onWhatsApp }: NextSt
           <button
             onClick={() => {
               if (step.navigateTo) {
+                onBeforeNavigate?.();
                 router.push(step.navigateTo(data));
               } else {
                 onWhatsApp?.();

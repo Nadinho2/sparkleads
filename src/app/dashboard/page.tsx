@@ -1005,6 +1005,8 @@ export default function DashboardPage() {
                                 url: lead.website,
                                 businessName: lead.name,
                                 leadId: lead.id,
+                                location: lead.address,
+                                phone: lead.phone,
                               }));
                               router.push('/dashboard/audit/grade');
                             }}
@@ -1028,7 +1030,7 @@ export default function DashboardPage() {
                           title="Check Google Business Profile"
                         >
                           <MapPin size={12} />
-                          <span className="hidden xl:inline">GBP</span>
+                          <span className="hidden xl:inline">Google</span>
                         </button>
                         <button
                           onClick={() => {

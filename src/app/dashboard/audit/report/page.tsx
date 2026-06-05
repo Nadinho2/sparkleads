@@ -211,7 +211,7 @@ export default function AuditReportPage() {
         <div className="flex items-center justify-between mb-8 no-print">
           <div>
             <h1 className="text-2xl sm:text-3xl font-bold text-text mb-2">Digital Audit Report</h1>
-            <p className="text-muted">Generate a professional report combining website grade + GBP audit.</p>
+            <p className="text-muted">Generate a professional report combining website grade + Google Profile audit.</p>
           </div>
           {savedReports.length > 0 && (
             <div className="relative group">
