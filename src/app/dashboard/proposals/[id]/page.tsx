@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useParams } from 'next/navigation';
-import { Printer, Send, CheckCircle, Copy, Zap, MessageCircle, Loader2 } from 'lucide-react';
+import { Download, Send, CheckCircle, Zap, MessageCircle, Loader2, Link as LinkIcon } from 'lucide-react';
 import { toast } from 'sonner';
 import NextStepBanner from '@/components/pipeline/NextStepBanner';
 import WhatsAppPreviewModal from '@/components/outreach/WhatsAppPreviewModal';
@@ -80,12 +80,17 @@ export default function ProposalViewPage() {
   }
 
   function handlePrint() {
-    window.print();
+    if (proposal) {
+      window.open(`/print/proposal/${proposal.id}`, '_blank');
+    }
   }
 
-  function handleCopyLink() {
-    navigator.clipboard.writeText(window.location.href);
-    toast.success('Link copied!');
+  function handleCopyShareLink() {
+    if (proposal) {
+      const printUrl = `${window.location.origin}/print/proposal/${proposal.id}`;
+      navigator.clipboard.writeText(printUrl);
+      toast.success('Share link copied — send this to your client');
+    }
   }
 
   async function generateWhatsApp() {
@@ -151,29 +156,17 @@ export default function ProposalViewPage() {
 
   return (
     <>
-      <style jsx global>{`
-        @media print {
-          nav, aside, header, .no-print { display: none !important; }
-          .proposal-content { width: 100% !important; max-width: none !important; margin: 0 !important; padding: 20px !important; }
-          body { background: white !important; color: black !important; -webkit-print-color-adjust: exact; }
-          .proposal-content * { color: black !important; }
-          h1 { font-size: 24pt !important; }
-          h2 { font-size: 18pt !important; }
-          p, li { font-size: 11pt !important; line-height: 1.6 !important; }
-        }
-      `}</style>
-
       <div className="max-w-4xl mx-auto">
         {/* Action Buttons */}
         <div className="flex flex-wrap gap-3 mb-6 no-print">
-          <button onClick={handlePrint} className="flex items-center gap-2 px-4 py-2.5 bg-primary text-white rounded-xl text-sm font-medium hover:bg-primary/90 transition-colors">
-            <Printer size={16} /> Download PDF
+          <button onClick={handlePrint} className="flex items-center gap-2 px-4 py-2.5 bg-white text-black rounded-xl text-sm font-semibold hover:bg-gray-100 transition-colors">
+            <Download size={16} /> Download PDF
+          </button>
+          <button onClick={handleCopyShareLink} className="flex items-center gap-2 px-4 py-2.5 bg-surface2 text-text border border-border rounded-xl text-sm font-medium hover:bg-surface transition-colors">
+            <LinkIcon size={16} /> Copy Share Link
           </button>
           <button onClick={() => updateStatus('sent')} className="flex items-center gap-2 px-4 py-2.5 bg-blue-600 text-white rounded-xl text-sm font-medium hover:bg-blue-500 transition-colors">
             <Send size={16} /> Mark as Sent
-          </button>
-          <button onClick={handleCopyLink} className="flex items-center gap-2 px-4 py-2.5 bg-surface2 text-text border border-border rounded-xl text-sm font-medium hover:bg-surface transition-colors">
-            <Copy size={16} /> Copy Link
           </button>
           <div className="ml-auto">
             <select
