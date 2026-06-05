@@ -1,5 +1,6 @@
 import { createClient } from '@supabase/supabase-js';
 import { notFound } from 'next/navigation';
+import PrintBar from './PrintBar';
 
 function getCurrencySymbol(currency: string) {
   if (currency === 'NGN') return '₦';
@@ -52,27 +53,7 @@ export default async function PrintProposalPage({ params }: { params: { id: stri
         fontFamily: "'Georgia', 'Times New Roman', serif",
       }}>
         {/* Print bar */}
-        <div className="no-print" style={{
-          position: 'sticky', top: 0, zIndex: 100,
-          background: '#1a1a1a', color: 'white',
-          padding: '10px 24px',
-          display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-        }}>
-          <span style={{ fontSize: '13px' }}>
-            Proposal for {proposal.business_name}
-          </span>
-          <button
-            onClick={() => window.print()}
-            style={{
-              background: 'white', color: '#1a1a1a',
-              border: 'none', padding: '8px 20px',
-              borderRadius: '6px', fontWeight: 'bold',
-              cursor: 'pointer', fontSize: '13px',
-            }}
-          >
-            Download PDF
-          </button>
-        </div>
+        <PrintBar businessName={proposal.business_name} />
 
         <div style={{
           maxWidth: '800px',
