@@ -4,8 +4,10 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import {
   Users, Loader2, Trophy, TrendingUp, TrendingDown, Minus,
-  Star, Phone, Globe, Camera, ChevronDown, MapPin, Target, AlertTriangle, Zap,
+  Star, Phone, Globe, Camera, ChevronDown, MapPin, Target, AlertTriangle, Zap, MessageCircle,
 } from 'lucide-react';
+import NextStepBanner from '@/components/pipeline/NextStepBanner';
+import WhatsAppPreviewModal from '@/components/outreach/WhatsAppPreviewModal';
 import { toast } from 'sonner';
 
 interface ScoredBusiness {
@@ -76,6 +78,10 @@ export default function CompetitorAnalysisPage() {
   const [pastAnalyses, setPastAnalyses] = useState<PastAnalysis[]>([]);
   const [showPast, setShowPast] = useState(true);
   const [expandedCompetitor, setExpandedCompetitor] = useState<number | null>(null);
+  const [whatsappModal, setWhatsappModal] = useState(false);
+  const [whatsappMessage, setWhatsappMessage] = useState('');
+  const [whatsappPhone, setWhatsappPhone] = useState('');
+  const [generatingWhatsApp, setGeneratingWhatsApp] = useState(false);
 
   useEffect(() => {
     const stored = localStorage.getItem('sparkleads_competitor_check');
@@ -156,6 +162,38 @@ export default function CompetitorAnalysisPage() {
     } catch {
       toast.error('Failed to load analysis');
     }
+  }
+
+  async function generateWhatsApp() {
+    if (!result) return;
+    setGeneratingWhatsApp(true);
+    try {
+      const res = await fetch('/api/competitors/whatsapp-message', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ competitorAnalysisId: result.analysisId }),
+      });
+      const data = await res.json();
+      if (data.error) throw new Error(data.error);
+      setWhatsappMessage(data.message);
+      setWhatsappPhone(data.phone || '');
+      setWhatsappModal(true);
+    } catch {
+      toast.error('Failed to generate WhatsApp message');
+    } finally {
+      setGeneratingWhatsApp(false);
+    }
+  }
+
+  function sendWhatsApp() {
+    if (!whatsappPhone) {
+      toast.error('No phone number available for this business');
+      return;
+    }
+    const cleaned = whatsappPhone.replace(/[^0-9+]/g, '');
+    const encoded = encodeURIComponent(whatsappMessage);
+    window.open(`https://wa.me/${cleaned}?text=${encoded}`, '_blank');
+    setWhatsappModal(false);
   }
 
   // Build comparison table data
@@ -492,6 +530,31 @@ export default function CompetitorAnalysisPage() {
                   ))}
                 </div>
               )}
+
+              {/* WhatsApp Pitch Button */}
+              <div className="flex justify-end">
+                <button
+                  onClick={generateWhatsApp}
+                  disabled={generatingWhatsApp}
+                  className="flex items-center gap-2 px-4 py-2 rounded-xl bg-green-600 hover:bg-green-500 text-white font-medium transition-colors disabled:opacity-50"
+                >
+                  {generatingWhatsApp ? (
+                    <Loader2 size={16} className="animate-spin" />
+                  ) : (
+                    <MessageCircle size={16} />
+                  )}
+                  {generatingWhatsApp ? 'Generating...' : 'Send WhatsApp Pitch'}
+                </button>
+              </div>
+
+              {/* Next Step Banner */}
+              <NextStepBanner
+                currentStep="competitor"
+                data={{
+                  businessName,
+                  competitorId: result.analysisId,
+                }}
+              />
             </div>
           ) : (
             <div className="flex flex-col items-center justify-center p-16 rounded-2xl border border-dashed border-border bg-surface/50 text-center">
@@ -502,6 +565,18 @@ export default function CompetitorAnalysisPage() {
           )}
         </div>
       </div>
+
+      {/* WhatsApp Preview Modal */}
+      <WhatsAppPreviewModal
+        isOpen={whatsappModal}
+        message={whatsappMessage}
+        businessName={businessName}
+        phone={whatsappPhone}
+        source="competitor"
+        onSend={sendWhatsApp}
+        onEdit={(msg) => setWhatsappMessage(msg)}
+        onClose={() => setWhatsappModal(false)}
+      />
     </div>
   );
 }

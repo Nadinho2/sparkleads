@@ -2,8 +2,10 @@
 
 import { useState, useEffect } from 'react';
 import { useParams } from 'next/navigation';
-import { Printer, Send, CheckCircle, Copy, Zap } from 'lucide-react';
+import { Printer, Send, CheckCircle, Copy, Zap, MessageCircle, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
+import NextStepBanner from '@/components/pipeline/NextStepBanner';
+import WhatsAppPreviewModal from '@/components/outreach/WhatsAppPreviewModal';
 
 interface ProposalData {
   subject_line: string;
@@ -31,6 +33,7 @@ interface ProposalData {
 interface Proposal {
   id: string;
   business_name: string;
+  lead_id: string | null;
   services: string[];
   pricing: { service: string; price: number; currency: string }[];
   proposal_data: ProposalData;
@@ -49,6 +52,10 @@ export default function ProposalViewPage() {
   const params = useParams();
   const [proposal, setProposal] = useState<Proposal | null>(null);
   const [loading, setLoading] = useState(true);
+  const [whatsappModal, setWhatsappModal] = useState(false);
+  const [whatsappMessage, setWhatsappMessage] = useState('');
+  const [whatsappPhone, setWhatsappPhone] = useState('');
+  const [generatingWhatsApp, setGeneratingWhatsApp] = useState(false);
 
   useEffect(() => {
     fetch(`/api/proposals/${params.id}`)
@@ -79,6 +86,49 @@ export default function ProposalViewPage() {
   function handleCopyLink() {
     navigator.clipboard.writeText(window.location.href);
     toast.success('Link copied!');
+  }
+
+  async function generateWhatsApp() {
+    if (!proposal) return;
+    setGeneratingWhatsApp(true);
+    try {
+      const res = await fetch('/api/proposals/whatsapp-message', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ proposalId: proposal.id }),
+      });
+      const data = await res.json();
+      if (data.error) throw new Error(data.error);
+      setWhatsappMessage(data.message);
+      setWhatsappPhone(data.phone || '');
+      setWhatsappModal(true);
+    } catch {
+      toast.error('Failed to generate WhatsApp message');
+    } finally {
+      setGeneratingWhatsApp(false);
+    }
+  }
+
+  function sendWhatsApp() {
+    if (!whatsappPhone) {
+      toast.error('No phone number available for this lead');
+      return;
+    }
+    const cleaned = whatsappPhone.replace(/[^0-9+]/g, '');
+    const encoded = encodeURIComponent(whatsappMessage);
+    window.open(`https://wa.me/${cleaned}?text=${encoded}`, '_blank');
+    setWhatsappModal(false);
+
+    // Log outreach
+    fetch('/api/outreach/deduct', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        lead_id: proposal?.lead_id,
+        type: 'whatsapp',
+        message: whatsappMessage,
+      }),
+    }).catch(() => {});
   }
 
   if (loading) {
@@ -275,7 +325,46 @@ export default function ProposalViewPage() {
               <p className="text-sm text-muted italic">{data.ps_line}</p>
             </div>
           )}
+
+          {/* Next Step Banner */}
+          <NextStepBanner
+            currentStep="proposal"
+            data={{
+              businessName: proposal.business_name,
+              proposalId: proposal.id,
+              leadId: proposal.lead_id || undefined,
+            }}
+            onWhatsApp={generateWhatsApp}
+          />
         </div>
+
+        {/* WhatsApp Button */}
+        <div className="flex justify-center mt-6 no-print">
+          <button
+            onClick={generateWhatsApp}
+            disabled={generatingWhatsApp}
+            className="flex items-center gap-2 px-6 py-3 bg-green-600 hover:bg-green-500 text-white rounded-xl font-medium transition-colors disabled:opacity-50"
+          >
+            {generatingWhatsApp ? (
+              <Loader2 size={16} className="animate-spin" />
+            ) : (
+              <MessageCircle size={16} />
+            )}
+            {generatingWhatsApp ? 'Generating...' : 'Send via WhatsApp'}
+          </button>
+        </div>
+
+        {/* WhatsApp Preview Modal */}
+        <WhatsAppPreviewModal
+          isOpen={whatsappModal}
+          message={whatsappMessage}
+          businessName={proposal.business_name}
+          phone={whatsappPhone}
+          source="proposal"
+          onSend={sendWhatsApp}
+          onEdit={(msg) => setWhatsappMessage(msg)}
+          onClose={() => setWhatsappModal(false)}
+        />
       </div>
     </>
   );

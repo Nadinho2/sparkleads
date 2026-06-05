@@ -5,6 +5,7 @@ import {
   FileText, Loader2, AlertTriangle, CheckCircle, TrendingUp, Printer,
   Target, DollarSign, Zap, Globe, MapPin, Phone as PhoneIcon,
 } from 'lucide-react';
+import NextStepBanner from '@/components/pipeline/NextStepBanner';
 import { toast } from 'sonner';
 
 interface ReportContent {
@@ -431,6 +432,17 @@ export default function AuditReportPage() {
             <div className="p-6 rounded-2xl border border-border bg-surface">
               <p className="text-sm text-muted leading-relaxed italic">{result.report.closing_pitch}</p>
             </div>
+
+            {/* Next Step Banner */}
+            <NextStepBanner
+              currentStep="audit"
+              data={{
+                businessName,
+                auditId: result.reportId,
+                websiteScore: result.websiteScore,
+                gbpScore: result.gbpScore,
+              }}
+            />
 
             {/* Print Button */}
             <div className="flex justify-center no-print">

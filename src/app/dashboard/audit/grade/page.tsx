@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { Globe, BarChart2, Loader2, CheckCircle, AlertTriangle, XCircle, ChevronDown } from 'lucide-react';
 import { toast } from 'sonner';
+import NextStepBanner from '@/components/pipeline/NextStepBanner';
 
 interface CheckResult {
   score: number;
@@ -351,6 +352,16 @@ export default function WebsiteGradePage() {
                   </div>
                 </div>
               )}
+
+              {/* Pipeline Next Step */}
+              <NextStepBanner
+                currentStep="grade"
+                data={{
+                  businessName: businessName || url,
+                  websiteScore: result.overallScore,
+                  gradeId: result.gradeId,
+                }}
+              />
             </div>
           ) : (
             <div className="flex flex-col items-center justify-center p-16 rounded-2xl border border-dashed border-border bg-surface/50 text-center">

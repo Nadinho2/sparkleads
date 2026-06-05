@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { MapPin, Loader2, CheckCircle, AlertTriangle, XCircle, ChevronDown, Star, Phone, Globe, Clock, Camera, Building2 } from 'lucide-react';
+import NextStepBanner from '@/components/pipeline/NextStepBanner';
 import { toast } from 'sonner';
 
 interface CheckResult {
@@ -470,6 +471,16 @@ export default function GBPAuditPage() {
                   </div>
                 </div>
               )}
+
+              {/* Next Step Banner */}
+              <NextStepBanner
+                currentStep="gbp"
+                data={{
+                  businessName,
+                  gbpScore: result.overallScore,
+                  gbpId: result.auditId,
+                }}
+              />
 
               {/* Action Buttons */}
               <div className="flex flex-wrap gap-3">

@@ -126,6 +126,20 @@ export default function DashboardPage() {
   } | null>(null);
   const [aiTemplates, setAiTemplates] = useState<{ id: string; name: string; service_description: string; tone: string; message_type: string }[]>([]);
 
+  // Website grade tracking
+  const [leadGrades, setLeadGrades] = useState<Record<string, { score: number; gradeId: string; loading: boolean }>>({});
+  const [showGradeNudge, setShowGradeNudge] = useState(false);
+  const [gradingAll, setGradingAll] = useState(false);
+  const [gradeNudgeDismissed, setGradeNudgeDismissed] = useState(false);
+
+  // Pipeline progress tracking
+  const [leadPipeline, setLeadPipeline] = useState<Record<string, {
+    graded?: boolean;
+    audited?: boolean;
+    proposed?: boolean;
+    contacted?: boolean;
+  }>>({});
+
   const { leads, isSearching, error, search, reset, updateLead } = useSearchStream({
     sessionId,
     isPaid: true,
@@ -202,6 +216,70 @@ export default function DashboardPage() {
     }
     setSessionId(id);
   }, []);
+
+  // Quick grade website inline
+  const quickGradeWebsite = useCallback(async (lead: Lead) => {
+    if (!lead.website || leadGrades[lead.place_id]?.score) return;
+
+    setLeadGrades((prev) => ({
+      ...prev,
+      [lead.place_id]: { score: 0, gradeId: '', loading: true },
+    }));
+
+    try {
+      const res = await fetch('/api/audit/grade-website', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ url: lead.website, businessName: lead.name, leadId: lead.id }),
+      });
+      const data = await res.json();
+
+      if (data.success) {
+        setLeadGrades((prev) => ({
+          ...prev,
+          [lead.place_id]: { score: data.overallScore, gradeId: data.gradeId, loading: false },
+        }));
+        setLeadPipeline((prev) => ({
+          ...prev,
+          [lead.place_id]: { ...prev[lead.place_id], graded: true },
+        }));
+      } else {
+        setLeadGrades((prev) => {
+          const next = { ...prev };
+          delete next[lead.place_id];
+          return next;
+        });
+        toast.error(data.error || 'Failed to grade');
+      }
+    } catch {
+      setLeadGrades((prev) => {
+        const next = { ...prev };
+        delete next[lead.place_id];
+        return next;
+      });
+    }
+  }, [leadGrades]);
+
+  // Grade all websites with leads
+  const gradeAllWithWebsites = useCallback(async () => {
+    const ungraded = leads.filter((l) => l.website && !leadGrades[l.place_id]?.score);
+    if (ungraded.length === 0) return;
+    setGradingAll(true);
+    for (const lead of ungraded.slice(0, 5)) {
+      await quickGradeWebsite(lead);
+    }
+    setGradingAll(false);
+  }, [leads, leadGrades, quickGradeWebsite]);
+
+  // Grade nudge effect — show after 10s if many ungraded websites
+  useEffect(() => {
+    if (!leads.length || gradeNudgeDismissed) return;
+    const ungradedWithWebsite = leads.filter((r) => r.website && !leadGrades[r.place_id]);
+    if (ungradedWithWebsite.length >= 3) {
+      const timer = setTimeout(() => setShowGradeNudge(true), 10000);
+      return () => clearTimeout(timer);
+    }
+  }, [leads, leadGrades, gradeNudgeDismissed]);
 
   const handleSearch = useCallback(async () => {
     if (!query.trim() || isSearching) return;
@@ -734,20 +812,69 @@ export default function DashboardPage() {
                       )}
                     </td>
                     <td className="py-3 px-4 text-sm">
-                      {lead.website ? (
-                        <a
-                          href={lead.website}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="text-primary hover:underline"
-                        >
-                          {lead.website
-                            .replace(/^https?:\/\/(www\.)?/, '')
-                            .slice(0, 30)}
-                        </a>
-                      ) : (
-                        <span className="text-muted">—</span>
-                      )}
+                      <div className="flex items-center gap-2 flex-wrap">
+                        {lead.website ? (
+                          <a
+                            href={lead.website}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-xs text-primary hover:underline truncate max-w-[120px]"
+                          >
+                            {lead.website.replace(/^https?:\/\/(www\.)?/, '').slice(0, 30)}
+                          </a>
+                        ) : (
+                          <span className="text-xs text-muted">No website</span>
+                        )}
+                        {lead.website && (
+                          <>
+                            {leadGrades[lead.place_id]?.loading ? (
+                              <div className="w-3 h-3 rounded-full border-2 border-primary border-t-transparent animate-spin" />
+                            ) : leadGrades[lead.place_id]?.score ? (
+                              <button
+                                onClick={() => router.push(`/dashboard/audit/grade?id=${leadGrades[lead.place_id].gradeId}`)}
+                                className={`text-xs px-2 py-0.5 rounded-full font-bold cursor-pointer transition-all hover:scale-105 ${
+                                  leadGrades[lead.place_id].score >= 70
+                                    ? 'bg-green-500/20 text-green-400'
+                                    : leadGrades[lead.place_id].score >= 50
+                                      ? 'bg-yellow-500/20 text-yellow-400'
+                                      : 'bg-red-500/20 text-red-400'
+                                }`}
+                              >
+                                {leadGrades[lead.place_id].score}/100
+                              </button>
+                            ) : (
+                              <button
+                                onClick={() => quickGradeWebsite(lead)}
+                                className="text-xs px-2 py-0.5 rounded-full bg-surface2 text-muted hover:text-primary hover:bg-surface transition-colors border border-border"
+                              >
+                                Grade
+                              </button>
+                            )}
+                          </>
+                        )}
+                      </div>
+
+                      {/* Pipeline progress dots */}
+                      <div className="flex items-center gap-1 mt-1">
+                        {[
+                          { key: 'graded', icon: '\ud83d\udcca', label: 'Graded' },
+                          { key: 'audited', icon: '\ud83d\udccb', label: 'Audited' },
+                          { key: 'proposed', icon: '\ud83d\udcc4', label: 'Proposed' },
+                          { key: 'contacted', icon: '\u2713', label: 'Contacted' },
+                        ].map((step) => (
+                          <div
+                            key={step.key}
+                            title={step.label}
+                            className={`w-5 h-5 rounded-full text-xs flex items-center justify-center ${
+                              leadPipeline[lead.place_id]?.[step.key as keyof typeof leadPipeline[string]]
+                                ? 'bg-green-500/20 text-green-400'
+                                : 'bg-surface2 text-muted opacity-40'
+                            }`}
+                          >
+                            {step.icon}
+                          </div>
+                        ))}
+                      </div>
                     </td>
                     <td className="py-3 px-4 text-sm">
                       {lead.rating ? (
@@ -1049,6 +1176,34 @@ export default function DashboardPage() {
           </motion.div>
         )}
       </AnimatePresence>
+
+      {/* Grade Nudge Popup */}
+      {showGradeNudge && !gradeNudgeDismissed && (
+        <div className="fixed bottom-24 right-6 z-40 max-w-xs rounded-xl bg-surface border border-primary/30 p-4 shadow-2xl shadow-black/40">
+          <button
+            onClick={() => { setShowGradeNudge(false); setGradeNudgeDismissed(true); }}
+            className="absolute top-2 right-2 text-muted"
+          >
+            <X size={14} />
+          </button>
+          <div className="flex items-start gap-3">
+            <div className="text-2xl">{'\ud83d\udcca'}</div>
+            <div>
+              <p className="font-semibold text-text text-sm">Grade their websites</p>
+              <p className="text-xs text-muted mt-1">
+                {leads.filter((r) => r.website && !leadGrades[r.place_id]).length} businesses with websites haven&apos;t been graded. Low scores = easy clients to close.
+              </p>
+              <button
+                onClick={() => { setShowGradeNudge(false); gradeAllWithWebsites(); }}
+                disabled={gradingAll}
+                className="mt-2 text-xs text-primary hover:underline disabled:opacity-50"
+              >
+                {gradingAll ? 'Grading...' : 'Grade top 5 now (10 credits)'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* AI Write Modal */}
       <AnimatePresence>
