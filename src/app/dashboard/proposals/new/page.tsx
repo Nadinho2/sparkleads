@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { FileText, Loader2, ChevronRight, ChevronLeft, Plus, Check } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -28,6 +28,7 @@ interface AuditReport {
 
 export default function NewProposalPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [step, setStep] = useState(1);
   const [loading, setLoading] = useState(false);
   const [auditReports, setAuditReports] = useState<AuditReport[]>([]);
@@ -46,7 +47,14 @@ export default function NewProposalPage() {
   const [timeline, setTimeline] = useState('1 month');
   const [currency, setCurrency] = useState('NGN');
 
+  // Read query params once (pipeline navigation)
+  const nameFromParams = searchParams.get('name');
+  const auditIdFromParams = searchParams.get('auditId');
+
   useEffect(() => {
+    if (nameFromParams) setBusinessName(decodeURIComponent(nameFromParams));
+    if (auditIdFromParams) setAuditReportId(auditIdFromParams);
+
     // Load audit reports
     fetch('/api/audit/report/history')
       .then((r) => r.json())
@@ -62,7 +70,8 @@ export default function NewProposalPage() {
         if (d.defaultCurrency) setCurrency(d.defaultCurrency);
       })
       .catch(() => {});
-  }, []);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [nameFromParams, auditIdFromParams]);
 
   function toggleService(service: string) {
     setSelectedServices((prev) => {

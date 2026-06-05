@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { useSearchParams } from 'next/navigation';
 import {
   FileText, Loader2, AlertTriangle, CheckCircle, TrendingUp, Printer,
   Target, DollarSign, Zap, Globe, MapPin, Phone as PhoneIcon,
@@ -84,6 +85,7 @@ function ScoreCircle({ score, label, size = 120 }: { score: number; label: strin
 }
 
 export default function AuditReportPage() {
+  const searchParams = useSearchParams();
   const [businessName, setBusinessName] = useState('');
   const [websiteUrl, setWebsiteUrl] = useState('');
   const [location, setLocation] = useState('');
@@ -92,7 +94,14 @@ export default function AuditReportPage() {
   const [result, setResult] = useState<ReportResult | null>(null);
   const [savedReports, setSavedReports] = useState<SavedReport[]>([]);
 
+  // Read query params once (pipeline navigation)
+  const nameFromParams = searchParams.get('name');
+
   useEffect(() => {
+    if (nameFromParams) {
+      setBusinessName(decodeURIComponent(nameFromParams));
+    }
+
     const stored = localStorage.getItem('sparkleads_report_data');
     if (stored) {
       try {
@@ -105,7 +114,8 @@ export default function AuditReportPage() {
       } catch { /* ignore */ }
     }
     fetchSaved();
-  }, []);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [nameFromParams]);
 
   async function fetchSaved() {
     try {

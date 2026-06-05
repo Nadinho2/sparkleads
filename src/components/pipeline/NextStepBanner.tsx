@@ -46,7 +46,7 @@ const PIPELINE_STEPS: Record<string, {
     icon: '\ud83d\udccb',
     urgency: (d) => d.websiteScore && d.websiteScore < 50 ? 'high' : 'medium',
     navigateTo: (d) =>
-      `/dashboard/audit/report/new?gradeId=${d.gradeId}&name=${encodeURIComponent(d.businessName)}&leadId=${d.leadId || ''}`,
+      `/dashboard/audit/report?gradeId=${d.gradeId}&name=${encodeURIComponent(d.businessName)}&leadId=${d.leadId || ''}`,
   },
   gbp: {
     next: 'audit',
@@ -58,7 +58,7 @@ const PIPELINE_STEPS: Record<string, {
     icon: '\ud83d\udccb',
     urgency: (d) => d.gbpScore && d.gbpScore < 50 ? 'high' : 'medium',
     navigateTo: (d) =>
-      `/dashboard/audit/report/new?gbpId=${d.gbpId}&name=${encodeURIComponent(d.businessName)}&leadId=${d.leadId || ''}`,
+      `/dashboard/audit/report?gbpId=${d.gbpId}&name=${encodeURIComponent(d.businessName)}&leadId=${d.leadId || ''}`,
   },
   competitor: {
     next: 'proposal',
