@@ -1,5 +1,6 @@
 import { getJson } from 'serpapi';
 import { safeJsonParse } from './safe-json';
+import { aiGenerateJSON } from './ai-client';
 
 export interface ContentProfile {
   id?: string;
@@ -839,6 +840,23 @@ Each platform gets exactly 5 variations.
 `;
 }
 
+async function generateContentWithAI(
+  profile: ContentProfile,
+  platforms: string[],
+  contentType: string,
+  goal: string,
+  extraContext?: string,
+  toneOverride?: string
+): Promise<{ platforms: Record<string, PlatformResult> }> {
+  const prompt = buildContentPrompt(profile, platforms, contentType, goal, extraContext, toneOverride);
+  return await aiGenerateJSON<{ platforms: Record<string, PlatformResult> }>({
+    prompt,
+    systemInstruction: 'You are a professional social media copywriter. You write content that sounds human, specific, and engaging. You NEVER use generic templates or metaphors from unrelated industries. Always respond in valid JSON only.',
+    temperature: 0.8,
+    maxOutputTokens: 8000,
+  });
+}
+
 async function generateContentWithClaude(
   profile: ContentProfile,
   platforms: string[],
@@ -922,6 +940,15 @@ export async function generateContent(
     fetchHashtags(profile.business_type, location),
     fetchMarketIntelligence(profile),
   ]);
+
+  // Try DeepSeek or Gemini first (via shared client)
+  if (process.env.DEEPSEEK_API_KEY || process.env.GEMINI_API_KEY) {
+    try {
+      return await generateContentWithAI(profile, platforms, contentType, goal, extraContext, toneOverride);
+    } catch (err) {
+      console.error('AI (DeepSeek/Gemini) failed, trying Claude:', err);
+    }
+  }
 
   if (process.env.ANTHROPIC_API_KEY) {
     try {
