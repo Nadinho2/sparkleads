@@ -140,6 +140,12 @@ export default function ProposalViewPage() {
   }
 
   const data = proposal.proposal_data;
+
+  // Normalize arrays — AI sometimes returns strings instead of arrays
+  const whyUs: string[] = Array.isArray(data.why_us) ? data.why_us : typeof data.why_us === 'string' ? [data.why_us] : [];
+  const nextSteps: string[] = Array.isArray(data.next_steps) ? data.next_steps : typeof data.next_steps === 'string' ? [data.next_steps] : [];
+  const services: ProposalData['services'] = Array.isArray(data.services) ? data.services : [];
+
   const sym = getCurrencySymbol(data.currency);
   const total = proposal.pricing?.reduce((sum, p) => sum + p.price, 0) || data.total_price;
 
@@ -223,7 +229,7 @@ export default function ProposalViewPage() {
           <div>
             <h2 className="text-lg font-semibold text-text mb-4">Services Included</h2>
             <div className="space-y-4">
-              {data.services?.map((service, i) => {
+              {services.map((service, i) => {
                 const servicePrice = proposal.pricing?.find((p) => p.service === service.name)?.price;
                 return (
                   <div key={i} className="p-6 rounded-2xl border border-border bg-surface">
@@ -280,11 +286,11 @@ export default function ProposalViewPage() {
           </div>
 
           {/* Why Us */}
-          {data.why_us && data.why_us.length > 0 && (
+          {whyUs.length > 0 && (
             <div className="p-6 rounded-2xl border border-border bg-surface">
               <h2 className="text-lg font-semibold text-text mb-3">Why Choose {data.agency_name}</h2>
               <ul className="space-y-2">
-                {data.why_us.map((point, i) => (
+                {whyUs.map((point, i) => (
                   <li key={i} className="text-sm text-text flex items-start gap-2">
                     <span className="text-primary font-bold">{i + 1}.</span> {point}
                   </li>
@@ -294,11 +300,11 @@ export default function ProposalViewPage() {
           )}
 
           {/* Next Steps */}
-          {data.next_steps && data.next_steps.length > 0 && (
+          {nextSteps.length > 0 && (
             <div className="p-6 rounded-2xl border border-blue-500/20 bg-blue-500/5">
               <h2 className="text-lg font-semibold text-text mb-3">Next Steps</h2>
               <div className="space-y-3">
-                {data.next_steps.map((step, i) => (
+                {nextSteps.map((step, i) => (
                   <div key={i} className="flex items-start gap-3">
                     <div className="w-8 h-8 rounded-full bg-blue-500/20 flex items-center justify-center flex-shrink-0">
                       <span className="text-sm font-bold text-blue-400">{i + 1}</span>

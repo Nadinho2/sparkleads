@@ -130,7 +130,7 @@ Return JSON with this exact format:
     }
   ],
   "timeline_overview": "Project timeline narrative explaining phases",
-  "why_us": "Why choose this agency — 3 compelling points",
+  "why_us": ["Reason 1 to choose this agency", "Reason 2", "Reason 3"],
   "next_steps": ["Step 1: What they do", "Step 2: What happens next", "Step 3: How we get started"],
   "closing": "Compelling closing paragraph with clear call to action",
   "ps_line": "Optional P.S. line for urgency or extra value"
