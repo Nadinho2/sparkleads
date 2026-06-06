@@ -14,7 +14,7 @@ export async function GET() {
 
   const { data } = await supabase
     .from('user_settings')
-    .select('agency_name, agency_contact, agency_title, default_currency, payment_terms')
+    .select('agency_name, agency_contact, agency_title, default_currency, payment_terms, freelancer_type')
     .eq('user_token', userToken)
     .single();
 
@@ -24,6 +24,7 @@ export async function GET() {
     agencyTitle: data?.agency_title || '',
     defaultCurrency: data?.default_currency || 'NGN',
     paymentTerms: data?.payment_terms || '',
+    freelancerType: data?.freelancer_type || '',
   });
 }
 
@@ -34,21 +35,24 @@ export async function POST(request: NextRequest) {
   }
 
   const body = await request.json();
-  const { agencyName, agencyContact, agencyTitle, defaultCurrency, paymentTerms } = body;
+  const { agencyName, agencyContact, agencyTitle, defaultCurrency, paymentTerms, freelancerType } = body;
 
   const supabase = createSupabaseAdmin();
 
+  const upsertData: Record<string, unknown> = {
+    user_token: userToken,
+    updated_at: new Date().toISOString(),
+  };
+  if (agencyName !== undefined) upsertData.agency_name = agencyName;
+  if (agencyContact !== undefined) upsertData.agency_contact = agencyContact;
+  if (agencyTitle !== undefined) upsertData.agency_title = agencyTitle;
+  if (defaultCurrency !== undefined) upsertData.default_currency = defaultCurrency;
+  if (paymentTerms !== undefined) upsertData.payment_terms = paymentTerms;
+  if (freelancerType !== undefined) upsertData.freelancer_type = freelancerType;
+
   const { error } = await supabase
     .from('user_settings')
-    .upsert({
-      user_token: userToken,
-      agency_name: agencyName,
-      agency_contact: agencyContact,
-      agency_title: agencyTitle,
-      default_currency: defaultCurrency,
-      payment_terms: paymentTerms,
-      updated_at: new Date().toISOString(),
-    }, { onConflict: 'user_token' });
+    .upsert(upsertData, { onConflict: 'user_token' });
 
   if (error) {
     return NextResponse.json({ error: 'Failed to save settings' }, { status: 500 });

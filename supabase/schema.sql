@@ -355,3 +355,106 @@ CREATE POLICY "Users can delete own notes"
 CREATE POLICY "Service role can manage notes"
   ON lead_notes FOR ALL
   USING (auth.role() = 'service_role');
+
+-- =============================================================================
+-- MIGRATIONS
+-- =============================================================================
+
+-- Add freelancer_type to user_settings (run in Supabase SQL editor)
+-- ALTER TABLE user_settings ADD COLUMN IF NOT EXISTS freelancer_type TEXT DEFAULT '';
+
+-- =============================================================================
+-- AGENCY SYSTEM TABLES
+-- =============================================================================
+
+-- Workspaces (one per agency account)
+CREATE TABLE IF NOT EXISTS workspaces (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  name TEXT NOT NULL,
+  slug TEXT UNIQUE NOT NULL,
+  owner_token TEXT NOT NULL,
+  plan TEXT CHECK (plan IN ('starter', 'growth', 'pro')) DEFAULT 'starter',
+  status TEXT CHECK (status IN ('active', 'cancelled', 'past_due')) DEFAULT 'active',
+  monthly_credits INTEGER DEFAULT 500,
+  credits_remaining INTEGER DEFAULT 500,
+  seats_limit INTEGER DEFAULT 3,
+  logo_url TEXT,
+  brand_color TEXT DEFAULT '#3B82F6',
+  paystack_subscription_code TEXT,
+  current_period_end TIMESTAMPTZ,
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- Workspace members
+CREATE TABLE IF NOT EXISTS workspace_members (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  workspace_id UUID REFERENCES workspaces(id) ON DELETE CASCADE,
+  user_token TEXT NOT NULL,
+  email TEXT NOT NULL,
+  name TEXT NOT NULL,
+  role TEXT CHECK (role IN ('owner', 'manager', 'member')) DEFAULT 'member',
+  credit_limit INTEGER DEFAULT 0,
+  credits_used INTEGER DEFAULT 0,
+  status TEXT CHECK (status IN ('active', 'invited', 'suspended')) DEFAULT 'invited',
+  invite_token TEXT UNIQUE,
+  joined_at TIMESTAMPTZ,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  UNIQUE(workspace_id, user_token)
+);
+
+-- Agency clients
+CREATE TABLE IF NOT EXISTS agency_clients (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  workspace_id UUID REFERENCES workspaces(id) ON DELETE CASCADE,
+  name TEXT NOT NULL,
+  business_type TEXT,
+  location TEXT,
+  website TEXT,
+  phone TEXT,
+  email TEXT,
+  contact_person TEXT,
+  status TEXT CHECK (status IN ('prospect', 'active', 'paused', 'churned')) DEFAULT 'prospect',
+  monthly_retainer NUMERIC(10,2) DEFAULT 0,
+  currency TEXT DEFAULT 'NGN',
+  start_date DATE,
+  notes TEXT,
+  assigned_to TEXT,
+  lead_id UUID REFERENCES leads(id),
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- Link leads to workspace
+-- ALTER TABLE leads ADD COLUMN IF NOT EXISTS workspace_id UUID REFERENCES workspaces(id) ON DELETE CASCADE;
+-- ALTER TABLE leads ADD COLUMN IF NOT EXISTS found_by TEXT;
+-- ALTER TABLE leads ADD COLUMN IF NOT EXISTS client_id UUID REFERENCES agency_clients(id);
+
+-- Workspace activity log
+CREATE TABLE IF NOT EXISTS workspace_activity (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  workspace_id UUID REFERENCES workspaces(id) ON DELETE CASCADE,
+  user_token TEXT NOT NULL,
+  member_name TEXT,
+  action TEXT NOT NULL,
+  resource_type TEXT,
+  resource_id TEXT,
+  metadata JSONB,
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- Credit allocation per member
+CREATE TABLE IF NOT EXISTS member_credit_allocations (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  workspace_id UUID REFERENCES workspaces(id),
+  member_token TEXT NOT NULL,
+  allocated INTEGER DEFAULT 0,
+  used INTEGER DEFAULT 0,
+  reset_at TIMESTAMPTZ,
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- Indexes
+CREATE INDEX IF NOT EXISTS idx_workspaces_owner_token ON workspaces(owner_token);
+CREATE INDEX IF NOT EXISTS idx_workspace_members_workspace_id ON workspace_members(workspace_id);
+CREATE INDEX IF NOT EXISTS idx_workspace_members_user_token ON workspace_members(user_token);
+CREATE INDEX IF NOT EXISTS idx_agency_clients_workspace_id ON agency_clients(workspace_id);
+CREATE INDEX IF NOT EXISTS idx_workspace_activity_workspace_id ON workspace_activity(workspace_id);

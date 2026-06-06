@@ -34,6 +34,7 @@ import { BulkWhatsAppComposer } from '@/components/dashboard/BulkWhatsAppCompose
 import { BulkEmailComposer } from '@/components/dashboard/BulkEmailComposer';
 import { FollowUpModal } from '@/components/dashboard/FollowUpModal';
 import { NotesPanel } from '@/components/dashboard/NotesPanel';
+import { OpportunityModal } from '@/components/dashboard/OpportunityModal';
 import type { Lead } from '@/types';
 
 interface DueReminder {
@@ -111,6 +112,23 @@ export default function DashboardPage() {
   const lastCheckedCountRef = useRef(0);
   const [notesPanel, setNotesPanel] = useState<{ isOpen: boolean; lead: Lead | null }>({ isOpen: false, lead: null });
   const [filterHasNotes, setFilterHasNotes] = useState(false);
+
+  // Freelancer profile + opportunity scores
+  const [freelancerType, setFreelancerType] = useState('');
+  const [leadOpportunityScores, setLeadOpportunityScores] = useState<
+    Record<string, {
+      score: number;
+      label: string;
+      opportunity: 'high' | 'medium' | 'low';
+      details: Record<string, unknown> | null;
+      loading: boolean;
+    }>
+  >({});
+  const [filterHighOpportunity, setFilterHighOpportunity] = useState(false);
+  const [opportunityModal, setOpportunityModal] = useState<{
+    isOpen: boolean;
+    lead: Lead | null;
+  }>({ isOpen: false, lead: null });
 
   // AI Write modal
   const [aiModal, setAiModal] = useState<{ isOpen: boolean; lead: Lead | null }>({ isOpen: false, lead: null });
@@ -215,6 +233,7 @@ export default function DashboardPage() {
       localStorage.setItem('sparkleads_session_id', id);
     }
     setSessionId(id);
+    setFreelancerType(localStorage.getItem('sparkleads_freelancer_type') || '');
   }, []);
 
   // Quick grade website inline
@@ -270,6 +289,64 @@ export default function DashboardPage() {
     }
     setGradingAll(false);
   }, [leads, leadGrades, quickGradeWebsite]);
+
+  // Quick opportunity check for a single lead
+  const checkOpportunity = useCallback(async (lead: Lead) => {
+    if (!lead.website || leadOpportunityScores[lead.place_id]) return;
+    if (!freelancerType) return;
+
+    setLeadOpportunityScores((prev) => ({
+      ...prev,
+      [lead.place_id]: {
+        score: 0, label: '', opportunity: 'medium',
+        details: null, loading: true,
+      },
+    }));
+
+    try {
+      const res = await fetch('/api/audit/freelancer-score', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ lead, freelancerType }),
+      });
+      const data = await res.json();
+
+      if (res.ok) {
+        setLeadOpportunityScores((prev) => ({
+          ...prev,
+          [lead.place_id]: { ...data, loading: false },
+        }));
+      } else {
+        setLeadOpportunityScores((prev) => {
+          const next = { ...prev };
+          delete next[lead.place_id];
+          return next;
+        });
+      }
+    } catch {
+      setLeadOpportunityScores((prev) => {
+        const next = { ...prev };
+        delete next[lead.place_id];
+        return next;
+      });
+    }
+  }, [freelancerType, leadOpportunityScores]);
+
+  // Scan all unscanned leads
+  const scanAllOpportunities = useCallback(async () => {
+    const unscanned = leads.filter(
+      (r) => r.website && !leadOpportunityScores[r.place_id]
+    );
+    for (const lead of unscanned) {
+      await checkOpportunity(lead);
+      await new Promise((r) => setTimeout(r, 300));
+    }
+  }, [leads, leadOpportunityScores, checkOpportunity]);
+
+  // Open opportunity detail modal
+  const openOpportunityDetail = useCallback((lead: Lead) => {
+    setOpportunityModal({ isOpen: true, lead });
+  }, []);
 
   // Grade nudge effect — show after 10s if many ungraded websites
   useEffect(() => {
@@ -611,6 +688,30 @@ export default function DashboardPage() {
         </button>
       </div>
 
+      {/* Onboarding prompt — no freelancer type set */}
+      {!freelancerType && leads.length > 0 && (
+        <div className="rounded-xl border border-primary/30 bg-primary/5 p-5 mb-4">
+          <div className="flex items-start justify-between gap-4">
+            <div>
+              <p className="font-semibold text-text">
+                What service do you offer?
+              </p>
+              <p className="text-sm text-muted mt-1">
+                Tell SparkLeads your service type and we&apos;ll show
+                you which leads are your best prospects —
+                automatically beside every result.
+              </p>
+            </div>
+            <button
+              onClick={() => router.push('/dashboard/settings#service')}
+              className="shrink-0 px-4 py-2 rounded-xl bg-primary text-white text-sm font-medium"
+            >
+              Set up now →
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* Results Header */}
       {leads.length > 0 && (
         <div className="flex items-center justify-between">
@@ -620,7 +721,29 @@ export default function DashboardPage() {
             </span>
             {isSearching && <Spinner size="sm" className="text-primary" />}
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2">
+            {freelancerType && (
+              <>
+                <button
+                  onClick={() => setFilterHighOpportunity(!filterHighOpportunity)}
+                  className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm transition-colors ${
+                    filterHighOpportunity
+                      ? 'bg-red-500/20 text-red-400'
+                      : 'bg-surface2 text-muted hover:text-text'
+                  }`}
+                >
+                  🔴 High Opportunity Only
+                  {filterHighOpportunity && <X size={12} />}
+                </button>
+                <button
+                  onClick={scanAllOpportunities}
+                  className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-surface2 text-muted hover:text-primary text-sm transition-colors"
+                >
+                  <Zap size={14} />
+                  Scan All ({leads.filter((r) => r.website && !leadOpportunityScores[r.place_id]).length} remaining)
+                </button>
+              </>
+            )}
             <button
               onClick={() => setFilterHasNotes(!filterHasNotes)}
               className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm transition-colors ${
@@ -742,6 +865,11 @@ export default function DashboardPage() {
                   <th className="text-left py-3 px-4 text-xs font-medium text-muted uppercase tracking-wider">
                     Reviews
                   </th>
+                  {freelancerType && (
+                    <th className="text-left py-3 px-4 text-xs font-medium text-muted uppercase tracking-wider">
+                      Opportunity
+                    </th>
+                  )}
                   <th className="text-left py-3 px-4 text-xs font-medium text-muted uppercase tracking-wider">
                     Status
                   </th>
@@ -754,7 +882,14 @@ export default function DashboardPage() {
                 </tr>
               </thead>
               <tbody>
-                {leads.filter((l) => !filterHasNotes || l.note).map((lead, i) => (
+                {leads.filter((l) => {
+                  if (filterHasNotes && !l.note) return false;
+                  if (filterHighOpportunity) {
+                    return leadOpportunityScores[l.place_id]?.opportunity === 'high'
+                      || !leadOpportunityScores[l.place_id];
+                  }
+                  return true;
+                }).map((lead, i) => (
                   <tr
                     key={lead.id}
                     className="border-b border-border/50 hover:bg-surface2/50 transition-colors animate-fade-in-up"
@@ -886,6 +1021,35 @@ export default function DashboardPage() {
                     <td className="py-3 px-4 text-sm text-muted">
                       {lead.reviews ? `${lead.reviews} reviews` : '—'}
                     </td>
+                    {freelancerType && (
+                      <td className="px-4 py-3">
+                        {leadOpportunityScores[lead.place_id]?.loading ? (
+                          <div className="w-3 h-3 rounded-full border-2 border-primary border-t-transparent animate-spin" />
+                        ) : leadOpportunityScores[lead.place_id] ? (
+                          <button
+                            onClick={() => openOpportunityDetail(lead)}
+                            className={`text-xs px-2 py-1 rounded-full font-medium cursor-pointer transition-all hover:scale-105 ${
+                              leadOpportunityScores[lead.place_id].opportunity === 'high'
+                                ? 'bg-red-500/20 text-red-400'
+                                : leadOpportunityScores[lead.place_id].opportunity === 'medium'
+                                  ? 'bg-yellow-500/20 text-yellow-400'
+                                  : 'bg-green-500/20 text-green-400'
+                            }`}
+                          >
+                            {leadOpportunityScores[lead.place_id].label}
+                          </button>
+                        ) : lead.website ? (
+                          <button
+                            onClick={() => checkOpportunity(lead)}
+                            className="text-xs px-2 py-1 rounded-full bg-surface2 text-muted hover:text-primary transition-colors border border-border"
+                          >
+                            Check
+                          </button>
+                        ) : (
+                          <span className="text-xs text-muted">—</span>
+                        )}
+                      </td>
+                    )}
                     <td className="py-3 px-4">
                       <select
                         value={lead.status}
@@ -1426,6 +1590,22 @@ export default function DashboardPage() {
           </motion.div>
         )}
       </AnimatePresence>
+
+      {/* Opportunity Detail Modal */}
+      {opportunityModal.lead && (
+        <OpportunityModal
+          lead={opportunityModal.lead}
+          scoreData={leadOpportunityScores[opportunityModal.lead.place_id] || null}
+          freelancerType={freelancerType}
+          isOpen={opportunityModal.isOpen}
+          onClose={() => setOpportunityModal({ isOpen: false, lead: null })}
+          onWhatsAppPitch={(lead, pitch) => {
+            setOpportunityModal({ isOpen: false, lead: null });
+            setAiServiceDesc(pitch);
+            setAiModal({ isOpen: true, lead });
+          }}
+        />
+      )}
     </div>
   );
 }

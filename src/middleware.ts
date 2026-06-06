@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 
-const protectedRoutes = ['/dashboard', '/affiliate'];
+const protectedRoutes = ['/dashboard', '/affiliate', '/agency'];
 
 export function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
@@ -20,9 +20,16 @@ export function middleware(request: NextRequest) {
     return NextResponse.redirect(loginUrl);
   }
 
-  return NextResponse.next();
+  const workspaceId = request.cookies.get('sparkleads_workspace')?.value;
+
+  const response = NextResponse.next();
+  response.headers.set('x-user-token', token);
+  response.headers.set('x-workspace-id', workspaceId || '');
+  response.headers.set('x-account-type', workspaceId ? 'agency' : 'individual');
+
+  return response;
 }
 
 export const config = {
-  matcher: ['/dashboard/:path*', '/affiliate/:path*'],
+  matcher: ['/dashboard/:path*', '/affiliate/:path*', '/agency/:path*'],
 };

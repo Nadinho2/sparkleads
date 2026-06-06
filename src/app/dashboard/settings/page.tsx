@@ -16,6 +16,7 @@ import {
 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { Spinner } from '@/components/ui';
+import { FREELANCER_TYPES } from '@/lib/freelancer-types';
 
 export default function SettingsPage() {
   const router = useRouter();
@@ -32,10 +33,16 @@ export default function SettingsPage() {
   const [savingSender, setSavingSender] = useState(false);
   const [testingEmail, setTestingEmail] = useState(false);
   const [senderMessage, setSenderMessage] = useState('');
+  const [freelancerType, setFreelancerType] = useState('');
+  const [savingType, setSavingType] = useState(false);
 
   useEffect(() => {
     const token = localStorage.getItem('sparkleads_session_id') || '';
     setUserToken(token);
+
+    // Load freelancer type from localStorage first for instant UI
+    const saved = localStorage.getItem('sparkleads_freelancer_type') || '';
+    setFreelancerType(saved);
 
     fetch('/api/settings/email')
       .then((res) => res.json())
@@ -43,6 +50,17 @@ export default function SettingsPage() {
         setSenderName(data.senderName || '');
         setSenderEmail(data.senderEmail || '');
         setHasPassword(data.hasPassword || false);
+      })
+      .catch(() => {});
+
+    // Load freelancer type from Supabase
+    fetch('/api/settings/agency')
+      .then((res) => res.json())
+      .then((data) => {
+        if (data.freelancerType) {
+          setFreelancerType(data.freelancerType);
+          localStorage.setItem('sparkleads_freelancer_type', data.freelancerType);
+        }
       })
       .catch(() => {});
   }, []);
@@ -56,6 +74,23 @@ export default function SettingsPage() {
       // Silent fail
     }
   }, [userToken]);
+
+  const saveFreelancerType = useCallback(async (typeId: string) => {
+    setFreelancerType(typeId);
+    localStorage.setItem('sparkleads_freelancer_type', typeId);
+    setSavingType(true);
+    try {
+      await fetch('/api/settings/agency', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ freelancerType: typeId }),
+      });
+    } catch {
+      // Silent fail — localStorage is already saved
+    } finally {
+      setSavingType(false);
+    }
+  }, []);
 
   const handleLogout = useCallback(async () => {
     setLoggingOut(true);
@@ -133,6 +168,47 @@ export default function SettingsPage() {
 
   return (
     <div className="max-w-2xl space-y-8">
+      {/* My Service Section */}
+      <div id="service" className="p-6 rounded-xl border border-border bg-surface">
+        <div className="flex items-center gap-3 mb-6">
+          <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center">
+            <span className="text-xl">🎯</span>
+          </div>
+          <div>
+            <h2 className="text-lg font-semibold text-text">My Service</h2>
+            <p className="text-xs text-muted">
+              Pick your service type and SparkLeads will show opportunity scores beside every lead.
+            </p>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+          {FREELANCER_TYPES.map(type => (
+            <button
+              key={type.id}
+              onClick={() => saveFreelancerType(type.id)}
+              className={`p-4 rounded-xl border text-left transition-all ${
+                freelancerType === type.id
+                  ? 'border-primary bg-primary/10'
+                  : 'border-border bg-surface2 hover:border-primary/50'
+              }`}
+            >
+              <div className="text-2xl mb-2">{type.icon}</div>
+              <p className="text-sm font-semibold text-text">{type.label}</p>
+              <p className="text-xs text-muted mt-1">
+                Shows {type.scoreLabel}
+              </p>
+            </button>
+          ))}
+        </div>
+
+        {savingType && (
+          <p className="text-xs text-muted mt-3 flex items-center gap-2">
+            <Spinner size="sm" /> Saving...
+          </p>
+        )}
+      </div>
+
       {/* Account Section */}
       <div className="p-6 rounded-xl border border-border bg-surface">
         <div className="flex items-center gap-3 mb-6">
