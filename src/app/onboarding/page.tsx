@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { Zap } from 'lucide-react';
 import { Spinner } from '@/components/ui';
@@ -8,6 +8,29 @@ import { Spinner } from '@/components/ui';
 export default function OnboardingPage() {
   const router = useRouter();
   const [saving, setSaving] = useState<string | null>(null);
+  const [checking, setChecking] = useState(true);
+
+  useEffect(() => {
+    // If user already has a workspace, go straight to agency dashboard
+    fetch('/api/account/context')
+      .then((r) => r.json())
+      .then((data) => {
+        if (data.accountType === 'agency' && data.workspaceId) {
+          router.replace('/agency');
+        } else {
+          setChecking(false);
+        }
+      })
+      .catch(() => setChecking(false));
+  }, [router]);
+
+  if (checking) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <Spinner size="lg" />
+      </div>
+    );
+  }
 
   const selectType = async (type: 'individual' | 'agency') => {
     setSaving(type);

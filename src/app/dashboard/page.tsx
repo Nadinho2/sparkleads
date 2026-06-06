@@ -389,16 +389,28 @@ export default function DashboardPage() {
   }, [reset]);
 
   const handleStatusChange = useCallback(async (leadId: string, status: LeadStatus) => {
+    // Find the lead's place_id for optimistic update
+    const lead = leads.find((l) => l.id === leadId);
+    if (lead) {
+      updateLead(lead.place_id, { status });
+    }
     try {
-      await fetch('/api/leads/update-status', {
+      const res = await fetch('/api/leads/update-status', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ lead_id: leadId, status }),
       });
+      if (!res.ok && lead) {
+        // Revert on failure
+        updateLead(lead.place_id, { status: 'new' as LeadStatus });
+      }
     } catch {
-      // Silent fail
+      // Revert on error
+      if (lead) {
+        updateLead(lead.place_id, { status: 'new' as LeadStatus });
+      }
     }
-  }, []);
+  }, [leads, updateLead]);
 
   const handleCopyPhone = useCallback(async (phone: string, leadId: string) => {
     try {
