@@ -2,7 +2,7 @@
 
 import { useState, useEffect, Suspense } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
-import { Zap, Loader2, CheckCircle, XCircle } from 'lucide-react';
+import { Loader2, CheckCircle, Building2 } from 'lucide-react';
 
 export default function JoinPage() {
   return (
@@ -16,12 +16,18 @@ function JoinContent() {
   const searchParams = useSearchParams();
   const router = useRouter();
   const token = searchParams.get('token');
-  const [state, setState] = useState<'loading' | 'form' | 'success' | 'error'>('loading');
-  const [workspaceName, setWorkspaceName] = useState('');
+
+  const [state, setState] = useState<'loading' | 'form' | 'success' | 'error' | 'already_used'>('loading');
+  const [inviteData, setInviteData] = useState<{
+    workspaceName: string;
+    workspaceLogo: string | null;
+    role: string;
+    inviterName: string;
+  } | null>(null);
+  const [errorMsg, setErrorMsg] = useState('');
   const [name, setName] = useState('');
   const [password, setPassword] = useState('');
-  const [submitting, setSubmitting] = useState(false);
-  const [errorMsg, setErrorMsg] = useState('');
+  const [isJoining, setIsJoining] = useState(false);
 
   useEffect(() => {
     if (!token) {
@@ -29,15 +35,17 @@ function JoinContent() {
       setErrorMsg('No invite token provided.');
       return;
     }
-    fetch(`/api/agency/invite/verify?token=${token}`)
+    fetch(`/api/agency/team/invite/verify?token=${token}`)
       .then((r) => r.json())
       .then((data) => {
         if (data.valid) {
-          setWorkspaceName(data.workspaceName || 'Agency');
+          setInviteData(data);
           setState('form');
+        } else if (data.error === 'already_used') {
+          setState('already_used');
         } else {
           setState('error');
-          setErrorMsg(data.error || 'Invalid or expired invite.');
+          setErrorMsg(data.message || 'This invite link is no longer valid.');
         }
       })
       .catch(() => {
@@ -46,11 +54,11 @@ function JoinContent() {
       });
   }, [token]);
 
-  const handleJoin = async () => {
-    if (!name.trim()) return;
-    setSubmitting(true);
+  const acceptInvite = async () => {
+    if (!name.trim() || password.length < 8) return;
+    setIsJoining(true);
     try {
-      const res = await fetch('/api/agency/invite/accept', {
+      const res = await fetch('/api/agency/team/invite/accept', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ token, name, password }),
@@ -67,54 +75,113 @@ function JoinContent() {
       setErrorMsg('Something went wrong');
       setState('error');
     }
-    setSubmitting(false);
+    setIsJoining(false);
   };
 
   return (
     <div className="min-h-screen bg-background text-text flex items-center justify-center p-4">
-      <div className="w-full max-w-md text-center">
+      <div className="w-full max-w-md">
+        {/* Loading */}
         {state === 'loading' && (
-          <div>
+          <div className="text-center">
             <Loader2 className="w-10 h-10 text-primary animate-spin mx-auto mb-4" />
             <p className="text-muted">Verifying invite...</p>
           </div>
         )}
-        {state === 'form' && (
-          <div className="bg-surface border border-border rounded-2xl p-8 text-left">
-            <div className="text-center mb-6">
-              <div className="w-14 h-14 rounded-xl bg-primary flex items-center justify-center mx-auto mb-3">
-                <Zap className="w-8 h-8 text-white" />
-              </div>
-              <h1 className="text-xl font-bold text-text">Join {workspaceName}</h1>
-              <p className="text-sm text-muted mt-1">You&apos;ve been invited to join this workspace.</p>
+
+        {/* Valid invite — setup form */}
+        {state === 'form' && inviteData && (
+          <div className="space-y-6">
+            {/* Agency branding */}
+            <div className="text-center">
+              {inviteData.workspaceLogo ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img src={inviteData.workspaceLogo} alt="" className="w-16 h-16 rounded-2xl mx-auto mb-4 object-cover" />
+              ) : (
+                <div className="w-16 h-16 rounded-2xl bg-primary/20 flex items-center justify-center mx-auto mb-4">
+                  <Building2 size={28} className="text-primary" />
+                </div>
+              )}
+              <h1 className="text-2xl font-bold text-text">You&apos;re invited!</h1>
+              <p className="text-muted mt-2">
+                Join <strong className="text-text">{inviteData.workspaceName}</strong> on SparkLeads as a{' '}
+                <strong className="text-text capitalize">{inviteData.role}</strong>
+              </p>
             </div>
-            <div className="space-y-4">
+
+            {/* Setup form */}
+            <div className="rounded-2xl bg-surface border border-border p-6 space-y-4">
+              <h2 className="font-semibold text-text">Set up your account</h2>
+
               <div>
-                <label className="block text-sm font-medium text-muted mb-1.5">Your Name</label>
-                <input type="text" value={name} onChange={(e) => setName(e.target.value)} placeholder="Your full name" className="w-full px-4 py-2.5 rounded-lg border border-border bg-surface2 text-text placeholder:text-muted focus:outline-none focus:ring-2 focus:ring-primary/50" />
+                <label className="text-xs text-muted mb-1 block">Your Name</label>
+                <input
+                  type="text"
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  placeholder="Amaka Johnson"
+                  className="w-full px-3 py-2.5 rounded-xl bg-surface2 border border-border text-text placeholder:text-muted focus:outline-none focus:ring-2 focus:ring-primary/50"
+                />
               </div>
+
               <div>
-                <label className="block text-sm font-medium text-muted mb-1.5">Password</label>
-                <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="Create a password" className="w-full px-4 py-2.5 rounded-lg border border-border bg-surface2 text-text placeholder:text-muted focus:outline-none focus:ring-2 focus:ring-primary/50" />
+                <label className="text-xs text-muted mb-1 block">Create a Password</label>
+                <input
+                  type="password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  placeholder="At least 8 characters"
+                  className="w-full px-3 py-2.5 rounded-xl bg-surface2 border border-border text-text placeholder:text-muted focus:outline-none focus:ring-2 focus:ring-primary/50"
+                />
               </div>
-              <button onClick={handleJoin} disabled={submitting || !name.trim()} className="w-full py-2.5 rounded-lg bg-primary text-white font-medium hover:bg-primary/90 disabled:opacity-50 flex items-center justify-center gap-2">
-                {submitting ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Join Workspace'}
+
+              <button
+                onClick={acceptInvite}
+                disabled={!name.trim() || password.length < 8 || isJoining}
+                className="w-full py-3 rounded-xl bg-primary hover:bg-primary/90 text-white font-semibold transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
+              >
+                {isJoining ? <><Loader2 className="w-4 h-4 animate-spin" /> Joining...</> : `Join ${inviteData.workspaceName} →`}
               </button>
+
+              <p className="text-xs text-muted text-center">
+                By joining you agree to SparkLeads terms of service
+              </p>
             </div>
           </div>
         )}
+
+        {/* Success */}
         {state === 'success' && (
-          <div>
+          <div className="text-center">
             <CheckCircle className="w-12 h-12 text-green-400 mx-auto mb-4" />
             <h1 className="text-2xl font-bold text-text mb-2">Welcome aboard!</h1>
             <p className="text-muted">Redirecting to your agency dashboard...</p>
           </div>
         )}
+
+        {/* Already used */}
+        {state === 'already_used' && (
+          <div className="text-center space-y-4">
+            <div className="text-5xl">🔗</div>
+            <h1 className="text-2xl font-bold text-text">This invite has already been accepted</h1>
+            <p className="text-muted">If that was you, go to login instead.</p>
+            <button
+              onClick={() => router.push('/login')}
+              className="px-6 py-2.5 rounded-xl bg-primary text-white font-medium hover:bg-primary/90 transition-colors"
+            >
+              Go to Login
+            </button>
+          </div>
+        )}
+
+        {/* Error / Expired / Revoked */}
         {state === 'error' && (
-          <div>
-            <XCircle className="w-12 h-12 text-red-400 mx-auto mb-4" />
-            <h1 className="text-2xl font-bold text-text mb-2">Oops</h1>
-            <p className="text-muted">{errorMsg}</p>
+          <div className="text-center space-y-4">
+            <div className="text-5xl">🔗</div>
+            <h1 className="text-2xl font-bold text-text">This invite link is no longer valid</h1>
+            <p className="text-muted">
+              {errorMsg || 'This link may have expired or been revoked. Ask your agency owner for a new invite link.'}
+            </p>
           </div>
         )}
       </div>

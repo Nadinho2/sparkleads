@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { Search, Users, PieChart } from 'lucide-react';
 import { Spinner } from '@/components/ui';
+import { WelcomeModal } from '@/components/agency/WelcomeModal';
 
 interface Client {
   id: string;
@@ -134,6 +135,9 @@ export default function AgencyOverviewPage() {
           )}
         </div>
       </div>
+
+      {/* Welcome modal for first-time members */}
+      <WelcomeModal />
     </div>
   );
 }

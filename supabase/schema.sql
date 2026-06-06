@@ -402,6 +402,14 @@ CREATE TABLE IF NOT EXISTS workspace_members (
   UNIQUE(workspace_id, user_token)
 );
 
+-- Member credentials (password-based auth for team members without email)
+CREATE TABLE IF NOT EXISTS member_credentials (
+  user_token TEXT PRIMARY KEY,
+  password_hash TEXT NOT NULL,
+  name TEXT NOT NULL,
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
 -- Agency clients
 CREATE TABLE IF NOT EXISTS agency_clients (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
