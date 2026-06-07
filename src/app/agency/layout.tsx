@@ -1,7 +1,7 @@
 import { cookies } from 'next/headers';
 import { redirect } from 'next/navigation';
 import Link from 'next/link';
-import { Search, Users, Settings, PieChart, CreditCard, Home, CheckSquare } from 'lucide-react';
+import { Search, Users, Settings, PieChart, CreditCard, Home, CheckSquare, PenTool, Megaphone, BarChart2, Briefcase, MessageSquare, Bell, History, Sparkles } from 'lucide-react';
 import { createSupabaseAdmin } from '@/lib/supabase';
 import { AgencyTopBar } from '@/components/agency/AgencyTopBar';
 
@@ -57,6 +57,23 @@ export default async function AgencyLayout({ children }: { children: React.React
           )}
           <NavLink href="/agency/settings" icon={<Settings size={18} />} label="Settings" />
         </nav>
+
+        {/* Services section */}
+        <div className="px-3 py-2 border-t border-border">
+          <p className="text-[10px] font-semibold text-muted uppercase tracking-wider px-3 mb-1">Services</p>
+          <nav className="space-y-1">
+            <ServiceLink href="/dashboard" icon={<Search size={18} />} label="Lead Search" />
+            <ServiceLink href="/dashboard/history" icon={<History size={18} />} label="Search History" />
+            <ServiceLink href="/dashboard/leads" icon={<Users size={18} />} label="My Leads" />
+            <ServiceLink href="/dashboard/reminders" icon={<Bell size={18} />} label="Reminders" />
+            <ServiceLink href="/dashboard/ads" icon={<Megaphone size={18} />} label="Ad Planner" />
+            <ServiceLink href="/dashboard/content" icon={<PenTool size={18} />} label="Content" />
+            <ServiceLink href="/dashboard/audit/grade" icon={<BarChart2 size={18} />} label="Website Grader" />
+            <ServiceLink href="/dashboard/proposals" icon={<Briefcase size={18} />} label="Proposals" />
+            <ServiceLink href="/dashboard/messages" icon={<MessageSquare size={18} />} label="AI Messages" />
+            <ServiceLink href="/dashboard/credits" icon={<Sparkles size={18} />} label="Credits" />
+          </nav>
+        </div>
       </aside>
 
       <div className="lg:ml-60 flex-1 flex flex-col">
@@ -73,7 +90,8 @@ export default async function AgencyLayout({ children }: { children: React.React
         {(role === 'owner' || role === 'manager') && (
           <MobileNavLink href="/agency/team" icon={<Users size={20} />} label="Team" />
         )}
-        <MobileNavLink href="/agency/settings" icon={<Settings size={20} />} label="More" />
+        <MobileNavLink href="/agency/settings" icon={<Settings size={20} />} label="Settings" />
+        <MobileNavLink href="/dashboard" icon={<Sparkles size={20} />} label="Services" />
       </nav>
     </div>
   );
@@ -93,6 +111,18 @@ function NavLink({ href, icon, label }: { href: string; icon: React.ReactNode; l
     <Link href={href} className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm text-muted hover:text-text hover:bg-surface2 transition-colors">
       {icon}
       {label}
+    </Link>
+  );
+}
+
+function ServiceLink({ href, icon, label }: { href: string; icon: React.ReactNode; label: string }) {
+  return (
+    <Link href={href} className="flex items-center gap-3 px-3 py-2 rounded-lg text-xs text-muted hover:text-text hover:bg-surface2 transition-colors group">
+      <span className="opacity-70 group-hover:opacity-100">{icon}</span>
+      <span className="flex-1">{label}</span>
+      <svg className="w-3 h-3 opacity-30 group-hover:opacity-70" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+      </svg>
     </Link>
   );
 }
