@@ -144,7 +144,7 @@ export default function TeamPage() {
           Link expires in 7 days.
         </p>
 
-        <div className="grid grid-cols-2 gap-4 mb-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
           {/* Role selector */}
           <div>
             <label className="text-xs text-muted mb-2 block">Role</label>
@@ -184,7 +184,7 @@ export default function TeamPage() {
         <button
           onClick={generateInviteLink}
           disabled={isGenerating}
-          className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-primary hover:bg-primary/90 text-white font-semibold transition-colors disabled:opacity-50"
+          className="w-full sm:w-auto flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-primary hover:bg-primary/90 text-white font-semibold transition-colors disabled:opacity-50"
         >
           {isGenerating ? (
             <><Spinner size="sm" /> Generating...</>
@@ -315,43 +315,91 @@ export default function TeamPage() {
         </div>
       )}
 
-      {/* Active Members Table */}
-      <div className="rounded-xl border border-border bg-surface overflow-hidden">
-        <table className="w-full">
-          <thead>
-            <tr className="border-b border-border">
-              {['Name', 'Role', 'Credits Used', 'Status', 'Actions'].map((h) => (
-                <th key={h} className="text-left px-4 py-3 text-xs font-medium text-muted uppercase">{h}</th>
+      {/* Active Members */}
+      <div>
+        <h2 className="text-lg font-semibold text-text mb-3">Active Members</h2>
+
+        {/* Desktop table */}
+        <div className="hidden md:block rounded-xl border border-border bg-surface overflow-hidden">
+          <table className="w-full">
+            <thead>
+              <tr className="border-b border-border">
+                {['Name', 'Role', 'Credits Used', 'Status', 'Actions'].map((h) => (
+                  <th key={h} className="text-left px-4 py-3 text-xs font-medium text-muted uppercase">{h}</th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {members.filter((m) => m.status === 'active').map((m) => (
+                <tr key={m.id} className="border-b border-border/50">
+                  <td className="px-4 py-3 text-sm font-medium text-text">{m.name}</td>
+                  <td className="px-4 py-3">
+                    <select
+                      value={m.role}
+                      onChange={(e) => updateMember(m.id, { role: e.target.value })}
+                      className="bg-transparent border border-border rounded-lg px-2 py-1 text-xs text-text"
+                    >
+                      <option value="owner">Owner</option>
+                      <option value="manager">Manager</option>
+                      <option value="member">Member</option>
+                    </select>
+                  </td>
+                  <td className="px-4 py-3 text-sm text-muted">{m.credits_used}{m.credit_limit > 0 ? ` / ${m.credit_limit}` : ''}</td>
+                  <td className="px-4 py-3">
+                    <span className="text-xs px-2 py-0.5 rounded-full bg-green-500/20 text-green-400">active</span>
+                  </td>
+                  <td className="px-4 py-3">
+                    <button onClick={() => updateMember(m.id, { status: m.status === 'suspended' ? 'active' : 'suspended' })} className="text-xs text-muted hover:text-text">
+                      {m.status === 'suspended' ? 'Activate' : 'Suspend'}
+                    </button>
+                  </td>
+                </tr>
               ))}
-            </tr>
-          </thead>
-          <tbody>
-            {members.filter((m) => m.status === 'active').map((m) => (
-              <tr key={m.id} className="border-b border-border/50">
-                <td className="px-4 py-3 text-sm font-medium text-text">{m.name}</td>
-                <td className="px-4 py-3">
-                  <select value={m.role} onChange={(e) => updateMember(m.id, { role: e.target.value })} className="bg-transparent border border-border rounded-lg px-2 py-1 text-xs text-text">
+              {members.filter((m) => m.status === 'active').length === 0 && (
+                <tr><td colSpan={5} className="px-4 py-8 text-center text-sm text-muted">No active members yet.</td></tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+
+        {/* Mobile cards */}
+        <div className="md:hidden space-y-2">
+          {members.filter((m) => m.status === 'active').length === 0 && (
+            <p className="text-sm text-muted text-center py-4">No active members yet.</p>
+          )}
+          {members.filter((m) => m.status === 'active').map((m) => (
+            <div key={m.id} className="rounded-xl border border-border bg-surface p-4">
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-sm font-semibold text-text">{m.name}</span>
+                <span className="text-xs px-2 py-0.5 rounded-full bg-green-500/20 text-green-400">active</span>
+              </div>
+              <div className="grid grid-cols-2 gap-2 text-xs text-muted mb-3">
+                <div>
+                  <span className="block text-muted">Role</span>
+                  <select
+                    value={m.role}
+                    onChange={(e) => updateMember(m.id, { role: e.target.value })}
+                    className="bg-surface2 border border-border rounded-lg px-2 py-1 text-xs text-text mt-0.5"
+                  >
                     <option value="owner">Owner</option>
                     <option value="manager">Manager</option>
                     <option value="member">Member</option>
                   </select>
-                </td>
-                <td className="px-4 py-3 text-sm text-muted">{m.credits_used}{m.credit_limit > 0 ? ` / ${m.credit_limit}` : ''}</td>
-                <td className="px-4 py-3">
-                  <span className="text-xs px-2 py-0.5 rounded-full bg-green-500/20 text-green-400">active</span>
-                </td>
-                <td className="px-4 py-3">
-                  <button onClick={() => updateMember(m.id, { status: m.status === 'suspended' ? 'active' : 'suspended' })} className="text-xs text-muted hover:text-text">
-                    {m.status === 'suspended' ? 'Activate' : 'Suspend'}
-                  </button>
-                </td>
-              </tr>
-            ))}
-            {members.filter((m) => m.status === 'active').length === 0 && (
-              <tr><td colSpan={5} className="px-4 py-8 text-center text-sm text-muted">No active members yet.</td></tr>
-            )}
-          </tbody>
-        </table>
+                </div>
+                <div>
+                  <span className="block text-muted">Credits</span>
+                  <span className="text-sm font-medium text-text">{m.credits_used}{m.credit_limit > 0 ? ` / ${m.credit_limit}` : ''}</span>
+                </div>
+              </div>
+              <button
+                onClick={() => updateMember(m.id, { status: m.status === 'suspended' ? 'active' : 'suspended' })}
+                className="text-xs text-red-400 hover:underline"
+              >
+                {m.status === 'suspended' ? 'Activate' : 'Suspend'}
+              </button>
+            </div>
+          ))}
+        </div>
       </div>
     </div>
   );

@@ -390,7 +390,7 @@ CREATE TABLE IF NOT EXISTS workspace_members (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
   workspace_id UUID REFERENCES workspaces(id) ON DELETE CASCADE,
   user_token TEXT NOT NULL,
-  email TEXT NOT NULL,
+  email TEXT,
   name TEXT NOT NULL,
   role TEXT CHECK (role IN ('owner', 'manager', 'member')) DEFAULT 'member',
   credit_limit INTEGER DEFAULT 0,

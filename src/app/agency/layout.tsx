@@ -59,12 +59,33 @@ export default async function AgencyLayout({ children }: { children: React.React
         </nav>
       </aside>
 
-      <div className="lg:ml-60 flex-1">
+      <div className="lg:ml-60 flex-1 flex flex-col">
         <AgencyTopBar workspace={workspace} member={member} />
-        <main className="p-4 sm:p-6 lg:p-8">{children}</main>
+        <main className="flex-1 p-4 sm:p-6 lg:p-8 pb-20 lg:pb-8">{children}</main>
       </div>
+
+      {/* Mobile Bottom Navigation */}
+      <nav className="fixed bottom-0 inset-x-0 z-40 lg:hidden bg-surface border-t border-border flex items-center justify-around px-1 pb-2">
+        <MobileNavLink href="/agency" icon={<Home size={20} />} label="Home" />
+        <MobileNavLink href="/agency/search" icon={<Search size={20} />} label="Search" />
+        <MobileNavLink href="/agency/clients" icon={<Users size={20} />} label="Clients" />
+        <MobileNavLink href="/agency/analytics" icon={<PieChart size={20} />} label="Analytics" />
+        {(role === 'owner' || role === 'manager') && (
+          <MobileNavLink href="/agency/team" icon={<Users size={20} />} label="Team" />
+        )}
+        <MobileNavLink href="/agency/settings" icon={<Settings size={20} />} label="More" />
+      </nav>
     </div>
   );
+
+  function MobileNavLink({ href, icon, label }: { href: string; icon: React.ReactNode; label: string }) {
+    return (
+      <Link href={href} className="flex flex-col items-center gap-0.5 py-2 px-3 text-muted hover:text-text transition-colors min-w-0">
+        <span className="shrink-0">{icon}</span>
+        <span className="text-[10px] font-medium truncate w-full text-center">{label}</span>
+      </Link>
+    );
+  }
 }
 
 function NavLink({ href, icon, label }: { href: string; icon: React.ReactNode; label: string }) {

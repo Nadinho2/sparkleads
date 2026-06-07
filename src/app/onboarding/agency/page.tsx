@@ -18,14 +18,16 @@ export default function AgencyOnboardingPage() {
   const [slug, setSlug] = useState('');
   const [brandColor, setBrandColor] = useState('#3B82F6');
   const [selectedPlan, setSelectedPlan] = useState('starter');
-  const [inviteEmail, setInviteEmail] = useState('');
   const [inviteRole, setInviteRole] = useState('member');
   const [loading, setLoading] = useState(false);
   const [inviteLink, setInviteLink] = useState('');
+  const [inviteCreditLimit, setInviteCreditLimit] = useState(0);
+  const [error, setError] = useState('');
 
   const handleCreateWorkspace = async () => {
     if (!name.trim()) return;
     setLoading(true);
+    setError('');
     const generatedSlug = slug || name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
     try {
       const res = await fetch('/api/agency/create', {
@@ -33,28 +35,44 @@ export default function AgencyOnboardingPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ name, slug: generatedSlug, brandColor, plan: selectedPlan }),
       });
+      const data = await res.json();
       if (res.ok) {
         setStep(3);
+      } else {
+        setError(data.message || data.error || 'Failed to create workspace');
       }
-    } catch { /* silent */ }
+    } catch {
+      setError('Something went wrong. Please try again.');
+    }
     setLoading(false);
   };
 
-  const handleInvite = async () => {
-    if (!inviteEmail.trim()) return;
+  const handleGenerateInvite = async () => {
     setLoading(true);
     try {
-      const res = await fetch('/api/agency/invite', {
+      const res = await fetch('/api/agency/team/invite', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email: inviteEmail, role: inviteRole }),
+        body: JSON.stringify({ role: inviteRole, creditLimit: inviteCreditLimit }),
       });
       const data = await res.json();
       if (res.ok) {
         setInviteLink(data.inviteLink);
+      } else {
+        setError(data.message || data.error || 'Failed to generate invite');
       }
-    } catch { /* silent */ }
+    } catch {
+      setError('Something went wrong');
+    }
     setLoading(false);
+  };
+
+  const copyInviteLink = async () => {
+    if (inviteLink) {
+      try {
+        await navigator.clipboard.writeText(inviteLink);
+      } catch { /* */ }
+    }
   };
 
   const goToDashboard = () => {
@@ -134,6 +152,11 @@ export default function AgencyOnboardingPage() {
                 </button>
               ))}
             </div>
+            {error && (
+              <div className="text-sm text-red-400 bg-red-500/10 border border-red-500/20 rounded-xl p-3">
+                {error}
+              </div>
+            )}
             <button onClick={handleCreateWorkspace} disabled={loading} className="w-full py-3 rounded-xl bg-primary text-white font-medium hover:bg-primary/90 transition-colors disabled:opacity-50 flex items-center justify-center gap-2">
               {loading ? <Spinner size="sm" /> : 'Create Workspace'} <ArrowRight size={16} />
             </button>
@@ -144,12 +167,8 @@ export default function AgencyOnboardingPage() {
         {step === 3 && (
           <div className="bg-surface border border-border rounded-2xl p-8">
             <h2 className="text-2xl font-bold text-text mb-2">Invite Your Team</h2>
-            <p className="text-sm text-muted mb-6">Add your first team member or skip for now.</p>
+            <p className="text-sm text-muted mb-6">Generate a shareable invite link and send it via WhatsApp or any messaging app.</p>
             <div className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-muted mb-1.5">Email Address</label>
-                <input type="email" value={inviteEmail} onChange={(e) => setInviteEmail(e.target.value)} placeholder="teammate@email.com" className="w-full px-4 py-3 rounded-xl border border-border bg-surface2 text-text placeholder:text-muted focus:outline-none focus:ring-2 focus:ring-primary/50" />
-              </div>
               <div>
                 <label className="block text-sm font-medium text-muted mb-1.5">Role</label>
                 <div className="flex gap-3">
@@ -160,12 +179,24 @@ export default function AgencyOnboardingPage() {
                   ))}
                 </div>
               </div>
-              <button onClick={handleInvite} disabled={loading || !inviteEmail.trim()} className="w-full py-3 rounded-xl bg-primary text-white font-medium hover:bg-primary/90 transition-colors disabled:opacity-50 flex items-center justify-center gap-2">
-                {loading ? <Spinner size="sm" /> : 'Send Invite'}
+              <div>
+                <label className="block text-sm font-medium text-muted mb-1.5">Monthly Credit Limit (0 = no limit)</label>
+                <input type="number" value={inviteCreditLimit} onChange={(e) => setInviteCreditLimit(Number(e.target.value))} min="0" placeholder="0" className="w-full px-4 py-3 rounded-xl border border-border bg-surface2 text-text placeholder:text-muted focus:outline-none focus:ring-2 focus:ring-primary/50" />
+              </div>
+              <button onClick={handleGenerateInvite} disabled={loading} className="w-full py-3 rounded-xl bg-primary text-white font-medium hover:bg-primary/90 transition-colors disabled:opacity-50 flex items-center justify-center gap-2">
+                {loading ? <Spinner size="sm" /> : 'Generate Invite Link'}
               </button>
+              {error && (
+                <div className="text-sm text-red-400 bg-red-500/10 border border-red-500/20 rounded-xl p-3">{error}</div>
+              )}
               {inviteLink && (
-                <div className="p-3 rounded-lg bg-green-500/10 text-green-400 text-sm">
-                  Invite link: <span className="font-mono">{inviteLink}</span>
+                <div className="space-y-3 p-4 rounded-xl border border-green-500/30 bg-green-500/5">
+                  <p className="text-sm font-semibold text-green-400">✅ Invite link ready</p>
+                  <div className="flex items-center gap-2 bg-surface rounded-lg p-3 border border-border">
+                    <code className="text-xs text-muted flex-1 truncate">{inviteLink}</code>
+                    <button onClick={copyInviteLink} className="shrink-0 px-3 py-1.5 rounded-lg bg-primary text-white text-xs font-medium">Copy</button>
+                  </div>
+                  <p className="text-xs text-muted">Share this link with your team member. It expires in 7 days.</p>
                 </div>
               )}
               <button onClick={goToDashboard} className="w-full py-3 rounded-xl border border-border text-muted text-sm font-medium hover:text-text hover:border-primary/50 transition-colors">

@@ -26,12 +26,26 @@ export async function POST(request: NextRequest) {
 
   const supabase = createSupabaseAdmin();
 
+  // Check name uniqueness
+  const { data: existingName } = await supabase
+    .from('workspaces')
+    .select('id, name')
+    .eq('name', name)
+    .maybeSingle();
+
+  if (existingName) {
+    return NextResponse.json({
+      error: 'name_taken',
+      message: `The agency name "${name}" is already taken. Please choose a different name.`,
+    }, { status: 409 });
+  }
+
   // Check slug uniqueness
   const { data: existing } = await supabase
     .from('workspaces')
     .select('id')
     .eq('slug', slug)
-    .single();
+    .maybeSingle();
 
   if (existing) {
     return NextResponse.json({ error: 'Slug already taken' }, { status: 409 });
