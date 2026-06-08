@@ -21,6 +21,7 @@ interface Transaction {
   description: string;
   balance_after: number;
   created_at: string;
+  member_name?: string;
 }
 
 export default function CreditsPage() {
@@ -288,6 +289,9 @@ export default function CreditsPage() {
                   </div>
                   <div>
                     <p className="text-sm text-text">{tx.description}</p>
+                    {tx.member_name && (
+                      <p className="text-xs text-primary">{tx.member_name}</p>
+                    )}
                     <p className="text-xs text-muted">{new Date(tx.created_at).toLocaleDateString()}</p>
                   </div>
                 </div>
