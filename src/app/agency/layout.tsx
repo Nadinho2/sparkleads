@@ -1,7 +1,11 @@
 import { cookies } from 'next/headers';
 import { redirect } from 'next/navigation';
 import Link from 'next/link';
-import { Search, Users, Settings, PieChart, CreditCard, Home, CheckSquare, PenTool, Megaphone, BarChart2, Briefcase, MessageSquare, Bell, History, Sparkles } from 'lucide-react';
+import {
+  Search, Users, Settings, PieChart, CreditCard, Home,
+  PenTool, Megaphone, Briefcase, MessageSquare, Bell,
+  History, Sparkles, Globe, MapPin, FileText, Send, BarChart3,
+} from 'lucide-react';
 import { createSupabaseAdmin } from '@/lib/supabase';
 import { AgencyTopBar } from '@/components/agency/AgencyTopBar';
 import { Footer } from '@/components/layout/Footer';
@@ -29,6 +33,66 @@ export default async function AgencyLayout({ children }: { children: React.React
   const workspace = member.workspaces as unknown as { id: string; name: string; logo_url: string | null; brand_color: string; credits_remaining: number; seats_limit: number };
   const role = member.role as string;
 
+  const navSections = [
+    {
+      section: 'Overview',
+      items: [
+        { href: '/agency', icon: <Home size={16} />, label: 'Dashboard' },
+        { href: '/agency/analytics', icon: <PieChart size={16} />, label: 'Analytics' },
+      ],
+    },
+    {
+      section: 'Lead Generation',
+      items: [
+        { href: '/agency/search', icon: <Search size={16} />, label: 'Lead Search' },
+        { href: '/agency/history', icon: <History size={16} />, label: 'Search History' },
+        { href: '/agency/leads', icon: <BarChart3 size={16} />, label: 'My Leads' },
+        { href: '/agency/reminders', icon: <Bell size={16} />, label: 'Reminders' },
+      ],
+    },
+    {
+      section: 'Website & SEO Audit',
+      items: [
+        { href: '/agency/audit/grade', icon: <Globe size={16} />, label: 'Website Grader' },
+        { href: '/agency/audit/gbp', icon: <MapPin size={16} />, label: 'Google Profile' },
+        { href: '/agency/audit/report', icon: <FileText size={16} />, label: 'Full Audit Report' },
+        { href: '/agency/audit/competitors', icon: <Users size={16} />, label: 'Competitor Analysis' },
+      ],
+    },
+    {
+      section: 'Proposals & Briefs',
+      items: [
+        { href: '/agency/proposals', icon: <Briefcase size={16} />, label: 'Proposals' },
+        { href: '/agency/briefs', icon: <Briefcase size={16} />, label: 'Creative Briefs' },
+      ],
+    },
+    {
+      section: 'Marketing & Content',
+      items: [
+        { href: '/agency/ads', icon: <Megaphone size={16} />, label: 'Ad Planner' },
+        { href: '/agency/content', icon: <PenTool size={16} />, label: 'Content' },
+      ],
+    },
+    {
+      section: 'Outreach',
+      items: [
+        { href: '/agency/messages', icon: <MessageSquare size={16} />, label: 'AI Messages' },
+        { href: '/agency/outreach/email', icon: <Send size={16} />, label: 'Email Outreach' },
+      ],
+    },
+  ];
+
+  const bottomItems = [
+    ...(role === 'owner' || role === 'manager' ? [
+      { href: '/agency/team', icon: <Users size={16} />, label: 'Team' },
+    ] : []),
+    ...(role === 'owner' ? [
+      { href: '/agency/billing', icon: <CreditCard size={16} />, label: 'Billing' },
+    ] : []),
+    { href: '/agency/credits', icon: <Sparkles size={16} />, label: 'Credits' },
+    { href: '/agency/settings', icon: <Settings size={16} />, label: 'Settings' },
+  ];
+
   return (
     <div className="min-h-screen bg-background text-text flex">
       {/* Sidebar */}
@@ -44,36 +108,26 @@ export default async function AgencyLayout({ children }: { children: React.React
           )}
           <span className="text-sm font-bold text-text truncate">{workspace.name}</span>
         </div>
-        <nav className="flex-1 px-3 py-4 space-y-1 overflow-y-auto">
-          <NavLink href="/agency" icon={<Home size={18} />} label="Overview" />
-          <NavLink href="/agency/search" icon={<Search size={18} />} label="Lead Search" />
-          <NavLink href="/agency/clients" icon={<Users size={18} />} label="Clients" />
-          <NavLink href="/agency/tasks" icon={<CheckSquare size={18} />} label="My Tasks" />
-          <NavLink href="/agency/analytics" icon={<PieChart size={18} />} label="Analytics" />
-          {(role === 'owner' || role === 'manager') && (
-            <NavLink href="/agency/team" icon={<Users size={18} />} label="Team" />
-          )}
-          {role === 'owner' && (
-            <NavLink href="/agency/billing" icon={<CreditCard size={18} />} label="Billing" />
-          )}
-          <NavLink href="/agency/settings" icon={<Settings size={18} />} label="Settings" />
+
+        <nav className="flex-1 px-3 py-4 space-y-4 overflow-y-auto">
+          {navSections.map((section) => (
+            <div key={section.section}>
+              <p className="text-[10px] font-semibold text-muted uppercase tracking-wider px-3 mb-2">{section.section}</p>
+              <div className="space-y-0.5">
+                {section.items.map((item) => (
+                  <NavLink key={item.href} href={item.href} icon={item.icon} label={item.label} />
+                ))}
+              </div>
+            </div>
+          ))}
         </nav>
 
-        {/* Services section */}
-        <div className="px-3 py-2 border-t border-border">
-          <p className="text-[10px] font-semibold text-muted uppercase tracking-wider px-3 mb-1">Services</p>
-          <nav className="space-y-1">
-            <ServiceLink href="/agency/search" icon={<Search size={18} />} label="Lead Search" />
-            <ServiceLink href="/agency/history" icon={<History size={18} />} label="Search History" />
-            <ServiceLink href="/agency/leads" icon={<Users size={18} />} label="My Leads" />
-            <ServiceLink href="/agency/reminders" icon={<Bell size={18} />} label="Reminders" />
-            <ServiceLink href="/agency/ads" icon={<Megaphone size={18} />} label="Ad Planner" />
-            <ServiceLink href="/agency/content" icon={<PenTool size={18} />} label="Content" />
-            <ServiceLink href="/agency/audit/grade" icon={<BarChart2 size={18} />} label="Website Grader" />
-            <ServiceLink href="/agency/proposals" icon={<Briefcase size={18} />} label="Proposals" />
-            <ServiceLink href="/agency/messages" icon={<MessageSquare size={18} />} label="AI Messages" />
-            <ServiceLink href="/agency/credits" icon={<Sparkles size={18} />} label="Credits" />
-          </nav>
+        {/* Bottom section */}
+        <div className="px-3 py-3 border-t border-border space-y-0.5">
+          <p className="text-[10px] font-semibold text-muted uppercase tracking-wider px-3 mb-2">Workspace</p>
+          {bottomItems.map((item) => (
+            <NavLink key={item.href} href={item.href} icon={item.icon} label={item.label} />
+          ))}
         </div>
       </aside>
 
@@ -88,9 +142,9 @@ export default async function AgencyLayout({ children }: { children: React.React
         <MobileNavLink href="/agency" icon={<Home size={20} />} label="Home" />
         <MobileNavLink href="/agency/search" icon={<Search size={20} />} label="Search" />
         <MobileNavLink href="/agency/leads" icon={<Users size={20} />} label="Leads" />
-        <MobileNavLink href="/agency/ads" icon={<Megaphone size={20} />} label="Ads" />
-        <MobileNavLink href="/agency/content" icon={<PenTool size={20} />} label="Content" />
-        <MobileNavLink href="/agency/team" icon={<Users size={20} />} label="Team" />
+        <MobileNavLink href="/agency/audit/grade" icon={<Globe size={20} />} label="Audit" />
+        <MobileNavLink href="/agency/proposals" icon={<Briefcase size={20} />} label="Proposals" />
+        <MobileNavLink href="/agency/messages" icon={<MessageSquare size={20} />} label="Messages" />
         <MobileNavLink href="/agency/settings" icon={<Settings size={20} />} label="More" />
       </nav>
     </div>
@@ -108,21 +162,9 @@ export default async function AgencyLayout({ children }: { children: React.React
 
 function NavLink({ href, icon, label }: { href: string; icon: React.ReactNode; label: string }) {
   return (
-    <Link href={href} className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm text-muted hover:text-text hover:bg-surface2 transition-colors">
+    <Link href={href} className="flex items-center gap-3 px-3 py-2 rounded-lg text-sm text-muted hover:text-text hover:bg-surface2 transition-colors">
       {icon}
       {label}
-    </Link>
-  );
-}
-
-function ServiceLink({ href, icon, label }: { href: string; icon: React.ReactNode; label: string }) {
-  return (
-    <Link
-      href={href}
-      className="flex items-center gap-3 px-3 py-2 rounded-lg text-xs text-muted hover:text-text hover:bg-surface2 transition-colors group"
-    >
-      <span className="opacity-70 group-hover:opacity-100">{icon}</span>
-      <span className="flex-1">{label}</span>
     </Link>
   );
 }
