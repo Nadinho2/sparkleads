@@ -937,6 +937,17 @@ export default function Home() {
             </div>
 
             <div className="border-t border-border mt-12 pt-8 text-center">
+              <div className="flex flex-wrap items-center justify-center gap-4 mb-4 text-sm">
+                <a href="/legal/privacy" className="text-muted hover:text-primary transition-colors">Privacy Policy</a>
+                <span className="text-border">·</span>
+                <a href="/legal/terms" className="text-muted hover:text-primary transition-colors">Terms of Service</a>
+                <span className="text-border">·</span>
+                <a href="/legal/cookies" className="text-muted hover:text-primary transition-colors">Cookie Policy</a>
+                <span className="text-border">·</span>
+                <a href="/legal/acceptable-use" className="text-muted hover:text-primary transition-colors">Acceptable Use</a>
+                <span className="text-border">·</span>
+                <a href="/legal/refund" className="text-muted hover:text-primary transition-colors">Refund Policy</a>
+              </div>
               <p className="text-sm text-muted">
                 © {new Date().getFullYear()} SparkLeads. All rights reserved.
               </p>

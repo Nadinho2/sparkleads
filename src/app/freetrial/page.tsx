@@ -216,6 +216,13 @@ export default function FreeTrialPage() {
             </button>
           </form>
 
+          <p className="mt-3 text-center text-xs text-muted">
+            By creating an account, you agree to our{' '}
+            <a href="/legal/terms" className="text-primary hover:underline">Terms of Service</a>
+            {' '}and{' '}
+            <a href="/legal/privacy" className="text-primary hover:underline">Privacy Policy</a>.
+          </p>
+
           <p className="mt-4 text-center text-sm text-muted">
             Already have an account?{' '}
             <Link href="/login" className="text-primary hover:underline">Log in</Link>
