@@ -3,6 +3,7 @@ import { createSupabaseAdmin } from '@/lib/supabase';
 import { getToken } from '@/lib/auth';
 import { generateContent } from '@/lib/content-prompt';
 import type { ContentProfile } from '@/lib/content-prompt';
+import { deductCredits } from '@/lib/credits';
 
 export const runtime = 'nodejs';
 
@@ -83,14 +84,10 @@ export async function POST(request: NextRequest) {
 
   const supabase = createSupabaseAdmin();
 
-  const { data: credits } = await supabase
-    .from('user_credits')
-    .select('balance')
-    .eq('user_token', userToken)
-    .single();
-
-  if (!credits || Number(credits.balance) < creditCost) {
-    return NextResponse.json({ error: 'insufficient_credits', required: creditCost, available: credits?.balance || 0 }, { status: 402 });
+  // Check and deduct credits
+  const creditResult = await deductCredits(userToken, creditCost, `Content calendar — ${totalPosts} posts`);
+  if (!creditResult.success) {
+    return NextResponse.json({ error: 'insufficient_credits', required: creditCost, available: creditResult.balance || 0 }, { status: 402 });
   }
 
   const { data: profile } = await supabase

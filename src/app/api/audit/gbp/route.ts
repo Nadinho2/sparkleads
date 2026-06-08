@@ -4,6 +4,7 @@ import { getToken } from '@/lib/auth';
 import { getJson } from 'serpapi';
 import { v4 as uuidv4 } from 'uuid';
 import { aiGenerateJSON } from '@/lib/ai-client';
+import { deductCredits } from '@/lib/credits';
 
 export const runtime = 'nodejs';
 
@@ -39,16 +40,11 @@ export async function POST(request: NextRequest) {
 
   const supabase = createSupabaseAdmin();
 
-  // Check credits
-  const { data: credits } = await supabase
-    .from('user_credits')
-    .select('balance')
-    .eq('user_token', userToken)
-    .single();
-
-  if (!credits || credits.balance < CREDIT_COST) {
+  // Check and deduct credits
+  const creditResult = await deductCredits(userToken, CREDIT_COST, `GBP audit for ${businessName}`);
+  if (!creditResult.success) {
     return NextResponse.json(
-      { error: 'Insufficient credits', required: CREDIT_COST, balance: credits?.balance ?? 0 },
+      { error: creditResult.error, required: creditResult.required, balance: creditResult.balance },
       { status: 403 }
     );
   }

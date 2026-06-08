@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createSupabaseAdmin } from '@/lib/supabase';
 import { getToken } from '@/lib/auth';
 import nodemailer from 'nodemailer';
+import { deductCredits } from '@/lib/credits';
 
 export const runtime = 'nodejs';
 
@@ -42,15 +43,11 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  const { data: credits } = await supabase
-    .from('user_credits')
-    .select('balance')
-    .eq('user_token', userToken)
-    .single();
-
-  if (!credits || credits.balance < recipients.length) {
+  // Check and deduct credits upfront
+  const creditResult = await deductCredits(userToken, recipients.length, `Sent ${recipients.length} outreach emails`);
+  if (!creditResult.success) {
     return NextResponse.json(
-      { error: 'Insufficient credits' },
+      { error: creditResult.error || 'Insufficient credits' },
       { status: 400 }
     );
   }
@@ -91,21 +88,7 @@ export async function POST(request: NextRequest) {
             encoder.encode(`data: ${JSON.stringify({ status: 'failed', email: recipient, sent, failed, error: 'Send failed' })}\n\n`)
           );
         }
-
-        const newBalance = credits.balance - sent;
-        await supabase
-          .from('user_credits')
-          .update({ balance: Math.max(0, newBalance) })
-          .eq('user_token', userToken);
       }
-
-      await supabase.from('credit_transactions').insert({
-        user_token: userToken,
-        type: 'usage',
-        amount: -sent,
-        description: `Sent ${sent} outreach emails`,
-        balance_after: Math.max(0, credits.balance - sent),
-      });
 
       controller.enqueue(
         encoder.encode(`data: ${JSON.stringify({ status: 'complete', sent, failed })}\n\n`)
