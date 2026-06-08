@@ -7,11 +7,9 @@ import {
   Search,
   Download,
   Globe,
-  Phone,
   Mail,
   Star,
   BarChart3,
-  FileSpreadsheet,
   MessageCircle,
   Users,
   Palette,
@@ -29,6 +27,11 @@ import {
   Shield,
   Clock,
   Target,
+  MapPin,
+  FileText,
+  Briefcase,
+  Send,
+  PenTool,
 } from 'lucide-react';
 
 function useInView() {
@@ -87,15 +90,19 @@ const steps = [
   },
 ];
 
-const features = [
-  { icon: Zap, title: 'Live Real-Time Results', description: 'Watch leads stream in as they\'re found. No waiting, no batch processing.' },
-  { icon: Phone, title: 'Direct Phone Numbers', description: 'Get real phone numbers you can call today. Start conversations that convert.' },
-  { icon: Mail, title: 'Email Discovery', description: 'Automatically find business emails from websites. Build your email list instantly.' },
-  { icon: Globe, title: '195+ Countries', description: 'Search any business in any city worldwide. Global lead generation at your fingertips.' },
-  { icon: Star, title: 'Ratings & Reviews', description: 'See Google ratings to prioritize quality leads. Focus on the best businesses first.' },
-  { icon: FileSpreadsheet, title: 'One-Click CSV Export', description: 'Download all leads as CSV instantly. Import into any CRM or spreadsheet tool.' },
-  { icon: BarChart3, title: 'Lead Status Tracking', description: 'Mark leads as contacted, interested, or closed. Track your entire sales pipeline.' },
-  { icon: MessageCircle, title: 'WhatsApp Ready', description: 'Phone numbers are formatted for WhatsApp. Start messaging leads immediately.' },
+const features: Array<{ icon: typeof Zap; title: string; description: string; color: string; bgColor: string }> = [
+  { icon: Search, title: 'Lead Search', description: 'Find businesses by keyword and location. Get names, phones, emails, websites, ratings, and addresses — exportable to CSV.', color: 'text-blue-400', bgColor: 'bg-blue-500/10' },
+  { icon: Globe, title: 'Website Grader', description: 'Score any website on speed, mobile, SEO, security, and UX. Get a PDF-ready report with prioritized fixes.', color: 'text-green-400', bgColor: 'bg-green-500/10' },
+  { icon: MapPin, title: 'GBP Audit', description: 'Analyze Google Business Profiles with AI — categories, reviews, photos, posts, Q&A, and a score out of 100.', color: 'text-yellow-400', bgColor: 'bg-yellow-500/10' },
+  { icon: BarChart3, title: 'Full Digital Audit', description: 'Combine website + GBP into one comprehensive report with a unified score, benchmarks, and action plan.', color: 'text-purple-400', bgColor: 'bg-purple-500/10' },
+  { icon: Users, title: 'Competitor Analysis', description: 'Pull competitors from Google Maps and compare ratings, reviews, photos, and online presence side-by-side.', color: 'text-orange-400', bgColor: 'bg-orange-500/10' },
+  { icon: FileText, title: 'AI Proposals', description: 'Generate professional proposals with pricing tiers, timelines, and ROI projections — branded and ready to send.', color: 'text-pink-400', bgColor: 'bg-pink-500/10' },
+  { icon: MessageCircle, title: 'AI Messages', description: 'Create personalized WhatsApp, SMS, email, and call scripts tailored to each business type and pain point.', color: 'text-indigo-400', bgColor: 'bg-indigo-500/10' },
+  { icon: Megaphone, title: 'Ad Campaign Planner', description: 'Generate Google Ads and Facebook ad copy with keyword targeting, budget allocation, and audience segments.', color: 'text-cyan-400', bgColor: 'bg-cyan-500/10' },
+  { icon: PenTool, title: 'Content Calendar', description: 'Generate a month of social posts with captions, hashtags, and optimal posting times for all major platforms.', color: 'text-teal-400', bgColor: 'bg-teal-500/10' },
+  { icon: Briefcase, title: 'Creative Briefs', description: 'Generate detailed briefs with brand voice, color palette, typography, target audience, and content pillars.', color: 'text-rose-400', bgColor: 'bg-rose-500/10' },
+  { icon: Send, title: 'Outreach Suite', description: 'Send WhatsApp messages and bulk emails directly from the platform with delivery tracking and personalization.', color: 'text-emerald-400', bgColor: 'bg-emerald-500/10' },
+  { icon: Shield, title: 'Agency Workspaces', description: 'Team collaboration with role-based access, credit allocation, and activity tracking. Scale with one subscription.', color: 'text-amber-400', bgColor: 'bg-amber-500/10' },
 ];
 
 const personas = [
@@ -546,14 +553,14 @@ export default function Home() {
             </p>
           </div>
 
-          <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-6">
+          <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
             {features.map((feature, i) => (
               <div
                 key={i}
                 className="p-6 rounded-xl border border-border bg-surface hover:border-primary/50 transition-all duration-300 hover:shadow-[0_0_20px_rgba(59,130,246,0.1)]"
               >
-                <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center mb-4">
-                  <feature.icon className="w-6 h-6 text-primary" />
+                <div className={`w-12 h-12 rounded-xl ${feature.bgColor} flex items-center justify-center mb-4`}>
+                  <feature.icon className={`w-6 h-6 ${feature.color}`} />
                 </div>
                 <h3 className="text-lg font-semibold text-text mb-2">{feature.title}</h3>
                 <p className="text-sm text-muted">{feature.description}</p>
