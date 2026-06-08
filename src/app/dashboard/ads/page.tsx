@@ -70,6 +70,17 @@ export default function AdsPage() {
       .then((res) => res.json())
       .then((data) => setBalance(data.balance ?? 0))
       .catch(() => setBalance(0));
+
+    // Pre-fill from search history service action
+    const stored = localStorage.getItem('sparkleads_ad_plan');
+    if (stored) {
+      try {
+        const data = JSON.parse(stored);
+        if (data.businessName) setBusinessName(data.businessName);
+        if (data.website) setWebsite(data.website);
+        localStorage.removeItem('sparkleads_ad_plan');
+      } catch { /* ignore */ }
+    }
   }, []);
 
   const filteredTypes = BUSINESS_TYPES.filter((t) =>

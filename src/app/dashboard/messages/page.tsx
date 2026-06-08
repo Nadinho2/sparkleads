@@ -104,6 +104,25 @@ export default function AIMessagesPage() {
   useEffect(() => {
     loadTemplates();
     loadLeads();
+
+    // Pre-fill from search history service action
+    const stored = localStorage.getItem('sparkleads_message_lead');
+    if (stored) {
+      try {
+        const data = JSON.parse(stored);
+        if (data.businessName) setServiceDescription(`Write a message for ${data.businessName}`);
+        setManualLead({
+          name: data.leadName || data.businessName || '',
+          type: '',
+          address: '',
+          phone: data.phone || '',
+          email: data.email || '',
+          website: data.website || '',
+        });
+        setShowManualInput(true);
+        localStorage.removeItem('sparkleads_message_lead');
+      } catch { /* ignore */ }
+    }
   }, [loadTemplates, loadLeads]);
 
   function loadTemplate(tmpl: Template) {

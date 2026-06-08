@@ -147,11 +147,22 @@ export default function SearchDetailPage({
       switch (service) {
         case 'grade': {
           if (!lead.website) { alert('No website found for this lead'); return; }
-          window.open(`${basePath}/audit/grade?url=${encodeURIComponent(lead.website)}`, '_blank');
+          localStorage.setItem('sparkleads_grade_url', JSON.stringify({
+            url: lead.website,
+            businessName: lead.name,
+            location: lead.address || '',
+            phone: lead.phone || '',
+            leadId: lead.id,
+          }));
+          window.open(`${basePath}/audit/grade`, '_blank');
           break;
         }
         case 'gbp': {
-          window.open(`${basePath}/audit/gbp?name=${encodeURIComponent(lead.name)}&location=${encodeURIComponent(lead.address || '')}`, '_blank');
+          localStorage.setItem('sparkleads_gbp_check', JSON.stringify({
+            businessName: lead.name,
+            location: lead.address || '',
+          }));
+          window.open(`${basePath}/audit/gbp`, '_blank');
           break;
         }
         case 'proposal': {
@@ -159,11 +170,23 @@ export default function SearchDetailPage({
           break;
         }
         case 'message': {
-          window.open(`${basePath}/messages?lead_id=${lead.id}&lead_name=${encodeURIComponent(lead.name)}`, '_blank');
+          localStorage.setItem('sparkleads_message_lead', JSON.stringify({
+            leadId: lead.id,
+            leadName: lead.name,
+            phone: lead.phone || '',
+            email: lead.email || '',
+            website: lead.website || '',
+            businessName: lead.name,
+          }));
+          window.open(`${basePath}/messages`, '_blank');
           break;
         }
         case 'ad': {
-          window.open(`${basePath}/ads?name=${encodeURIComponent(lead.name)}&website=${encodeURIComponent(lead.website || '')}`, '_blank');
+          localStorage.setItem('sparkleads_ad_plan', JSON.stringify({
+            businessName: lead.name,
+            website: lead.website || '',
+          }));
+          window.open(`${basePath}/ads`, '_blank');
           break;
         }
         case 'outreach': {
