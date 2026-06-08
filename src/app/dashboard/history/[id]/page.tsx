@@ -12,6 +12,13 @@ import {
   Calendar,
   StickyNote,
   Plus,
+  Globe,
+  MapPin,
+  FileText,
+  Megaphone,
+  Send,
+  Sparkles,
+  Loader2,
 } from 'lucide-react';
 import { useBasePath } from '@/hooks/useBasePath';
 import { Spinner } from '@/components/ui';
@@ -45,6 +52,8 @@ export default function SearchDetailPage({
   const [notesPanel, setNotesPanel] = useState<{ isOpen: boolean; lead: Lead | null }>({ isOpen: false, lead: null });
   const [whatsappComposer, setWhatsappComposer] = useState<{ isOpen: boolean; lead: Lead | null }>({ isOpen: false, lead: null });
   const [emailComposer, setEmailComposer] = useState<{ isOpen: boolean; lead: Lead | null }>({ isOpen: false, lead: null });
+  const [activeServiceMenu, setActiveServiceMenu] = useState<string | null>(null);
+  const [runningService, setRunningService] = useState<string | null>(null);
 
   useEffect(() => {
     async function fetchLeads() {
@@ -128,6 +137,50 @@ export default function SearchDetailPage({
       lead: prev.lead?.id === leadId ? { ...prev.lead, note: null } : prev.lead,
     }));
   }, []);
+
+  const handleServiceAction = useCallback(async (lead: Lead, service: string) => {
+    setActiveServiceMenu(null);
+    const key = `${lead.id}-${service}`;
+    setRunningService(key);
+
+    try {
+      switch (service) {
+        case 'grade': {
+          if (!lead.website) { alert('No website found for this lead'); return; }
+          window.open(`${basePath}/audit/grade?url=${encodeURIComponent(lead.website)}`, '_blank');
+          break;
+        }
+        case 'gbp': {
+          window.open(`${basePath}/audit/gbp?name=${encodeURIComponent(lead.name)}&location=${encodeURIComponent(lead.address || '')}`, '_blank');
+          break;
+        }
+        case 'proposal': {
+          window.open(`${basePath}/proposals/new?name=${encodeURIComponent(lead.name)}&website=${encodeURIComponent(lead.website || '')}&phone=${encodeURIComponent(lead.phone || '')}&address=${encodeURIComponent(lead.address || '')}`, '_blank');
+          break;
+        }
+        case 'message': {
+          window.open(`${basePath}/messages?lead_id=${lead.id}&lead_name=${encodeURIComponent(lead.name)}`, '_blank');
+          break;
+        }
+        case 'ad': {
+          window.open(`${basePath}/ads?name=${encodeURIComponent(lead.name)}&website=${encodeURIComponent(lead.website || '')}`, '_blank');
+          break;
+        }
+        case 'outreach': {
+          setWhatsappComposer({ isOpen: true, lead });
+          break;
+        }
+        case 'email': {
+          setEmailComposer({ isOpen: true, lead });
+          break;
+        }
+      }
+    } catch (err) {
+      console.error('Service action failed:', err);
+    } finally {
+      setRunningService(null);
+    }
+  }, [basePath]);
 
   const handleExportCsv = useCallback(async () => {
     if (leads.length === 0) return;
@@ -253,6 +306,9 @@ export default function SearchDetailPage({
                   <th className="text-left py-3 px-4 text-xs font-medium text-muted uppercase tracking-wider">
                     Actions
                   </th>
+                  <th className="text-left py-3 px-4 text-xs font-medium text-muted uppercase tracking-wider">
+                    Services
+                  </th>
                 </tr>
               </thead>
               <tbody>
@@ -375,6 +431,90 @@ export default function SearchDetailPage({
                           >
                             <ExternalLink className="w-4 h-4" />
                           </a>
+                        )}
+                      </div>
+                    </td>
+                    <td className="py-3 px-4">
+                      <div className="relative">
+                        <button
+                          onClick={() => setActiveServiceMenu(activeServiceMenu === lead.id ? null : lead.id)}
+                          className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-primary/10 text-primary text-xs font-medium hover:bg-primary/20 transition-colors"
+                        >
+                          <Sparkles size={14} />
+                          Use Service
+                        </button>
+                        {activeServiceMenu === lead.id && (
+                          <>
+                            <div className="fixed inset-0 z-10" onClick={() => setActiveServiceMenu(null)} />
+                            <div className="absolute right-0 top-full mt-1 z-20 w-52 rounded-xl border border-border bg-surface shadow-xl py-1">
+                              {lead.website && (
+                                <button
+                                  onClick={() => handleServiceAction(lead, 'grade')}
+                                  disabled={runningService === `${lead.id}-grade`}
+                                  className="w-full flex items-center gap-3 px-3 py-2 text-xs text-text hover:bg-surface2 transition-colors disabled:opacity-50"
+                                >
+                                  {runningService === `${lead.id}-grade` ? <Loader2 size={14} className="animate-spin" /> : <Globe size={14} className="text-green-400" />}
+                                  <span>Grade Website</span>
+                                  <span className="ml-auto text-muted">2 cr</span>
+                                </button>
+                              )}
+                              <button
+                                onClick={() => handleServiceAction(lead, 'gbp')}
+                                disabled={runningService === `${lead.id}-gbp`}
+                                className="w-full flex items-center gap-3 px-3 py-2 text-xs text-text hover:bg-surface2 transition-colors disabled:opacity-50"
+                              >
+                                {runningService === `${lead.id}-gbp` ? <Loader2 size={14} className="animate-spin" /> : <MapPin size={14} className="text-yellow-400" />}
+                                <span>GBP Audit</span>
+                                <span className="ml-auto text-muted">3 cr</span>
+                              </button>
+                              <button
+                                onClick={() => handleServiceAction(lead, 'proposal')}
+                                disabled={runningService === `${lead.id}-proposal`}
+                                className="w-full flex items-center gap-3 px-3 py-2 text-xs text-text hover:bg-surface2 transition-colors disabled:opacity-50"
+                              >
+                                {runningService === `${lead.id}-proposal` ? <Loader2 size={14} className="animate-spin" /> : <FileText size={14} className="text-pink-400" />}
+                                <span>Generate Proposal</span>
+                                <span className="ml-auto text-muted">5 cr</span>
+                              </button>
+                              <button
+                                onClick={() => handleServiceAction(lead, 'message')}
+                                disabled={runningService === `${lead.id}-message`}
+                                className="w-full flex items-center gap-3 px-3 py-2 text-xs text-text hover:bg-surface2 transition-colors disabled:opacity-50"
+                              >
+                                {runningService === `${lead.id}-message` ? <Loader2 size={14} className="animate-spin" /> : <MessageCircle size={14} className="text-indigo-400" />}
+                                <span>AI Message</span>
+                                <span className="ml-auto text-muted">1 cr</span>
+                              </button>
+                              <button
+                                onClick={() => handleServiceAction(lead, 'ad')}
+                                disabled={runningService === `${lead.id}-ad`}
+                                className="w-full flex items-center gap-3 px-3 py-2 text-xs text-text hover:bg-surface2 transition-colors disabled:opacity-50"
+                              >
+                                {runningService === `${lead.id}-ad` ? <Loader2 size={14} className="animate-spin" /> : <Megaphone size={14} className="text-cyan-400" />}
+                                <span>Ad Plan</span>
+                                <span className="ml-auto text-muted">5 cr</span>
+                              </button>
+                              <div className="border-t border-border my-1" />
+                              {lead.phone && (
+                                <button
+                                  onClick={() => handleServiceAction(lead, 'outreach')}
+                                  className="w-full flex items-center gap-3 px-3 py-2 text-xs text-text hover:bg-surface2 transition-colors"
+                                >
+                                  <Send size={14} className="text-green-400" />
+                                  <span>WhatsApp</span>
+                                </button>
+                              )}
+                              {lead.email && (
+                                <button
+                                  onClick={() => handleServiceAction(lead, 'email')}
+                                  className="w-full flex items-center gap-3 px-3 py-2 text-xs text-text hover:bg-surface2 transition-colors"
+                                >
+                                  <Send size={14} className="text-blue-400" />
+                                  <span>Email</span>
+                                </button>
+                              )}
+                            </div>
+                          </>
                         )}
                       </div>
                     </td>
