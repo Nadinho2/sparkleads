@@ -18,6 +18,7 @@ import {
   Eye,
   EyeOff,
 } from 'lucide-react';
+import { useBasePath } from '@/hooks/useBasePath';
 import { toast } from 'sonner';
 import { Spinner } from '@/components/ui';
 import { ProfileEditor } from '@/components/content/ProfileEditor';
@@ -101,6 +102,7 @@ const APPROACH_COLORS: Record<string, string> = {
 };
 
 export default function ContentPage() {
+  const basePath = useBasePath();
   const router = useRouter();
   const [profiles, setProfiles] = useState<ContentProfile[]>([]);
   const [selectedProfile, setSelectedProfile] = useState<ContentProfile | null>(null);
@@ -501,7 +503,7 @@ export default function ContentPage() {
                     </p>
                   </div>
                   <a
-                    href="/dashboard/content/calendar"
+                    href={`${basePath}/content/calendar`}
                     className="flex items-center gap-2 px-4 py-2 rounded-lg bg-primary/10 text-primary text-sm font-medium hover:bg-primary/20 transition-colors"
                   >
                     View in Calendar <ArrowRight className="w-4 h-4" />
@@ -780,11 +782,11 @@ export default function ContentPage() {
                 </div>
                 {genMode === 'single' ? (
                   balance < creditCost && (
-                    <a href="/dashboard/credits" className="text-xs text-primary underline">Get more credits</a>
+                    <a href={`${basePath}/credits`} className="text-xs text-primary underline">Get more credits</a>
                   )
                 ) : (
                   balance < calendarCreditCost && (
-                    <a href="/dashboard/credits" className="text-xs text-primary underline">Get more credits</a>
+                    <a href={`${basePath}/credits`} className="text-xs text-primary underline">Get more credits</a>
                   )
                 )}
               </div>
@@ -1033,7 +1035,7 @@ export default function ContentPage() {
                           hashtags: v.hashtags.join(','),
                           image_direction: v.image_direction,
                         });
-                        router.push(`/dashboard/content/calendar?${params.toString()}`);
+                        router.push(`${basePath}/content/calendar?${params.toString()}`);
                       }}
                       className="flex items-center gap-2 px-4 py-2 rounded-lg bg-surface2 text-text text-sm font-medium hover:bg-surface2/80 transition-colors border border-border"
                     >

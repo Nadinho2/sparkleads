@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { Plus, Loader2, Briefcase, ExternalLink } from 'lucide-react';
+import { useBasePath } from '@/hooks/useBasePath';
 import { toast } from 'sonner';
 
 interface Brief {
@@ -15,6 +16,7 @@ interface Brief {
 }
 
 export default function BriefsPage() {
+  const basePath = useBasePath();
   const router = useRouter();
   const [briefs, setBriefs] = useState<Brief[]>([]);
   const [loading, setLoading] = useState(true);
@@ -67,7 +69,7 @@ export default function BriefsPage() {
           <p className="text-sm text-muted">Production-ready briefs for your creative team</p>
         </div>
         <button
-          onClick={() => router.push('/dashboard/briefs/new')}
+          onClick={() => router.push(`${basePath}/briefs/new`)}
           className="flex items-center gap-2 px-4 py-2.5 bg-gradient-to-r from-purple-600 to-pink-600 text-white rounded-xl text-sm font-medium hover:from-purple-500 hover:to-pink-500 transition-all"
         >
           <Plus size={16} />
@@ -144,7 +146,7 @@ export default function BriefsPage() {
                   </td>
                   <td className="py-3 px-4">
                     <button
-                      onClick={() => router.push(`/dashboard/briefs/${brief.id}`)}
+                      onClick={() => router.push(`${basePath}/briefs/${brief.id}`)}
                       className="flex items-center gap-1 text-xs text-primary hover:underline"
                     >
                       <ExternalLink size={12} /> View

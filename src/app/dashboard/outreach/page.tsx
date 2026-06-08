@@ -3,9 +3,11 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { Send, AlertTriangle, Check, Loader2 } from 'lucide-react';
+import { useBasePath } from '@/hooks/useBasePath';
 import { Spinner } from '@/components/ui';
 
 export default function OutreachPage() {
+  const basePath = useBasePath();
   const router = useRouter();
   const [hasSenderEmail, setHasSenderEmail] = useState(false);
   const [senderEmail, setSenderEmail] = useState('');
@@ -121,7 +123,7 @@ export default function OutreachPage() {
             </div>
           </div>
           <button
-            onClick={() => router.push('/dashboard/settings')}
+            onClick={() => router.push(`${basePath}/settings`)}
             className="px-4 py-2 rounded-lg border border-border text-sm text-muted hover:text-text transition-colors"
           >
             Set up now →

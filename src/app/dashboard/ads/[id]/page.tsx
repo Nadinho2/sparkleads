@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useRouter, useParams } from 'next/navigation';
 import { ArrowLeft, FileText } from 'lucide-react';
+import { useBasePath } from '@/hooks/useBasePath';
 import { Spinner } from '@/components/ui';
 import { AdPlanResults } from '@/components/dashboard/AdPlanResults';
 import type { AdPlan } from '@/lib/ad-plan-generator';
@@ -22,6 +23,7 @@ interface SavedPlanData {
 }
 
 export default function AdPlanDetailPage() {
+  const basePath = useBasePath();
   const router = useRouter();
   const params = useParams();
   const planId = params.id as string;
@@ -66,7 +68,7 @@ export default function AdPlanDetailPage() {
         <h3 className="text-lg font-semibold text-text mb-2">Ad plan not found</h3>
         <p className="text-sm text-muted mb-4">{error || 'This plan may have been deleted.'}</p>
         <button
-          onClick={() => router.push('/dashboard/ads/history')}
+          onClick={() => router.push(`${basePath}/ads/history`)}
           className="flex items-center gap-2 px-4 py-2 rounded-lg bg-primary text-white text-sm font-medium hover:bg-primary/90 transition-colors"
         >
           <ArrowLeft className="w-4 h-4" />
@@ -80,7 +82,7 @@ export default function AdPlanDetailPage() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <button
-          onClick={() => router.push('/dashboard/ads/history')}
+          onClick={() => router.push(`${basePath}/ads/history`)}
           className="flex items-center gap-2 text-sm text-muted hover:text-text transition-colors"
         >
           <ArrowLeft className="w-4 h-4" />
@@ -89,7 +91,7 @@ export default function AdPlanDetailPage() {
         <button
           onClick={() => {
             localStorage.setItem('sparkleads_brief_plan', planId);
-            router.push('/dashboard/briefs/new');
+            router.push(`${basePath}/briefs/new`);
           }}
           className="flex items-center gap-2 px-4 py-2 rounded-lg bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-500 hover:to-pink-500 text-white text-sm font-medium transition-all"
         >

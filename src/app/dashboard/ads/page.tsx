@@ -8,6 +8,7 @@ import {
   Target,
   ChevronDown,
 } from 'lucide-react';
+import { useBasePath } from '@/hooks/useBasePath';
 import { toast } from 'sonner';
 import { Spinner } from '@/components/ui';
 import { AdPlanResults } from '@/components/dashboard/AdPlanResults';
@@ -46,6 +47,7 @@ const CURRENCY_SYMBOLS: Record<string, string> = {
 };
 
 export default function AdsPage() {
+  const basePath = useBasePath();
   const [balance, setBalance] = useState<number>(0);
   const [businessName, setBusinessName] = useState('');
   const [businessType, setBusinessType] = useState('');
@@ -314,7 +316,7 @@ export default function AdsPage() {
               </div>
             </div>
             {balance < 5 && (
-              <Link href="/dashboard/credits" className="text-xs text-primary underline">
+              <Link href={`${basePath}/credits`} className="text-xs text-primary underline">
                 Get more credits
               </Link>
             )}

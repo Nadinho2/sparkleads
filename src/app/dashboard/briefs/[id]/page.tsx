@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { ArrowLeft, Loader2, Printer } from 'lucide-react';
+import { useBasePath } from '@/hooks/useBasePath';
 import { toast } from 'sonner';
 
 interface BriefData {
@@ -62,6 +63,7 @@ interface BriefRecord {
 }
 
 export default function BriefDetailPage({ params }: { params: { id: string } }) {
+  const basePath = useBasePath();
   const router = useRouter();
   const [brief, setBrief] = useState<BriefRecord | null>(null);
   const [loading, setLoading] = useState(true);
@@ -109,7 +111,7 @@ export default function BriefDetailPage({ params }: { params: { id: string } }) 
     return (
       <div className="text-center py-20">
         <p className="text-muted">Brief not found</p>
-        <button onClick={() => router.push('/dashboard/briefs')} className="text-primary text-sm mt-2 hover:underline">
+        <button onClick={() => router.push(`${basePath}/briefs`)} className="text-primary text-sm mt-2 hover:underline">
           Back to briefs
         </button>
       </div>
@@ -124,7 +126,7 @@ export default function BriefDetailPage({ params }: { params: { id: string } }) 
       <div className="flex items-center justify-between mb-6 no-print">
         <div className="flex items-center gap-3">
           <button
-            onClick={() => router.push('/dashboard/briefs')}
+            onClick={() => router.push(`${basePath}/briefs`)}
             className="p-2 rounded-lg bg-surface2 text-muted hover:text-text transition-colors"
           >
             <ArrowLeft size={18} />

@@ -13,6 +13,7 @@ import {
   StickyNote,
   Plus,
 } from 'lucide-react';
+import { useBasePath } from '@/hooks/useBasePath';
 import { Spinner } from '@/components/ui';
 import { NotesPanel } from '@/components/dashboard/NotesPanel';
 import { WhatsAppComposer } from '@/components/dashboard/WhatsAppComposer';
@@ -35,6 +36,7 @@ export default function SearchDetailPage({
   params: { id: string };
 }) {
   const { id } = params;
+  const basePath = useBasePath();
   const router = useRouter();
   const [search, setSearch] = useState<Search | null>(null);
   const [leads, setLeads] = useState<Lead[]>([]);
@@ -49,7 +51,7 @@ export default function SearchDetailPage({
       try {
         const response = await fetch(`/api/searches/${id}/leads`);
         if (!response.ok) {
-          router.push('/dashboard/history');
+          router.push(`${basePath}/history`);
           return;
         }
         const data = await response.json();
@@ -73,14 +75,14 @@ export default function SearchDetailPage({
           }
         }
       } catch {
-        router.push('/dashboard/history');
+        router.push(`${basePath}/history`);
       } finally {
         setLoading(false);
       }
     }
 
     fetchLeads();
-  }, [id, router]);
+  }, [id, router, basePath]);
 
   const handleStatusChange = useCallback(async (leadId: string, status: LeadStatus) => {
     try {
@@ -183,7 +185,7 @@ export default function SearchDetailPage({
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <button
-            onClick={() => router.push('/dashboard/history')}
+            onClick={() => router.push(`${basePath}/history`)}
             className="flex items-center gap-2 text-sm text-muted hover:text-text mb-3 transition-colors"
           >
             <ArrowLeft className="w-4 h-4" />

@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { FileText, Loader2, ChevronRight, ChevronLeft, Plus, Check } from 'lucide-react';
+import { useBasePath } from '@/hooks/useBasePath';
 import { toast } from 'sonner';
 
 const AVAILABLE_SERVICES = [
@@ -27,6 +28,7 @@ interface AuditReport {
 }
 
 export default function NewProposalPage() {
+  const basePath = useBasePath();
   const router = useRouter();
   const searchParams = useSearchParams();
   const [step, setStep] = useState(1);
@@ -138,7 +140,7 @@ export default function NewProposalPage() {
       }
 
       toast.success('Proposal generated!');
-      router.push(`/dashboard/proposals/${data.proposalId}`);
+      router.push(`${basePath}/proposals/${data.proposalId}`);
     } catch {
       toast.error('Something went wrong');
     } finally {

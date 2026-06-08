@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { MapPin, Loader2, CheckCircle, AlertTriangle, XCircle, ChevronDown, Star, Phone, Globe, Clock, Camera, Building2 } from 'lucide-react';
 import NextStepBanner from '@/components/pipeline/NextStepBanner';
+import { useBasePath } from '@/hooks/useBasePath';
 import { toast } from 'sonner';
 
 interface CheckResult {
@@ -86,6 +87,7 @@ function getCheckIcon(key: string) {
 }
 
 export default function GBPAuditPage() {
+  const basePath = useBasePath();
   const router = useRouter();
   const [businessName, setBusinessName] = useState('');
   const [location, setLocation] = useState('');
@@ -499,7 +501,7 @@ export default function GBPAuditPage() {
                       address: location,
                       ...result.business,
                     }));
-                    router.push('/dashboard/content');
+                    router.push(`${basePath}/content`);
                   }}
                   className="px-4 py-2.5 rounded-xl bg-purple-600 hover:bg-purple-500 text-white text-sm font-medium transition-colors"
                 >

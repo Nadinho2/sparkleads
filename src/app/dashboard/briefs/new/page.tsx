@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { Loader2, Briefcase, Sparkles, ArrowLeft } from 'lucide-react';
+import { useBasePath } from '@/hooks/useBasePath';
 import { toast } from 'sonner';
 
 const PLATFORMS = [
@@ -31,6 +32,7 @@ const ASSET_OPTIONS = [
 ];
 
 export default function NewBriefPage() {
+  const basePath = useBasePath();
   const router = useRouter();
 
   const [businessName, setBusinessName] = useState('');
@@ -145,7 +147,7 @@ export default function NewBriefPage() {
     <div className="max-w-3xl mx-auto">
       <div className="flex items-center gap-3 mb-6">
         <button
-          onClick={() => router.push('/dashboard/briefs')}
+          onClick={() => router.push(`${basePath}/briefs`)}
           className="p-2 rounded-lg bg-surface2 text-muted hover:text-text transition-colors"
         >
           <ArrowLeft size={18} />

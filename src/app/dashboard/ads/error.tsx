@@ -31,7 +31,7 @@ export default function AdsError({
             Try again
           </button>
           <button
-            onClick={() => window.location.href = '/dashboard/ads'}
+            onClick={() => window.location.reload()}
             className="px-4 py-2 rounded-lg bg-surface2 text-text text-sm font-medium hover:bg-surface2/80 transition-colors"
           >
             Reload page

@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { FileText, Plus, TrendingUp, Send, CheckCircle, Clock } from 'lucide-react';
+import { useBasePath } from '@/hooks/useBasePath';
 import { toast } from 'sonner';
 
 interface Proposal {
@@ -30,6 +31,7 @@ function getStatusColor(status: string) {
 }
 
 export default function ProposalsPage() {
+  const basePath = useBasePath();
   const [proposals, setProposals] = useState<Proposal[]>([]);
 
   useEffect(() => {
@@ -66,7 +68,7 @@ export default function ProposalsPage() {
           <p className="text-muted">Track and manage your client proposals.</p>
         </div>
         <Link
-          href="/dashboard/proposals/new"
+          href={`${basePath}/proposals/new`}
           className="flex items-center gap-2 px-4 py-2.5 bg-primary text-white rounded-xl text-sm font-medium hover:bg-primary/90 transition-colors"
         >
           <Plus size={16} />
@@ -171,7 +173,7 @@ export default function ProposalsPage() {
           <p className="text-lg font-medium text-text mb-2">No proposals yet</p>
           <p className="text-sm text-muted mb-4">Generate your first proposal to start winning clients</p>
           <Link
-            href="/dashboard/proposals/new"
+            href={`${basePath}/proposals/new`}
             className="flex items-center gap-2 px-6 py-3 bg-primary text-white rounded-xl text-sm font-medium hover:bg-primary/90 transition-colors"
           >
             <Plus size={16} />

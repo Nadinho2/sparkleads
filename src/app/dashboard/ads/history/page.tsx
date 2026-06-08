@@ -9,6 +9,7 @@ import {
   Trash2,
   Target,
 } from 'lucide-react';
+import { useBasePath } from '@/hooks/useBasePath';
 import { toast } from 'sonner';
 import { Spinner } from '@/components/ui';
 
@@ -39,6 +40,7 @@ interface SavedPlan {
 }
 
 export default function AdHistoryPage() {
+  const basePath = useBasePath();
   const [plans, setPlans] = useState<SavedPlan[]>([]);
   const [loading, setLoading] = useState(true);
   const [deleting, setDeleting] = useState<string | null>(null);
@@ -110,7 +112,7 @@ export default function AdHistoryPage() {
             Generate your first ad plan to see it here.
           </p>
           <Link
-            href="/dashboard/ads"
+            href={`${basePath}/ads`}
             className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-primary text-white text-sm font-medium hover:bg-primary/90 transition-colors"
           >
             <Target className="w-4 h-4" />

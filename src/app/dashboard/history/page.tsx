@@ -10,10 +10,12 @@ import {
   Trash2,
   History,
 } from 'lucide-react';
+import { useBasePath } from '@/hooks/useBasePath';
 import { Spinner } from '@/components/ui';
 import type { Search as SearchType } from '@/types';
 
 export default function HistoryPage() {
+  const basePath = useBasePath();
   const router = useRouter();
   const [searches, setSearches] = useState<SearchType[]>([]);
   const [loading, setLoading] = useState(true);
@@ -63,9 +65,9 @@ export default function HistoryPage() {
 
   const handleReRun = useCallback(
     (query: string) => {
-      router.push(`/dashboard?q=${encodeURIComponent(query)}`);
+      router.push(`${basePath}?q=${encodeURIComponent(query)}`);
     },
-    [router]
+    [router, basePath]
   );
 
   const formatDate = (dateStr: string) => {
@@ -102,7 +104,7 @@ export default function HistoryPage() {
         <h2 className="text-xl font-semibold text-text mb-2">No search history</h2>
         <p className="text-muted mb-6">Your searches will appear here</p>
         <button
-          onClick={() => router.push('/dashboard')}
+          onClick={() => router.push(`${basePath}`)}
           className="inline-flex items-center gap-2 px-6 py-3 rounded-xl bg-primary text-white font-medium hover:bg-primary/90 transition-colors"
         >
           <Search className="w-5 h-5" />
@@ -137,7 +139,7 @@ export default function HistoryPage() {
 
             <div className="flex items-center gap-2">
               <button
-                onClick={() => router.push(`/dashboard/history/${search.id}`)}
+                onClick={() => router.push(`${basePath}/history/${search.id}`)}
                 className="flex items-center gap-2 px-4 py-2 rounded-lg border border-border bg-surface2 text-sm text-muted hover:text-text hover:border-primary/50 transition-colors"
               >
                 <Eye className="w-4 h-4" />

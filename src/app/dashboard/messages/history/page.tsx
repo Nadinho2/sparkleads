@@ -6,6 +6,7 @@ import {
   ArrowLeft, Search, Copy, ExternalLink, MessageSquare,
   Loader2, ChevronDown, ChevronUp,
 } from 'lucide-react';
+import { useBasePath } from '@/hooks/useBasePath';
 import { toast } from 'sonner';
 
 interface HistoryMessage {
@@ -26,6 +27,7 @@ interface HistoryMessage {
 }
 
 export default function MessageHistoryPage() {
+  const basePath = useBasePath();
   const router = useRouter();
   const [messages, setMessages] = useState<HistoryMessage[]>([]);
   const [loading, setLoading] = useState(true);
@@ -84,7 +86,7 @@ export default function MessageHistoryPage() {
     <div className="max-w-5xl mx-auto">
       <div className="flex items-center gap-3 mb-6">
         <button
-          onClick={() => router.push('/dashboard/messages')}
+          onClick={() => router.push(`${basePath}/messages`)}
           className="p-2 rounded-lg bg-surface2 text-muted hover:text-text transition-colors"
         >
           <ArrowLeft size={18} />

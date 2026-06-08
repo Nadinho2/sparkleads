@@ -6,6 +6,7 @@ import {
   Sparkles, Loader2, Copy, ExternalLink, Check, FileDown,
   MessageSquare, Mail, Wand2, Filter, History,
 } from 'lucide-react';
+import { useBasePath } from '@/hooks/useBasePath';
 import { toast } from 'sonner';
 
 interface Lead {
@@ -48,6 +49,7 @@ function calculateCreditCost(count: number) {
 }
 
 export default function AIMessagesPage() {
+  const basePath = useBasePath();
   const router = useRouter();
 
   // Service setup
@@ -273,7 +275,7 @@ export default function AIMessagesPage() {
           <p className="text-muted text-sm">Generate personalized outreach messages for your leads.</p>
         </div>
         <button
-          onClick={() => router.push('/dashboard/messages/history')}
+          onClick={() => router.push(`${basePath}/messages/history`)}
           className="flex items-center gap-2 px-4 py-2.5 bg-surface2 text-text border border-border rounded-xl text-sm font-medium hover:bg-surface transition-colors"
         >
           <History size={16} />

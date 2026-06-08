@@ -6,6 +6,7 @@ import {
   Users, Loader2, Trophy, TrendingUp, TrendingDown, Minus,
   Star, Phone, Globe, Camera, ChevronDown, MapPin, Target, AlertTriangle, Zap, MessageCircle,
 } from 'lucide-react';
+import { useBasePath } from '@/hooks/useBasePath';
 import NextStepBanner from '@/components/pipeline/NextStepBanner';
 import WhatsAppPreviewModal from '@/components/outreach/WhatsAppPreviewModal';
 import { toast } from 'sonner';
@@ -69,6 +70,7 @@ function getBestWorst(values: (number | null)[], higher: boolean = true): { best
 }
 
 export default function CompetitorAnalysisPage() {
+  const basePath = useBasePath();
   const router = useRouter();
   const [businessName, setBusinessName] = useState('');
   const [businessType, setBusinessType] = useState('');
@@ -517,7 +519,7 @@ export default function CompetitorAnalysisPage() {
                             <button
                               onClick={() => {
                                 localStorage.setItem('sparkleads_grade_url', JSON.stringify({ url: comp.website, businessName: comp.name }));
-                                router.push('/dashboard/audit/grade');
+                                router.push(`${basePath}/audit/grade`);
                               }}
                               className="mt-3 px-3 py-1.5 rounded-lg bg-orange-600 hover:bg-orange-500 text-white text-xs font-medium transition-colors"
                             >
