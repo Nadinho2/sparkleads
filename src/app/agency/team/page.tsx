@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import { UserPlus, UserCircle, Check, Copy, CheckCircle, MessageCircle, Send, ClipboardCopy } from 'lucide-react';
+import { UserPlus, UserCircle, Check, Copy, CheckCircle, MessageCircle, Send, ClipboardCopy, Sparkles } from 'lucide-react';
 import { Spinner } from '@/components/ui';
 import { toast } from 'sonner';
 
@@ -66,6 +66,9 @@ export default function TeamPage() {
   const [isGenerating, setIsGenerating] = useState(false);
   const [generatedInvite, setGeneratedInvite] = useState<GeneratedInvite | null>(null);
   const [copied, setCopied] = useState(false);
+  const [allocatingMember, setAllocatingMember] = useState<Member | null>(null);
+  const [allocateAmount, setAllocateAmount] = useState(0);
+  const [allocating, setAllocating] = useState(false);
 
   const loadData = useCallback(async () => {
     try {
@@ -123,6 +126,30 @@ export default function TeamPage() {
       body: JSON.stringify({ memberId, ...updates }),
     });
     loadData();
+  };
+
+  const handleAllocate = async () => {
+    if (!allocatingMember || allocateAmount <= 0) return;
+    setAllocating(true);
+    try {
+      const res = await fetch('/api/agency/credits/allocate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ memberId: allocatingMember.id, amount: allocateAmount }),
+      });
+      const data = await res.json();
+      if (res.ok) {
+        toast.success(`Allocated ${allocateAmount} credits to ${allocatingMember.name}`);
+        setAllocatingMember(null);
+        setAllocateAmount(0);
+        loadData();
+      } else {
+        toast.error(data.error || 'Failed to allocate credits');
+      }
+    } catch {
+      toast.error('Something went wrong');
+    }
+    setAllocating(false);
   };
 
   const appUrl = typeof window !== 'undefined' ? window.location.origin : '';
@@ -349,9 +376,14 @@ export default function TeamPage() {
                     <span className="text-xs px-2 py-0.5 rounded-full bg-green-500/20 text-green-400">active</span>
                   </td>
                   <td className="px-4 py-3">
-                    <button onClick={() => updateMember(m.id, { status: m.status === 'suspended' ? 'active' : 'suspended' })} className="text-xs text-muted hover:text-text">
-                      {m.status === 'suspended' ? 'Activate' : 'Suspend'}
-                    </button>
+                    <div className="flex items-center gap-2">
+                      <button onClick={() => setAllocatingMember(m)} className="flex items-center gap-1 text-xs text-primary hover:underline">
+                        <Sparkles size={12} /> Allocate
+                      </button>
+                      <button onClick={() => updateMember(m.id, { status: m.status === 'suspended' ? 'active' : 'suspended' })} className="text-xs text-muted hover:text-text">
+                        {m.status === 'suspended' ? 'Activate' : 'Suspend'}
+                      </button>
+                    </div>
                   </td>
                 </tr>
               ))}
@@ -391,16 +423,68 @@ export default function TeamPage() {
                   <span className="text-sm font-medium text-text">{m.credits_used}{m.credit_limit > 0 ? ` / ${m.credit_limit}` : ''}</span>
                 </div>
               </div>
-              <button
-                onClick={() => updateMember(m.id, { status: m.status === 'suspended' ? 'active' : 'suspended' })}
-                className="text-xs text-red-400 hover:underline"
-              >
-                {m.status === 'suspended' ? 'Activate' : 'Suspend'}
-              </button>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => setAllocatingMember(m)}
+                  className="flex items-center gap-1 text-xs text-primary hover:underline"
+                >
+                  <Sparkles size={12} /> Allocate Credits
+                </button>
+                <button
+                  onClick={() => updateMember(m.id, { status: m.status === 'suspended' ? 'active' : 'suspended' })}
+                  className="text-xs text-red-400 hover:underline"
+                >
+                  {m.status === 'suspended' ? 'Activate' : 'Suspend'}
+                </button>
+              </div>
             </div>
           ))}
         </div>
       </div>
+
+      {/* Allocate Credits Modal */}
+      {allocatingMember && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+          <div className="w-full max-w-md rounded-2xl bg-surface border border-border p-6">
+            <h3 className="text-lg font-bold text-text mb-1">Allocate Credits</h3>
+            <p className="text-sm text-muted mb-4">
+              Transfer credits from the workspace pool to <strong className="text-text">{allocatingMember.name}</strong>.
+              They can use up to their limit each month.
+            </p>
+
+            <div className="mb-4">
+              <label className="text-xs text-muted mb-2 block">Amount of credits</label>
+              <input
+                type="number"
+                value={allocateAmount || ''}
+                onChange={(e) => setAllocateAmount(Number(e.target.value))}
+                placeholder="e.g. 100"
+                min="1"
+                className="w-full px-3 py-2.5 rounded-lg bg-surface2 border border-border text-text text-sm focus:outline-none focus:ring-2 focus:ring-primary/50"
+              />
+              <p className="text-xs text-muted mt-1.5">
+                Current limit: {allocatingMember.credit_limit > 0 ? `${allocatingMember.credit_limit} credits` : 'No limit'} · Used: {allocatingMember.credits_used}
+              </p>
+            </div>
+
+            <div className="flex gap-3">
+              <button
+                onClick={() => { setAllocatingMember(null); setAllocateAmount(0); }}
+                className="flex-1 px-4 py-2.5 rounded-lg border border-border text-sm text-muted hover:text-text transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleAllocate}
+                disabled={allocating || allocateAmount <= 0}
+                className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg bg-primary text-white text-sm font-medium hover:bg-primary/90 transition-colors disabled:opacity-50"
+              >
+                {allocating ? <><Spinner size="sm" /> Allocating...</> : <><Sparkles size={14} /> Allocate {allocateAmount || 0} Credits</>}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

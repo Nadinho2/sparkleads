@@ -99,6 +99,16 @@ export async function POST(request: NextRequest) {
     joined_at: new Date().toISOString(),
   });
 
+  // Log initial credit allocation to workspace activity
+  await supabase.from('workspace_activity').insert({
+    workspace_id: workspace.id,
+    user_token: token,
+    member_name: 'System',
+    action: 'credit_added',
+    resource_type: 'credit',
+    metadata: { amount: planCredits, description: `${selectedPlan} plan — ${planCredits} monthly credits` },
+  });
+
   const response = NextResponse.json({ success: true, workspaceId: workspace.id });
   response.cookies.set(setWorkspaceCookie(workspace.id));
   return response;
