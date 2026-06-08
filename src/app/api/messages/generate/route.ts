@@ -207,21 +207,6 @@ Each must be genuinely different based on that business's specific details.`;
     } catch { /* ignore */ }
   }
 
-  // Deduct credits
-  const newBalance = credits.balance - creditCost;
-  await supabase
-    .from('user_credits')
-    .update({ balance: newBalance, updated_at: new Date().toISOString() })
-    .eq('user_token', userToken);
-
-  await supabase.from('credit_transactions').insert({
-    user_token: userToken,
-    type: 'usage',
-    amount: -creditCost,
-    description: `AI messages for ${leads.length} lead${leads.length > 1 ? 's' : ''}`,
-    balance_after: newBalance,
-  });
-
   return NextResponse.json({
     success: true,
     messages: result,

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createSupabaseAdmin } from '@/lib/supabase';
 import { getToken } from '@/lib/auth';
+import { deductCredits } from '@/lib/credits';
 import { v4 as uuidv4 } from 'uuid';
 import { aiGenerateJSON } from '@/lib/ai-client';
 
@@ -51,16 +52,11 @@ export async function POST(request: NextRequest) {
 
   const supabase = createSupabaseAdmin();
 
-  // Check credits
-  const { data: credits } = await supabase
-    .from('user_credits')
-    .select('balance')
-    .eq('user_token', userToken)
-    .single();
-
-  if (!credits || credits.balance < CREDIT_COST) {
+  // Check & deduct credits (works with both workspace and individual pools)
+  const deduction = await deductCredits(userToken, CREDIT_COST, `Website grade for ${url}`);
+  if (!deduction.success) {
     return NextResponse.json(
-      { error: 'Insufficient credits', required: CREDIT_COST, balance: credits?.balance ?? 0 },
+      { error: deduction.error, required: deduction.required, balance: deduction.balance },
       { status: 403 }
     );
   }
@@ -193,21 +189,6 @@ Only return the JSON array, no other text.`;
       { priority: 'low', title: 'Improve SEO meta tags', description: 'Add a descriptive meta description and optimize your page title.', impact: '+5 points' },
     ];
   }
-
-  // Deduct credits
-  const newBalance = credits.balance - CREDIT_COST;
-  await supabase
-    .from('user_credits')
-    .update({ balance: newBalance, updated_at: new Date().toISOString() })
-    .eq('user_token', userToken);
-
-  await supabase.from('credit_transactions').insert({
-    user_token: userToken,
-    type: 'usage',
-    amount: -CREDIT_COST,
-    description: `Website grade for ${url}`,
-    balance_after: newBalance,
-  });
 
   // Save to database
   const gradeId = uuidv4();

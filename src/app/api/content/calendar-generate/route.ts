@@ -210,20 +210,6 @@ export async function POST(request: NextRequest) {
     }
   }
 
-  const newBalance = Number(credits.balance) - creditCost;
-  await supabase
-    .from('user_credits')
-    .update({ balance: newBalance, updated_at: new Date().toISOString() })
-    .eq('user_token', userToken);
-
-  await supabase.from('credit_transactions').insert({
-    user_token: userToken,
-    type: 'usage',
-    amount: -creditCost,
-    description: `Monthly calendar (${generatedPosts.length} posts) for ${profile.business_name}`,
-    balance_after: newBalance,
-  });
-
   return NextResponse.json({
     success: true,
     month: targetMonth,
@@ -231,7 +217,6 @@ export async function POST(request: NextRequest) {
     platforms,
     posts_per_week: ppw,
     credits_used: creditCost,
-    new_balance: newBalance,
     events: calendarEvents,
     posts: generatedPosts.map((p) => ({
       date: p.date,

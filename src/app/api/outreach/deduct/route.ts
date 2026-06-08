@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createSupabaseAdmin } from '@/lib/supabase';
 import { getToken } from '@/lib/auth';
+import { deductCredits } from '@/lib/credits';
 
 export const runtime = 'nodejs';
 
@@ -24,33 +25,14 @@ export async function POST(request: NextRequest) {
 
   const supabase = createSupabaseAdmin();
 
-  const { data: credits } = await supabase
-    .from('user_credits')
-    .select('balance')
-    .eq('user_token', userToken)
-    .single();
-
-  if (!credits || Number(credits.balance) < 1) {
+  // Check & deduct credits
+  const deduction = await deductCredits(userToken, 1, `${type === 'whatsapp' ? 'WhatsApp' : 'Email'} outreach`);
+  if (!deduction.success) {
     return NextResponse.json(
-      { error: 'insufficient_credits', balance: Number(credits?.balance ?? 0) },
+      { error: deduction.error, required: deduction.required, balance: deduction.balance },
       { status: 403 }
     );
   }
-
-  const newBalance = Number(credits.balance) - 1;
-
-  await supabase
-    .from('user_credits')
-    .update({ balance: newBalance, updated_at: new Date().toISOString() })
-    .eq('user_token', userToken);
-
-  await supabase.from('credit_transactions').insert({
-    user_token: userToken,
-    type: 'usage',
-    amount: -1,
-    description: `${type === 'whatsapp' ? 'WhatsApp' : 'Email'} outreach`,
-    balance_after: newBalance,
-  });
 
   await supabase.from('outreach_messages').insert({
     user_token: userToken,
@@ -65,5 +47,5 @@ export async function POST(request: NextRequest) {
     .update({ status: 'contacted' })
     .eq('id', lead_id);
 
-  return NextResponse.json({ success: true, balance_after: newBalance });
+  return NextResponse.json({ success: true });
 }

@@ -224,21 +224,6 @@ Only return the JSON object, no other text.`;
     };
   }
 
-  // Deduct credits
-  const newBalance = credits.balance - CREDIT_COST;
-  await supabase
-    .from('user_credits')
-    .update({ balance: newBalance, updated_at: new Date().toISOString() })
-    .eq('user_token', userToken);
-
-  await supabase.from('credit_transactions').insert({
-    user_token: userToken,
-    type: 'usage',
-    amount: -CREDIT_COST,
-    description: `Audit report for ${businessName}`,
-    balance_after: newBalance,
-  });
-
   // Save report
   const reportId = uuidv4();
   await supabase.from('audit_reports').insert({

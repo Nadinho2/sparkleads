@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createSupabaseAdmin } from '@/lib/supabase';
 import { getToken } from '@/lib/auth';
+import { deductCredits } from '@/lib/credits';
 import { generateAdPlan, type AdPlanInput } from '@/lib/ad-plan-generator';
 
 export const runtime = 'nodejs';
@@ -67,35 +68,17 @@ export async function POST(request: NextRequest) {
 
   const supabase = createSupabaseAdmin();
 
-  const { data: credits } = await supabase
-    .from('user_credits')
-    .select('balance')
-    .eq('user_token', userToken)
-    .single();
-
-  if (!credits || credits.balance < 5) {
+  // Check & deduct credits
+  const deduction = await deductCredits(userToken, 5, `Ad plan for ${body.businessName}`);
+  if (!deduction.success) {
     return NextResponse.json(
-      { error: 'insufficient_credits', balance: credits?.balance ?? 0 },
+      { error: deduction.error, required: deduction.required, balance: deduction.balance },
       { status: 403 }
     );
   }
 
   try {
     const plan = await generateAdPlan({ ...body, resolvedLocation, businessContext });
-
-    const newBalance = Number(credits.balance) - 5;
-    await supabase
-      .from('user_credits')
-      .update({ balance: newBalance, updated_at: new Date().toISOString() })
-      .eq('user_token', userToken);
-
-    await supabase.from('credit_transactions').insert({
-      user_token: userToken,
-      type: 'usage',
-      amount: -5,
-      description: `Ad plan for ${businessName}`,
-      balance_after: newBalance,
-    });
 
     const { data: savedPlan, error: saveError } = await supabase
       .from('ad_plans')

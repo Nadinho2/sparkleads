@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createSupabaseAdmin } from '@/lib/supabase';
 import { getToken } from '@/lib/auth';
+import { deductCredits } from '@/lib/credits';
 import { generateContent } from '@/lib/content-prompt';
 
 export const runtime = 'nodejs';
@@ -29,15 +30,11 @@ export async function POST(request: NextRequest) {
 
   const supabase = createSupabaseAdmin();
 
-  const { data: credits } = await supabase
-    .from('user_credits')
-    .select('balance')
-    .eq('user_token', userToken)
-    .single();
-
-  if (!credits || credits.balance < creditCost) {
+  // Check & deduct credits
+  const deduction = await deductCredits(userToken, creditCost, `Content generation (${varCount} variation${varCount > 1 ? 's' : ''})`);
+  if (!deduction.success) {
     return NextResponse.json(
-      { error: 'insufficient_credits', balance: credits?.balance ?? 0 },
+      { error: deduction.error, required: deduction.required, balance: deduction.balance },
       { status: 403 }
     );
   }
@@ -63,20 +60,6 @@ export async function POST(request: NextRequest) {
       tone_override,
       varCount
     );
-
-    const newBalance = Number(credits.balance) - creditCost;
-    await supabase
-      .from('user_credits')
-      .update({ balance: newBalance, updated_at: new Date().toISOString() })
-      .eq('user_token', userToken);
-
-    await supabase.from('credit_transactions').insert({
-      user_token: userToken,
-      type: 'usage',
-      amount: -creditCost,
-      description: `Content generation (${varCount} variations) for ${profile.business_name}`,
-      balance_after: newBalance,
-    });
 
     const { data: savedContent, error: saveError } = await supabase
       .from('generated_content')

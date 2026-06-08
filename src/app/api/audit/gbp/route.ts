@@ -164,21 +164,6 @@ Only return the JSON array, no other text.`;
     ];
   }
 
-  // Deduct credits
-  const newBalance = credits.balance - CREDIT_COST;
-  await supabase
-    .from('user_credits')
-    .update({ balance: newBalance, updated_at: new Date().toISOString() })
-    .eq('user_token', userToken);
-
-  await supabase.from('credit_transactions').insert({
-    user_token: userToken,
-    type: 'usage',
-    amount: -CREDIT_COST,
-    description: `GBP audit for ${businessName}`,
-    balance_after: newBalance,
-  });
-
   // Save to database
   const auditId = uuidv4();
   await supabase.from('gbp_audits').insert({

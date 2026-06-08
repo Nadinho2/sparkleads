@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createSupabaseAdmin } from '@/lib/supabase';
 import { getToken } from '@/lib/auth';
+import { deductCredits } from '@/lib/credits';
 import { v4 as uuidv4 } from 'uuid';
 import { aiGenerateJSON } from '@/lib/ai-client';
 
@@ -50,16 +51,11 @@ export async function POST(request: NextRequest) {
 
   const supabase = createSupabaseAdmin();
 
-  // Check credits (5)
-  const { data: credits } = await supabase
-    .from('user_credits')
-    .select('balance')
-    .eq('user_token', userToken)
-    .single();
-
-  if (!credits || credits.balance < 5) {
+  // Check & deduct credits
+  const deduction = await deductCredits(userToken, 5, `Creative brief for ${businessName}`);
+  if (!deduction.success) {
     return NextResponse.json(
-      { error: 'Insufficient credits', required: 5, balance: credits?.balance ?? 0 },
+      { error: deduction.error, required: deduction.required, balance: deduction.balance },
       { status: 403 }
     );
   }
@@ -235,21 +231,6 @@ Return ONLY valid JSON:
   if (insertError) {
     console.error('Failed to save brief:', insertError);
   }
-
-  // Deduct credits
-  const newBalance = credits.balance - 5;
-  await supabase
-    .from('user_credits')
-    .update({ balance: newBalance, updated_at: new Date().toISOString() })
-    .eq('user_token', userToken);
-
-  await supabase.from('credit_transactions').insert({
-    user_token: userToken,
-    type: 'usage',
-    amount: -5,
-    description: `Creative brief for ${businessName}`,
-    balance_after: newBalance,
-  });
 
   return NextResponse.json({
     success: true,

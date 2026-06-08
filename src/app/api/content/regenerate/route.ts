@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createSupabaseAdmin } from '@/lib/supabase';
 import { getToken } from '@/lib/auth';
+import { deductCredits } from '@/lib/credits';
 import { generateContent } from '@/lib/content-prompt';
 import type { ContentProfile } from '@/lib/content-prompt';
 
@@ -27,14 +28,13 @@ export async function POST(request: NextRequest) {
 
   const supabase = createSupabaseAdmin();
 
-  const { data: credits } = await supabase
-    .from('user_credits')
-    .select('balance')
-    .eq('user_token', userToken)
-    .single();
-
-  if (!credits || credits.balance < 1) {
-    return NextResponse.json({ error: 'Not enough credits. Regenerating costs 1 credit.' }, { status: 402 });
+  // Check & deduct credits
+  const deduction = await deductCredits(userToken, 1, `Regenerated variation ${variation_id} (${approach})`);
+  if (!deduction.success) {
+    return NextResponse.json(
+      { error: deduction.error, required: deduction.required, balance: deduction.balance },
+      { status: 403 }
+    );
   }
 
   const { data: profile } = await supabase
@@ -70,24 +70,9 @@ export async function POST(request: NextRequest) {
       approach: approach || platformResult.variations[0].approach,
     };
 
-    const newBalance = Number(credits.balance) - 1;
-    await supabase
-      .from('user_credits')
-      .update({ balance: newBalance, updated_at: new Date().toISOString() })
-      .eq('user_token', userToken);
-
-    await supabase.from('credit_transactions').insert({
-      user_token: userToken,
-      type: 'usage',
-      amount: -1,
-      description: `Regenerated variation ${variation_id} (${approach}) for ${profile.business_name}`,
-      balance_after: newBalance,
-    });
-
     return NextResponse.json({
       success: true,
       variation,
-      new_balance: newBalance,
     });
   } catch (err) {
     const msg = err instanceof Error ? err.message : 'Unknown error';
