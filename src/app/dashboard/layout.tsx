@@ -3,6 +3,7 @@ import { redirect } from 'next/navigation';
 import { Bell, Search } from 'lucide-react';
 import { Sidebar, BottomNav } from '@/components/dashboard/Sidebar';
 import { CreditsBadge } from '@/components/dashboard/CreditsBadge';
+import { Footer } from '@/components/layout/Footer';
 
 export default async function DashboardLayout({
   children,
@@ -20,10 +21,12 @@ export default async function DashboardLayout({
     <div className="min-h-screen bg-background text-text">
       <Sidebar userToken={token} />
 
-      <div className="lg:ml-60">
+      <div className="lg:ml-60 min-h-screen flex flex-col">
         <TopBar token={token} />
 
-        <main className="p-4 sm:p-6 lg:p-8 pb-24 lg:pb-8">{children}</main>
+        <main className="flex-1 p-4 sm:p-6 lg:p-8 pb-24 lg:pb-8">{children}</main>
+
+        <Footer />
       </div>
 
       <BottomNav />

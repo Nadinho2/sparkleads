@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { Search, Users, Settings, PieChart, CreditCard, Home, CheckSquare, PenTool, Megaphone, BarChart2, Briefcase, MessageSquare, Bell, History, Sparkles } from 'lucide-react';
 import { createSupabaseAdmin } from '@/lib/supabase';
 import { AgencyTopBar } from '@/components/agency/AgencyTopBar';
+import { Footer } from '@/components/layout/Footer';
 
 export default async function AgencyLayout({ children }: { children: React.ReactNode }) {
   const cookieStore = cookies();
@@ -76,9 +77,10 @@ export default async function AgencyLayout({ children }: { children: React.React
         </div>
       </aside>
 
-      <div className="lg:ml-60 flex-1 flex flex-col">
+      <div className="lg:ml-60 flex-1 flex flex-col min-h-screen">
         <AgencyTopBar workspace={workspace} member={member} />
         <main className="flex-1 p-4 sm:p-6 lg:p-8 pb-20 lg:pb-8">{children}</main>
+        <Footer />
       </div>
 
       {/* Mobile Bottom Navigation */}
