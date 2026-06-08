@@ -3,8 +3,10 @@
 import { useState, useEffect } from 'react';
 import { Zap } from 'lucide-react';
 import Link from 'next/link';
+import { useBasePath } from '@/hooks/useBasePath';
 
 export function CreditsBadge() {
+  const basePath = useBasePath();
   const [balance, setBalance] = useState<number | null>(null);
 
   useEffect(() => {
@@ -20,7 +22,7 @@ export function CreditsBadge() {
 
   return (
     <Link
-      href="/dashboard/credits"
+      href={`${basePath}/credits`}
       className={`hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-lg transition-colors ${
         isLow
           ? 'bg-red-500/10 hover:bg-red-500/20'

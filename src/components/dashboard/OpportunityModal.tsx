@@ -3,6 +3,7 @@
 import { X, MessageCircle, BarChart2, StickyNote } from 'lucide-react';
 import type { Lead } from '@/types';
 import { FREELANCER_TYPES_MAP } from '@/lib/freelancer-types';
+import { useBasePath } from '@/hooks/useBasePath';
 
 const DETAIL_LABELS: Record<string, string> = {
   ssl: 'SSL/HTTPS',
@@ -150,6 +151,7 @@ export function OpportunityModal({
   onClose,
   onWhatsAppPitch,
 }: OpportunityModalProps) {
+  const basePath = useBasePath();
   if (!isOpen || !scoreData) return null;
 
   const typeInfo = FREELANCER_TYPES_MAP[freelancerType] || { label: 'Freelancer', icon: '🎯', scoreLabel: 'Score' };
@@ -293,7 +295,7 @@ export function OpportunityModal({
                     location: lead.address,
                     phone: lead.phone,
                   }));
-                  window.location.href = '/dashboard/audit/grade';
+                  window.location.href = `${basePath}/audit/grade`;
                 }}
                 className="flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl border border-border bg-surface2 text-muted text-sm hover:text-text transition-colors"
               >

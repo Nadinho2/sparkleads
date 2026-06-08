@@ -2,6 +2,7 @@
 
 import { useRouter } from 'next/navigation';
 import { ArrowRight, ChevronRight } from 'lucide-react';
+import { useBasePath } from '@/hooks/useBasePath';
 
 interface PipelineData {
   businessName: string;
@@ -47,7 +48,7 @@ const PIPELINE_STEPS: Record<string, {
     icon: '\ud83d\udccb',
     urgency: (d) => d.websiteScore && d.websiteScore < 50 ? 'high' : 'medium',
     navigateTo: (d) =>
-      `/dashboard/audit/report?gradeId=${d.gradeId}&name=${encodeURIComponent(d.businessName)}&leadId=${d.leadId || ''}`,
+      `/audit/report?gradeId=${d.gradeId}&name=${encodeURIComponent(d.businessName)}&leadId=${d.leadId || ''}`,
   },
   gbp: {
     next: 'audit',
@@ -59,7 +60,7 @@ const PIPELINE_STEPS: Record<string, {
     icon: '\ud83d\udccb',
     urgency: (d) => d.gbpScore && d.gbpScore < 50 ? 'high' : 'medium',
     navigateTo: (d) =>
-      `/dashboard/audit/report?gbpId=${d.gbpId}&name=${encodeURIComponent(d.businessName)}&leadId=${d.leadId || ''}`,
+      `/audit/report?gbpId=${d.gbpId}&name=${encodeURIComponent(d.businessName)}&leadId=${d.leadId || ''}`,
   },
   competitor: {
     next: 'proposal',
@@ -71,7 +72,7 @@ const PIPELINE_STEPS: Record<string, {
     icon: '\ud83d\udcc4',
     urgency: () => 'high',
     navigateTo: (d) =>
-      `/dashboard/proposals/new?competitorId=${d.competitorId}&name=${encodeURIComponent(d.businessName)}&leadId=${d.leadId || ''}`,
+      `/proposals/new?competitorId=${d.competitorId}&name=${encodeURIComponent(d.businessName)}&leadId=${d.leadId || ''}`,
   },
   audit: {
     next: 'proposal',
@@ -83,7 +84,7 @@ const PIPELINE_STEPS: Record<string, {
     icon: '\ud83d\udcc4',
     urgency: () => 'high',
     navigateTo: (d) =>
-      `/dashboard/proposals/new?auditId=${d.auditId}&name=${encodeURIComponent(d.businessName)}&leadId=${d.leadId || ''}`,
+      `/proposals/new?auditId=${d.auditId}&name=${encodeURIComponent(d.businessName)}&leadId=${d.leadId || ''}`,
   },
   proposal: {
     next: 'whatsapp',
@@ -102,6 +103,7 @@ const PIPELINE_ORDER = ['grade', 'audit', 'proposal', 'whatsapp'];
 
 export default function NextStepBanner({ currentStep, data, onWhatsApp, onBeforeNavigate }: NextStepBannerProps) {
   const router = useRouter();
+  const basePath = useBasePath();
   const step = PIPELINE_STEPS[currentStep];
   if (!step) return null;
 
@@ -136,7 +138,7 @@ export default function NextStepBanner({ currentStep, data, onWhatsApp, onBefore
             onClick={() => {
               if (step.navigateTo) {
                 onBeforeNavigate?.();
-                router.push(step.navigateTo(data));
+                router.push(`${basePath}${step.navigateTo(data)}`);
               } else {
                 onWhatsApp?.();
               }
