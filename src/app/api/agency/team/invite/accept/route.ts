@@ -25,12 +25,24 @@ export async function POST(request: NextRequest) {
 
   const supabase = createSupabaseAdmin();
 
-  // Verify invite
-  const { data: member } = await supabase
+  // Verify invite — try with invite_expires_at, fall back without it
+  let member: Record<string, unknown> | null = null;
+  const { data: m1, error: e1 } = await supabase
     .from('workspace_members')
-    .select('id, workspace_id, role, status, created_at, invite_expires_at')
+    .select('id, workspace_id, role, status, created_at, invite_expires_at, credit_limit')
     .eq('invite_token', token)
     .single();
+
+  if (e1 && e1.message?.includes('invite_expires_at')) {
+    const { data: m2 } = await supabase
+      .from('workspace_members')
+      .select('id, workspace_id, role, status, created_at, credit_limit')
+      .eq('invite_token', token)
+      .single();
+    member = m2;
+  } else {
+    member = m1;
+  }
 
   if (!member) {
     return NextResponse.json({ error: 'Invite not found' }, { status: 404 });
@@ -42,10 +54,11 @@ export async function POST(request: NextRequest) {
 
   // Check expiry — use stored invite_expires_at if available
   let expiresAt: Date;
-  if (member.invite_expires_at) {
-    expiresAt = new Date(member.invite_expires_at);
+  const inviteExpires = member.invite_expires_at as string | null;
+  if (inviteExpires) {
+    expiresAt = new Date(inviteExpires);
   } else {
-    const createdAt = new Date(member.created_at || Date.now());
+    const createdAt = new Date((member.created_at as string) || Date.now());
     expiresAt = new Date(createdAt);
     expiresAt.setDate(expiresAt.getDate() + 7);
   }
@@ -91,7 +104,7 @@ export async function POST(request: NextRequest) {
 
   // Log activity
   await logActivity({
-    workspaceId: member.workspace_id,
+    workspaceId: member.workspace_id as string,
     userToken: newUserToken,
     memberName: name,
     action: 'joined the workspace',
@@ -108,7 +121,7 @@ export async function POST(request: NextRequest) {
     maxAge: 30 * 24 * 60 * 60,
     path: '/',
   });
-  response.cookies.set(setWorkspaceCookie(member.workspace_id));
+  response.cookies.set(setWorkspaceCookie(member.workspace_id as string));
   // Signal to show the welcome modal on first load
   response.cookies.set('sparkleads_new_member', 'true', {
     httpOnly: false,
