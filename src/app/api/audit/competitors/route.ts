@@ -100,10 +100,19 @@ export async function POST(request: NextRequest) {
         temperature: 0,
         maxOutputTokens: 50,
       });
-      effectiveBusinessType = typeResult?.type || businessName.trim();
+      effectiveBusinessType = typeResult?.type || '';
     } catch {
-      effectiveBusinessType = businessName.trim();
+      effectiveBusinessType = '';
     }
+  }
+
+  // If still no type, try to extract last word(s) from business name as a service hint
+  // e.g. "Lagos Plumbing Co." → "plumbing", "Mama Nkechi Restaurant" → "restaurant"
+  if (!effectiveBusinessType) {
+    const words = businessName.trim().split(/\s+/);
+    const commonSuffixes = ['ltd', 'limited', 'inc', 'co', 'company', 'enterprises', 'enterprise', 'global', 'international', 'group', 'nig', 'nigeria'];
+    const meaningful = words.filter((w) => !commonSuffixes.includes(w.toLowerCase().replace(/[.,]/g, '')));
+    effectiveBusinessType = meaningful[meaningful.length - 1] || businessName.trim();
   }
 
   // Check & deduct credits
@@ -116,6 +125,7 @@ export async function POST(request: NextRequest) {
   }
 
   // Search for subject business by name, competitors by industry type
+  // Use "{industry} in {location}" for competitors — more reliable than "near"
   const [subjectResult, competitorResult] = await Promise.allSettled([
     getJson({
       engine: 'google_maps',
@@ -125,7 +135,7 @@ export async function POST(request: NextRequest) {
     }),
     getJson({
       engine: 'google_maps',
-      q: `${effectiveBusinessType} near ${location.trim()}`,
+      q: `${effectiveBusinessType} in ${location.trim()}`,
       type: 'search',
       api_key: process.env.SERPAPI_KEY,
     }),
@@ -138,7 +148,11 @@ export async function POST(request: NextRequest) {
   const subjectScored = subject ? scoreBusiness(subject) : null;
 
   // Filter out subject business and take top 5 competitors
-  const allResults = (competitorData?.local_results || []) as Record<string, unknown>[];
+  // Fallback: if competitor-specific search is empty, use subject search results (often includes nearby businesses)
+  const competitorResults = (competitorData?.local_results || []) as Record<string, unknown>[];
+  const subjectResults = (subjectData?.local_results || []) as Record<string, unknown>[];
+  const allResults = competitorResults.length > 0 ? competitorResults : subjectResults;
+
   const competitors = allResults
     .filter((r) => {
       const title = ((r.title as string) || '').toLowerCase();
