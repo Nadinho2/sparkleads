@@ -79,9 +79,9 @@ export async function POST(request: NextRequest) {
 
   const inviteToken = crypto.randomUUID();
 
-  // Calculate expiry (7 days)
+  // Calculate expiry (30 days)
   const expiresAt = new Date();
-  expiresAt.setDate(expiresAt.getDate() + 7);
+  expiresAt.setDate(expiresAt.getDate() + 30);
 
   // creditLimit of 0 means 0 credits (no free credits), not unlimited
   const finalCreditLimit = creditLimit !== undefined ? creditLimit : 0;

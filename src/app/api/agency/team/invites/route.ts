@@ -21,7 +21,7 @@ export async function GET() {
 
   const { data: invites } = await supabase
     .from('workspace_members')
-    .select('id, invite_token, role, name, credit_limit, status, created_at')
+    .select('id, invite_token, role, name, email, credit_limit, status, created_at')
     .eq('workspace_id', workspaceId)
     .eq('status', 'invited')
     .order('created_at', { ascending: false });

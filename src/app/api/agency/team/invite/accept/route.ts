@@ -60,7 +60,7 @@ export async function POST(request: NextRequest) {
   } else {
     const createdAt = new Date((member.created_at as string) || Date.now());
     expiresAt = new Date(createdAt);
-    expiresAt.setDate(expiresAt.getDate() + 7);
+    expiresAt.setDate(expiresAt.getDate() + 30);
   }
 
   if (new Date() > expiresAt) {

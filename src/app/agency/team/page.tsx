@@ -21,6 +21,7 @@ interface PendingInvite {
   invite_token: string;
   role: string;
   name: string;
+  email: string;
   credit_limit: number;
   created_at: string;
 }
@@ -31,6 +32,7 @@ interface GeneratedInvite {
   expiresAt: string;
   role: string;
   creditLimit: number;
+  email?: string;
 }
 
 function timeAgo(dateStr: string, future = false) {
@@ -50,8 +52,12 @@ function timeAgo(dateStr: string, future = false) {
 
 function getInviteExpiryDate(createdAt: string) {
   const d = new Date(createdAt);
-  d.setDate(d.getDate() + 7);
+  d.setDate(d.getDate() + 30);
   return d.toISOString();
+}
+
+function isInviteExpired(createdAt: string) {
+  return new Date() > new Date(getInviteExpiryDate(createdAt));
 }
 
 export default function TeamPage() {
@@ -70,6 +76,7 @@ export default function TeamPage() {
   const [allocatingMember, setAllocatingMember] = useState<Member | null>(null);
   const [allocateAmount, setAllocateAmount] = useState(0);
   const [allocating, setAllocating] = useState(false);
+  const [reissuingId, setReissuingId] = useState<string | null>(null);
 
   const loadData = useCallback(async () => {
     try {
@@ -124,6 +131,28 @@ export default function TeamPage() {
     } catch { /* silent */ }
   };
 
+  const reissueInvite = async (memberId: string) => {
+    setReissuingId(memberId);
+    try {
+      const res = await fetch('/api/agency/team/invite/reissue', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ memberId }),
+      });
+      const data = await res.json();
+      if (res.ok) {
+        setGeneratedInvite(data);
+        toast.success('New invite link generated');
+        loadData();
+      } else {
+        toast.error(data.error || 'Failed to refresh invite');
+      }
+    } catch {
+      toast.error('Something went wrong');
+    }
+    setReissuingId(null);
+  };
+
   const updateMember = async (memberId: string, updates: Record<string, unknown>) => {
     await fetch('/api/agency/members', {
       method: 'PATCH',
@@ -173,7 +202,7 @@ export default function TeamPage() {
         <h3 className="font-semibold text-text mb-1">Invite Team Member</h3>
         <p className="text-sm text-muted mb-4">
           Enter their email, set their role and credit limit, then share the generated link.
-          Link expires in 7 days.
+          Link expires in 30 days.
         </p>
 
         <div className="space-y-4 mb-4">
@@ -251,7 +280,7 @@ export default function TeamPage() {
           <div className="flex items-center gap-2 mb-3">
             <CheckCircle size={18} className="text-green-400" />
             <p className="font-semibold text-green-400">Invite link ready</p>
-            <span className="text-xs text-muted ml-auto">Expires in 7 days</span>
+            <span className="text-xs text-muted ml-auto">Expires in 30 days</span>
           </div>
 
           {/* Link display */}
@@ -278,7 +307,7 @@ export default function TeamPage() {
               <button
                 onClick={() => {
                   const message = encodeURIComponent(
-                    `Hi! You've been invited to join our team on SparkLeads as a ${generatedInvite.role}.\n\nClick this link to set up your account:\n${generatedInvite.inviteLink}\n\nThe link expires in 7 days.`
+                    `Hi! You've been invited to join our team on SparkLeads as a ${generatedInvite.role}.\n\nClick this link to set up your account:\n${generatedInvite.inviteLink}\n\nThe link expires in 30 days.`
                   );
                   window.open(`https://wa.me/?text=${message}`, '_blank');
                 }}
@@ -301,8 +330,8 @@ export default function TeamPage() {
 
               <button
                 onClick={() => {
-                  const message = `Hi! You've been invited to join our team on SparkLeads as a ${generatedInvite.role}.\n\nClick this link to set up your account:\n${generatedInvite.inviteLink}\n\nThe link expires in 7 days.`;
-                  navigator.clipboard.writeText(message);
+                  const message = `Hi! You've been invited to join our team on SparkLeads as a ${generatedInvite.role}.\n\nClick this link to set up your account:\n${generatedInvite.inviteLink}\n\nThe link expires in 30 days.`;
+                    navigator.clipboard.writeText(message);
                   toast.success('Full message copied — paste it anywhere');
                 }}
                 className="flex items-center gap-2 px-4 py-2 rounded-xl bg-surface2 hover:bg-surface text-muted hover:text-text text-sm transition-colors border border-border"
@@ -335,24 +364,51 @@ export default function TeamPage() {
                     <UserCircle size={18} className="text-muted" />
                   </div>
                   <div>
-                    <p className="text-sm text-text capitalize">{invite.role} invite</p>
+                    <p className="text-sm text-text capitalize">
+                      {invite.role} invite
+                      {invite.email && <span className="normal-case text-muted ml-1">({invite.email})</span>}
+                      {isInviteExpired(invite.created_at) && (
+                        <span className="ml-2 text-xs px-2 py-0.5 rounded-full bg-red-500/20 text-red-400">expired</span>
+                      )}
+                    </p>
                     <p className="text-xs text-muted">
-                      Created {timeAgo(invite.created_at)} · Expires {timeAgo(getInviteExpiryDate(invite.created_at), true)}
+                      Created {timeAgo(invite.created_at)} · {isInviteExpired(invite.created_at) ? 'Expired' : `Expires ${timeAgo(getInviteExpiryDate(invite.created_at), true)}`}
                     </p>
                   </div>
                 </div>
                 <div className="flex items-center gap-2">
-                  <button
-                    onClick={() => {
-                      const message = encodeURIComponent(
-                        `Reminder: You've been invited to join SparkLeads.\n\nJoin here: ${appUrl}/join?token=${invite.invite_token}`
-                      );
-                      window.open(`https://wa.me/?text=${message}`, '_blank');
-                    }}
-                    className="text-xs text-primary hover:underline"
-                  >
-                    Resend
-                  </button>
+                  {isInviteExpired(invite.created_at) ? (
+                    <button
+                      onClick={() => reissueInvite(invite.id)}
+                      disabled={reissuingId === invite.id}
+                      className="text-xs text-primary hover:underline disabled:opacity-50"
+                    >
+                      {reissuingId === invite.id ? 'Refreshing...' : 'Refresh Link'}
+                    </button>
+                  ) : (
+                    <>
+                      <button
+                        onClick={() => {
+                          navigator.clipboard.writeText(`${appUrl}/join?token=${invite.invite_token}`);
+                          toast.success('Invite link copied');
+                        }}
+                        className="text-xs text-primary hover:underline"
+                      >
+                        Copy Link
+                      </button>
+                      <button
+                        onClick={() => {
+                          const message = encodeURIComponent(
+                            `Reminder: You've been invited to join SparkLeads.\n\nJoin here: ${appUrl}/join?token=${invite.invite_token}`
+                          );
+                          window.open(`https://wa.me/?text=${message}`, '_blank');
+                        }}
+                        className="text-xs text-primary hover:underline"
+                      >
+                        Resend
+                      </button>
+                    </>
+                  )}
                   <button
                     onClick={() => revokeInvite(invite.invite_token)}
                     className="text-xs text-red-400 hover:underline"

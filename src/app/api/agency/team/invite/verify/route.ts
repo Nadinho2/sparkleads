@@ -45,14 +45,14 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ valid: false, error: 'already_used', message: 'This invite has already been accepted.' }, { status: 409 });
   }
 
-  // Check expiry — use stored invite_expires_at if available, otherwise fall back to created_at + 7 days
+  // Check expiry — use stored invite_expires_at if available, otherwise fall back to created_at + 30 days
   let expiresAt: Date;
   if (member.invite_expires_at) {
     expiresAt = new Date(member.invite_expires_at as string);
   } else {
     const createdAt = new Date((member.created_at as string) || Date.now());
     expiresAt = new Date(createdAt);
-    expiresAt.setDate(expiresAt.getDate() + 7);
+    expiresAt.setDate(expiresAt.getDate() + 30);
   }
 
   if (new Date() > expiresAt) {

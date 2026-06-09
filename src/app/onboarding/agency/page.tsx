@@ -196,7 +196,7 @@ export default function AgencyOnboardingPage() {
                     <code className="text-xs text-muted flex-1 truncate">{inviteLink}</code>
                     <button onClick={copyInviteLink} className="shrink-0 px-3 py-1.5 rounded-lg bg-primary text-white text-xs font-medium">Copy</button>
                   </div>
-                  <p className="text-xs text-muted">Share this link with your team member. It expires in 7 days.</p>
+                  <p className="text-xs text-muted">Share this link with your team member. It expires in 30 days.</p>
                 </div>
               )}
               <button onClick={goToDashboard} className="w-full py-3 rounded-xl border border-border text-muted text-sm font-medium hover:text-text hover:border-primary/50 transition-colors">
