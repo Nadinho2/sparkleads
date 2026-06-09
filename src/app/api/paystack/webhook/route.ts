@@ -80,6 +80,12 @@ async function handleChargeSuccess(data: Record<string, unknown>) {
     return;
   }
 
+  // Handle agency credit pack purchase
+  if (metadata?.type === 'agency_credit_pack') {
+    await handleAgencyCreditPack(reference, metadata);
+    return;
+  }
+
   console.log('Webhook: charge.success', { reference, email });
 
   const supabase = createSupabaseAdmin();
@@ -168,4 +174,63 @@ async function handleChargeSuccess(data: Record<string, unknown>) {
   } catch (emailError) {
     console.error('Webhook: Failed to send activation email:', emailError);
   }
+}
+
+async function handleAgencyCreditPack(reference: string, metadata: Record<string, unknown>) {
+  const supabase = createSupabaseAdmin();
+  const workspaceId = metadata.workspace_id as string;
+  const credits = metadata.credits as number;
+  const userToken = metadata.user_token as string;
+
+  if (!workspaceId || !credits) {
+    console.error('Webhook: Missing workspace_id or credits in metadata');
+    return;
+  }
+
+  // Check if already processed
+  const { data: purchase } = await supabase
+    .from('credit_purchases')
+    .select('status')
+    .eq('reference', reference)
+    .single();
+
+  if (purchase?.status === 'completed') {
+    console.log('Webhook: Credit pack already processed for reference:', reference);
+    return;
+  }
+
+  // Add credits to workspace
+  const { data: workspace } = await supabase
+    .from('workspaces')
+    .select('credits_remaining')
+    .eq('id', workspaceId)
+    .single();
+
+  if (!workspace) {
+    console.error('Webhook: Workspace not found:', workspaceId);
+    return;
+  }
+
+  await supabase
+    .from('workspaces')
+    .update({ credits_remaining: workspace.credits_remaining + credits })
+    .eq('id', workspaceId);
+
+  // Mark purchase as completed
+  await supabase
+    .from('credit_purchases')
+    .update({ status: 'completed', completed_at: new Date().toISOString() })
+    .eq('reference', reference);
+
+  // Log activity
+  await supabase.from('workspace_activity').insert({
+    workspace_id: workspaceId,
+    user_token: userToken,
+    member_name: 'System',
+    action: 'credit_added',
+    resource_type: 'credit',
+    metadata: { amount: credits, description: `Purchased ${credits} credit pack` },
+  });
+
+  console.log(`Webhook: Added ${credits} credits to workspace ${workspaceId}`);
 }
