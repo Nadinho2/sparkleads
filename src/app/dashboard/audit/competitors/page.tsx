@@ -1,10 +1,10 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import {
   Users, Loader2, Trophy, TrendingUp, TrendingDown, Minus,
-  Star, Phone, Globe, Camera, ChevronDown, MapPin, Target, AlertTriangle, Zap, MessageCircle,
+  Star, Phone, Globe, Camera, ChevronDown, MapPin, Target, AlertTriangle, Zap, MessageCircle, List,
 } from 'lucide-react';
 import { useBasePath } from '@/hooks/useBasePath';
 import NextStepBanner from '@/components/pipeline/NextStepBanner';
@@ -84,6 +84,10 @@ export default function CompetitorAnalysisPage() {
   const [whatsappMessage, setWhatsappMessage] = useState('');
   const [whatsappPhone, setWhatsappPhone] = useState('');
   const [generatingWhatsApp, setGeneratingWhatsApp] = useState(false);
+  const [leads, setLeads] = useState<Array<{ id: string; name: string; address: string | null; phone: string | null; website: string | null }>>([]);
+  const [showLeadPicker, setShowLeadPicker] = useState(false);
+  const [leadSearch, setLeadSearch] = useState('');
+  const leadPickerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const stored = localStorage.getItem('sparkleads_competitor_check');
@@ -97,7 +101,45 @@ export default function CompetitorAnalysisPage() {
       } catch { /* ignore */ }
     }
     fetchPast();
+    fetchLeads();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  // Close lead picker on outside click
+  useEffect(() => {
+    function handleClickOutside(e: MouseEvent) {
+      if (leadPickerRef.current && !leadPickerRef.current.contains(e.target as Node)) {
+        setShowLeadPicker(false);
+      }
+    }
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  async function fetchLeads() {
+    try {
+      const sessionId = localStorage.getItem('sparkleads_session_id');
+      if (!sessionId) return;
+      const res = await fetch(`/api/searches?user_token=${encodeURIComponent(sessionId)}`);
+      const data = await res.json();
+      const allLeads: typeof leads = [];
+      for (const search of (data.searches || [])) {
+        const detail = await fetch(`/api/searches/${search.id}`);
+        const detailData = await detail.json();
+        for (const lead of (detailData.leads || [])) {
+          if (lead.name) allLeads.push({ id: lead.id, name: lead.name, address: lead.address, phone: lead.phone, website: lead.website });
+        }
+      }
+      // Deduplicate by name
+      const seen = new Set<string>();
+      const unique = allLeads.filter((l) => {
+        if (seen.has(l.name)) return false;
+        seen.add(l.name);
+        return true;
+      });
+      setLeads(unique);
+    } catch { /* ignore */ }
+  }
 
   async function fetchPast() {
     try {
@@ -220,6 +262,67 @@ export default function CompetitorAnalysisPage() {
         {/* LEFT: Form */}
         <div className="lg:col-span-1 space-y-6">
           <form onSubmit={handleAnalyze} className="p-6 rounded-2xl border border-border bg-surface space-y-4">
+            {/* Lead picker */}
+            {leads.length > 0 && (
+              <div ref={leadPickerRef} className="relative">
+                <label className="block text-sm font-medium text-text mb-1.5">Select from your leads</label>
+                <button
+                  type="button"
+                  onClick={() => setShowLeadPicker(!showLeadPicker)}
+                  className="w-full flex items-center justify-between px-4 py-3 rounded-xl border border-border bg-surface2 text-sm text-muted hover:border-primary/50 transition-colors"
+                >
+                  <span className="flex items-center gap-2">
+                    <List className="w-4 h-4" />
+                    {businessName ? businessName : `Choose from ${leads.length} saved leads...`}
+                  </span>
+                  <ChevronDown className={`w-4 h-4 transition-transform ${showLeadPicker ? 'rotate-180' : ''}`} />
+                </button>
+                {showLeadPicker && (
+                  <div className="absolute z-20 top-full mt-1 left-0 right-0 max-h-64 overflow-y-auto rounded-xl border border-border bg-surface shadow-xl">
+                    <div className="sticky top-0 bg-surface p-2 border-b border-border">
+                      <input
+                        type="text"
+                        value={leadSearch}
+                        onChange={(e) => setLeadSearch(e.target.value)}
+                        placeholder="Search leads..."
+                        className="w-full px-3 py-2 rounded-lg bg-surface2 border border-border text-sm text-text placeholder:text-muted focus:outline-none focus:ring-1 focus:ring-primary/50"
+                        autoFocus
+                      />
+                    </div>
+                    <div className="py-1">
+                      {leads
+                        .filter((l) => l.name.toLowerCase().includes(leadSearch.toLowerCase()) || (l.address || '').toLowerCase().includes(leadSearch.toLowerCase()))
+                        .slice(0, 30)
+                        .map((lead) => (
+                          <button
+                            key={lead.id}
+                            type="button"
+                            onClick={() => {
+                              setBusinessName(lead.name);
+                              setLocation(lead.address || '');
+                              setShowLeadPicker(false);
+                              setLeadSearch('');
+                            }}
+                            className="w-full text-left px-4 py-2.5 hover:bg-surface2 transition-colors"
+                          >
+                            <p className="text-sm font-medium text-text">{lead.name}</p>
+                            <p className="text-xs text-muted">{lead.address || 'No address'}</p>
+                          </button>
+                        ))}
+                      {leads.filter((l) => l.name.toLowerCase().includes(leadSearch.toLowerCase())).length === 0 && (
+                        <p className="px-4 py-3 text-xs text-muted text-center">No leads match your search</p>
+                      )}
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+
+            <div className="relative">
+              <div className="absolute inset-0 flex items-center"><div className="w-full border-t border-border" /></div>
+              <div className="relative flex justify-center text-xs"><span className="bg-surface px-2 text-muted">or enter manually</span></div>
+            </div>
+
             <div>
               <label className="block text-sm font-medium text-text mb-1.5">Business Name *</label>
               <input
