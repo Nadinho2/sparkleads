@@ -90,6 +90,22 @@ export async function POST(request: NextRequest) {
 
   const supabase = createSupabaseAdmin();
 
+  // Derive business type if not provided — extract the industry/service from the name
+  let effectiveBusinessType = businessType?.trim() || '';
+  if (!effectiveBusinessType) {
+    try {
+      const typeResult = await aiGenerateJSON<{ type: string }>({
+        prompt: `What type of business is "${businessName}"? Return ONLY a JSON object like {"type": "plumber"} or {"type": "restaurant"} or {"type": "salon"}. Use 1-3 words describing the industry/service category, NOT the brand name.`,
+        systemInstruction: 'You extract business industry types. Return ONLY valid JSON with a "type" field.',
+        temperature: 0,
+        maxOutputTokens: 50,
+      });
+      effectiveBusinessType = typeResult?.type || businessName.trim();
+    } catch {
+      effectiveBusinessType = businessName.trim();
+    }
+  }
+
   // Check & deduct credits
   const deduction = await deductCredits(userToken, CREDIT_COST, `Competitor audit for ${businessName}`);
   if (!deduction.success) {
@@ -99,7 +115,7 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  // Search for subject business and competitors in parallel
+  // Search for subject business by name, competitors by industry type
   const [subjectResult, competitorResult] = await Promise.allSettled([
     getJson({
       engine: 'google_maps',
@@ -109,7 +125,7 @@ export async function POST(request: NextRequest) {
     }),
     getJson({
       engine: 'google_maps',
-      q: `${(businessType || businessName).trim()} ${location.trim()}`,
+      q: `${effectiveBusinessType} near ${location.trim()}`,
       type: 'search',
       api_key: process.env.SERPAPI_KEY,
     }),
@@ -144,7 +160,7 @@ export async function POST(request: NextRequest) {
   } | null = null;
 
   try {
-    const prompt = `Analyze this competitive landscape for "${businessName}" (${businessType || 'business'}) in ${location}.
+    const prompt = `Analyze this competitive landscape for "${businessName}" (${effectiveBusinessType}) in ${location}.
 
 Subject business: ${JSON.stringify(subjectScored, null, 2)}
 Competitors (top 5): ${JSON.stringify(competitors, null, 2)}
