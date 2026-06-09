@@ -15,7 +15,7 @@ export async function GET(request: NextRequest) {
 
   const { data: member } = await supabase
     .from('workspace_members')
-    .select('id, status, workspace_id, role, name, created_at, invite_expires_at, workspaces(name, logo_url)')
+    .select('id, status, workspace_id, role, name, email, created_at, invite_expires_at, workspaces(name, logo_url)')
     .eq('invite_token', token)
     .single();
 
@@ -71,5 +71,6 @@ export async function GET(request: NextRequest) {
     workspaceLogo: workspace?.logo_url || null,
     role: member.role,
     inviterName,
+    email: member.email || null,
   });
 }

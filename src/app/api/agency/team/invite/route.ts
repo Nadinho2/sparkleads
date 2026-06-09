@@ -23,13 +23,39 @@ export async function POST(request: NextRequest) {
   }
 
   const body = await request.json();
-  const { role, name, creditLimit } = body as {
+  const { role, name, creditLimit, email } = body as {
     role?: 'manager' | 'member';
     name?: string;
     creditLimit?: number;
+    email?: string;
   };
 
+  if (!email || !email.trim()) {
+    return NextResponse.json({ error: 'Email is required to send an invite' }, { status: 400 });
+  }
+
+  const normalizedEmail = email.trim().toLowerCase();
+
   const supabase = createSupabaseAdmin();
+
+  // Check if this email is already an active member
+  const { data: existingMember } = await supabase
+    .from('workspace_members')
+    .select('id, status')
+    .eq('workspace_id', workspaceId)
+    .eq('email', normalizedEmail)
+    .in('status', ['active', 'invited'])
+    .limit(1)
+    .single();
+
+  if (existingMember) {
+    if (existingMember.status === 'active') {
+      return NextResponse.json({ error: 'This person is already an active member' }, { status: 409 });
+    }
+    if (existingMember.status === 'invited') {
+      return NextResponse.json({ error: 'An invite has already been sent to this email' }, { status: 409 });
+    }
+  }
 
   // Check seat limit
   const { data: workspace } = await supabase
@@ -57,14 +83,17 @@ export async function POST(request: NextRequest) {
   const expiresAt = new Date();
   expiresAt.setDate(expiresAt.getDate() + 7);
 
+  // creditLimit of 0 means 0 credits (no free credits), not unlimited
+  const finalCreditLimit = creditLimit !== undefined ? creditLimit : 0;
+
   await supabase.from('workspace_members').insert({
     workspace_id: workspaceId,
     invite_token: inviteToken,
     role: role || 'member',
     name: name || 'Team Member',
-    credit_limit: creditLimit || 0,
+    email: normalizedEmail,
+    credit_limit: finalCreditLimit,
     status: 'invited',
-    email: null,
     user_token: null,
     invite_expires_at: expiresAt.toISOString(),
   });
@@ -77,9 +106,10 @@ export async function POST(request: NextRequest) {
     workspaceId,
     userToken: token,
     memberName: caller.name,
-    action: `generated a ${role || 'member'} invite link`,
+    action: `invited ${normalizedEmail} as ${role || 'member'}`,
     resourceType: 'invite',
     resourceId: inviteToken,
+    metadata: { email: normalizedEmail, role: role || 'member', creditLimit: finalCreditLimit },
   });
 
   return NextResponse.json({
@@ -87,6 +117,7 @@ export async function POST(request: NextRequest) {
     inviteToken,
     expiresAt: expiresAt.toISOString(),
     role: role || 'member',
-    creditLimit: creditLimit || 0,
+    creditLimit: finalCreditLimit,
+    email: normalizedEmail,
   });
 }

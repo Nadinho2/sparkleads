@@ -61,6 +61,7 @@ export default function TeamPage() {
   const [seatsInfo, setSeatsInfo] = useState({ used: 0, limit: 3 });
 
   // Invite form state
+  const [inviteEmail, setInviteEmail] = useState('');
   const [inviteRole, setInviteRole] = useState<'manager' | 'member'>('member');
   const [creditLimit, setCreditLimit] = useState(0);
   const [isGenerating, setIsGenerating] = useState(false);
@@ -89,12 +90,16 @@ export default function TeamPage() {
   useEffect(() => { loadData(); }, [loadData]);
 
   const generateInviteLink = async () => {
+    if (!inviteEmail.trim()) {
+      toast.error('Please enter the team member\'s email');
+      return;
+    }
     setIsGenerating(true);
     try {
       const res = await fetch('/api/agency/team/invite', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ role: inviteRole, creditLimit }),
+        body: JSON.stringify({ role: inviteRole, creditLimit, email: inviteEmail.trim() }),
       });
       const data = await res.json();
       if (res.ok) {
@@ -167,44 +172,63 @@ export default function TeamPage() {
       <div className="rounded-xl bg-surface border border-border p-6">
         <h3 className="font-semibold text-text mb-1">Invite Team Member</h3>
         <p className="text-sm text-muted mb-4">
-          Generate a link and send it via WhatsApp, Telegram, or any app you use.
+          Enter their email, set their role and credit limit, then share the generated link.
           Link expires in 7 days.
         </p>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
-          {/* Role selector */}
+        <div className="space-y-4 mb-4">
+          {/* Email input */}
           <div>
-            <label className="text-xs text-muted mb-2 block">Role</label>
-            <div className="flex gap-2">
-              {(['member', 'manager'] as const).map((r) => (
-                <button
-                  key={r}
-                  onClick={() => setInviteRole(r)}
-                  className={`flex-1 py-2 px-3 rounded-lg text-sm font-medium border transition-colors ${
-                    inviteRole === r
-                      ? 'border-primary bg-primary/10 text-primary'
-                      : 'border-border text-muted hover:border-primary/50'
-                  }`}
-                >
-                  {r.charAt(0).toUpperCase() + r.slice(1)}
-                </button>
-              ))}
-            </div>
-          </div>
-
-          {/* Credit limit */}
-          <div>
-            <label className="text-xs text-muted mb-2 block">
-              Monthly Credit Limit (0 = no limit)
-            </label>
+            <label className="text-xs text-muted mb-2 block">Team Member&apos;s Email *</label>
             <input
-              type="number"
-              value={creditLimit}
-              onChange={(e) => setCreditLimit(Number(e.target.value))}
-              placeholder="0"
-              min="0"
+              type="email"
+              value={inviteEmail}
+              onChange={(e) => setInviteEmail(e.target.value)}
+              placeholder="teammate@example.com"
               className="w-full px-3 py-2 rounded-lg bg-surface2 border border-border text-text text-sm focus:outline-none focus:ring-2 focus:ring-primary/50"
             />
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            {/* Role selector */}
+            <div>
+              <label className="text-xs text-muted mb-2 block">Role</label>
+              <div className="flex gap-2">
+                {(['member', 'manager'] as const).map((r) => (
+                  <button
+                    key={r}
+                    onClick={() => setInviteRole(r)}
+                    className={`flex-1 py-2 px-3 rounded-lg text-sm font-medium border transition-colors ${
+                      inviteRole === r
+                        ? 'border-primary bg-primary/10 text-primary'
+                        : 'border-border text-muted hover:border-primary/50'
+                    }`}
+                  >
+                    {r.charAt(0).toUpperCase() + r.slice(1)}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Credit limit */}
+            <div>
+              <label className="text-xs text-muted mb-2 block">
+                Starting Credits (-1 = unlimited, 0 = none)
+              </label>
+              <input
+                type="number"
+                value={creditLimit}
+                onChange={(e) => setCreditLimit(Number(e.target.value))}
+                placeholder="0"
+                min="-1"
+                className="w-full px-3 py-2 rounded-lg bg-surface2 border border-border text-text text-sm focus:outline-none focus:ring-2 focus:ring-primary/50"
+              />
+              <p className="text-[10px] text-muted mt-1">
+                {creditLimit === -1 ? 'Unlimited — can use workspace credits freely' :
+                 creditLimit === 0 ? 'No credits — allocate credits after they join' :
+                 `${creditLimit} credits per month`}
+              </p>
+            </div>
           </div>
         </div>
 
