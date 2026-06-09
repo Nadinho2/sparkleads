@@ -124,11 +124,13 @@ export default function CompetitorAnalysisPage() {
       const data = await res.json();
       const allLeads: typeof leads = [];
       for (const search of (data.searches || [])) {
-        const detail = await fetch(`/api/searches/${search.id}`);
-        const detailData = await detail.json();
-        for (const lead of (detailData.leads || [])) {
-          if (lead.name) allLeads.push({ id: lead.id, name: lead.name, address: lead.address, phone: lead.phone, website: lead.website });
-        }
+        try {
+          const detail = await fetch(`/api/searches/${search.id}/leads`);
+          const detailData = await detail.json();
+          for (const lead of (detailData.leads || [])) {
+            if (lead.name) allLeads.push({ id: lead.id, name: lead.name, address: lead.address, phone: lead.phone, website: lead.website });
+          }
+        } catch { /* skip failed search */ }
       }
       // Deduplicate by name
       const seen = new Set<string>();
