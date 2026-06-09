@@ -77,7 +77,7 @@ const navSections: { section: string; items: NavItem[] }[] = [
           { label: 'Message History', href: '/dashboard/messages/history', icon: History },
         ],
       },
-      { label: 'Email Outreach', href: '/dashboard/outreach/email', icon: Send },
+      { label: 'Email Outreach', href: '/dashboard/outreach', icon: Send },
     ],
   },
 ];

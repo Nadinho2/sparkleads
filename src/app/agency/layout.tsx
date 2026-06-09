@@ -77,7 +77,7 @@ export default async function AgencyLayout({ children }: { children: React.React
       section: 'Outreach',
       items: [
         { href: '/agency/messages', icon: <MessageSquare size={16} />, label: 'AI Messages' },
-        { href: '/agency/outreach/email', icon: <Send size={16} />, label: 'Email Outreach' },
+        { href: '/agency/outreach', icon: <Send size={16} />, label: 'Email Outreach' },
       ],
     },
   ];
