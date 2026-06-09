@@ -15,7 +15,7 @@ export async function GET(request: NextRequest) {
 
   const { data: member } = await supabase
     .from('workspace_members')
-    .select('id, status, workspace_id, role, name, created_at, workspaces(name, logo_url)')
+    .select('id, status, workspace_id, role, name, created_at, invite_expires_at, workspaces(name, logo_url)')
     .eq('invite_token', token)
     .single();
 
@@ -31,10 +31,15 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ valid: false, error: 'already_used', message: 'This invite has already been accepted.' }, { status: 409 });
   }
 
-  // Check expiry (7 days from creation)
-  const createdAt = new Date(member.created_at);
-  const expiresAt = new Date(createdAt);
-  expiresAt.setDate(expiresAt.getDate() + 7);
+  // Check expiry — use stored invite_expires_at if available, otherwise fall back to created_at + 7 days
+  let expiresAt: Date;
+  if (member.invite_expires_at) {
+    expiresAt = new Date(member.invite_expires_at);
+  } else {
+    const createdAt = new Date(member.created_at || Date.now());
+    expiresAt = new Date(createdAt);
+    expiresAt.setDate(expiresAt.getDate() + 7);
+  }
 
   if (new Date() > expiresAt) {
     return NextResponse.json({ valid: false, error: 'expired', message: 'This invite link has expired.' }, { status: 410 });

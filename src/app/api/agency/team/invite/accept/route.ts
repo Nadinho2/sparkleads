@@ -28,7 +28,7 @@ export async function POST(request: NextRequest) {
   // Verify invite
   const { data: member } = await supabase
     .from('workspace_members')
-    .select('id, workspace_id, role, status, created_at')
+    .select('id, workspace_id, role, status, created_at, invite_expires_at')
     .eq('invite_token', token)
     .single();
 
@@ -40,10 +40,15 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'Invite already used or revoked' }, { status: 409 });
   }
 
-  // Check expiry
-  const createdAt = new Date(member.created_at);
-  const expiresAt = new Date(createdAt);
-  expiresAt.setDate(expiresAt.getDate() + 7);
+  // Check expiry — use stored invite_expires_at if available
+  let expiresAt: Date;
+  if (member.invite_expires_at) {
+    expiresAt = new Date(member.invite_expires_at);
+  } else {
+    const createdAt = new Date(member.created_at || Date.now());
+    expiresAt = new Date(createdAt);
+    expiresAt.setDate(expiresAt.getDate() + 7);
+  }
 
   if (new Date() > expiresAt) {
     return NextResponse.json({ error: 'Invite has expired' }, { status: 410 });

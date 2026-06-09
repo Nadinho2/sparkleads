@@ -66,6 +66,7 @@ export async function POST(request: NextRequest) {
     status: 'invited',
     email: null,
     user_token: null,
+    invite_expires_at: expiresAt.toISOString(),
   });
 
   const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://sparkleads.io';
