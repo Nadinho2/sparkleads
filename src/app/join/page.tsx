@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { Suspense, useState, useEffect } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { Zap, Loader2, CheckCircle, XCircle, UserPlus, Eye, EyeOff } from 'lucide-react';
 
@@ -15,7 +15,7 @@ interface InviteData {
   email?: string;
 }
 
-export default function JoinPage() {
+function JoinContent() {
   const searchParams = useSearchParams();
   const token = searchParams.get('token');
 
@@ -36,7 +36,13 @@ export default function JoinPage() {
     }
 
     fetch(`/api/agency/team/invite/verify?token=${encodeURIComponent(token)}`)
-      .then((r) => r.json())
+      .then(async (r) => {
+        if (!r.ok) {
+          const text = await r.text();
+          try { return JSON.parse(text); } catch { return { valid: false, message: 'Server error' }; }
+        }
+        return r.json();
+      })
       .then((data) => {
         setInvite(data);
         setVerifying(false);
@@ -223,5 +229,20 @@ export default function JoinPage() {
         </form>
       </div>
     </div>
+  );
+}
+
+export default function JoinPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen bg-bg flex items-center justify-center p-4">
+        <div className="text-center">
+          <Loader2 className="w-8 h-8 text-primary animate-spin mx-auto mb-4" />
+          <p className="text-muted text-sm">Loading...</p>
+        </div>
+      </div>
+    }>
+      <JoinContent />
+    </Suspense>
   );
 }
