@@ -89,7 +89,7 @@ export default function CreditsPage() {
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
-    const ref = params.get('reference');
+    const ref = params.get('reference') || params.get('trxref');
     if (ref) {
       toast.info('Verifying your payment...');
       fetch('/api/credits/verify', {

@@ -59,7 +59,7 @@ export async function POST(request: NextRequest) {
         amount: PACKS[credits],
         currency: 'NGN',
         reference,
-        callback_url: `${origin}/agency/billing?status=success`,
+        callback_url: `${origin}/agency/billing`,
         metadata: {
           type: 'agency_credit_pack',
           workspace_id: workspaceId,

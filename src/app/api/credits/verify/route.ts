@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createSupabaseAdmin } from '@/lib/supabase';
+import { getWorkspaceId } from '@/lib/agency-auth';
 
 export const runtime = 'nodejs';
 
@@ -100,7 +101,43 @@ export async function POST(request: NextRequest) {
     }
 
     const supabase = createSupabaseAdmin();
+    const workspaceId = getWorkspaceId();
 
+    // Agency workspace path
+    if (workspaceId) {
+      const { data: workspace } = await supabase
+        .from('workspaces')
+        .select('credits_remaining')
+        .eq('id', workspaceId)
+        .single();
+
+      if (!workspace) {
+        return NextResponse.json({ success: false, error: 'Workspace not found' }, { status: 400 });
+      }
+
+      const newBalance = Number(workspace.credits_remaining) + resolvedCredits;
+      await supabase
+        .from('workspaces')
+        .update({ credits_remaining: newBalance })
+        .eq('id', workspaceId);
+
+      await supabase.from('workspace_activity').insert({
+        workspace_id: workspaceId,
+        user_token: resolvedUserToken,
+        member_name: 'System',
+        action: 'credit_added',
+        resource_type: 'credit',
+        metadata: { amount: resolvedCredits, description: `Purchased ${resolvedCredits} credits via Paystack` },
+      });
+
+      return NextResponse.json({
+        success: true,
+        balance: newBalance,
+        credits_added: resolvedCredits,
+      });
+    }
+
+    // Individual path
     const { data: existing } = await supabase
       .from('user_credits')
       .select('*')

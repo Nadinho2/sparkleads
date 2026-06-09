@@ -57,6 +57,32 @@ export default function BillingPage() {
         setLoading(false);
       })
       .catch(() => setLoading(false));
+
+    // Verify payment after Paystack redirect
+    const params = new URLSearchParams(window.location.search);
+    const ref = params.get('reference') || params.get('trxref');
+    if (ref) {
+      toast.info('Verifying your payment...');
+      fetch('/api/credits/verify', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ reference: ref }),
+      })
+        .then((r) => r.json())
+        .then((data) => {
+          if (data.success) {
+            toast.success(`${data.credits_added} credits added!`);
+            window.history.replaceState({}, '', '/agency/billing');
+            // Refresh workspace data
+            fetch('/api/account/context')
+              .then((r) => r.json())
+              .then((d) => setWorkspace(d.workspace));
+          } else {
+            toast.error(data.error || 'Payment verification failed');
+          }
+        })
+        .catch(() => toast.error('Failed to verify payment'));
+    }
   }, []);
 
   async function handleBuyCredits(pack: typeof CREDIT_PACKS[number]) {

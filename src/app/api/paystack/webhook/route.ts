@@ -86,6 +86,12 @@ async function handleChargeSuccess(data: Record<string, unknown>) {
     return;
   }
 
+  // Handle individual credit topup
+  if (metadata?.type === 'credit_topup') {
+    await handleCreditTopup(reference, metadata);
+    return;
+  }
+
   console.log('Webhook: charge.success', { reference, email });
 
   const supabase = createSupabaseAdmin();
@@ -233,4 +239,63 @@ async function handleAgencyCreditPack(reference: string, metadata: Record<string
   });
 
   console.log(`Webhook: Added ${credits} credits to workspace ${workspaceId}`);
+}
+
+async function handleCreditTopup(reference: string, metadata: Record<string, unknown>) {
+  const supabase = createSupabaseAdmin();
+  const userToken = metadata.user_token as string;
+  const credits = metadata.credits as number;
+
+  if (!userToken || !credits) {
+    console.error('Webhook: Missing user_token or credits in credit_topup metadata');
+    return;
+  }
+
+  // Check if already processed (idempotency)
+  const { data: existingTx } = await supabase
+    .from('credit_transactions')
+    .select('id')
+    .eq('user_token', userToken)
+    .eq('description', `Credit topup: ${credits} credits`)
+    .limit(1)
+    .single();
+
+  if (existingTx) {
+    console.log('Webhook: Credit topup already processed for reference:', reference);
+    return;
+  }
+
+  // Get current balance
+  const { data: userCredits } = await supabase
+    .from('user_credits')
+    .select('balance, total_purchased')
+    .eq('user_token', userToken)
+    .single();
+
+  const currentBalance = Number(userCredits?.balance || 0);
+  const newBalance = currentBalance + credits;
+  const newTotalPurchased = Number(userCredits?.total_purchased || 0) + credits;
+
+  if (userCredits) {
+    await supabase
+      .from('user_credits')
+      .update({ balance: newBalance, total_purchased: newTotalPurchased, updated_at: new Date().toISOString() })
+      .eq('user_token', userToken);
+  } else {
+    await supabase.from('user_credits').insert({
+      user_token: userToken,
+      balance: newBalance,
+      total_purchased: newTotalPurchased,
+    });
+  }
+
+  await supabase.from('credit_transactions').insert({
+    user_token: userToken,
+    type: 'purchase',
+    amount: credits,
+    description: `Credit topup: ${credits} credits`,
+    balance_after: newBalance,
+  });
+
+  console.log(`Webhook: Added ${credits} credits to user ${userToken}, new balance: ${newBalance}`);
 }
