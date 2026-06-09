@@ -6,10 +6,11 @@ import { v4 as uuidv4 } from 'uuid';
 
 export const runtime = 'nodejs';
 
+// Prices in kobo (Paystack uses smallest currency unit)
 const PACKS: Record<number, number> = {
-  50: 999,     // $9.99 in cents (actually kobo for Paystack)
-  200: 2999,
-  500: 5999,
+  50: 660000,     // ₦6,600
+  150: 1330000,   // ₦13,300
+  500: 3320000,   // ₦33,200
 };
 
 export async function POST(request: NextRequest) {
@@ -23,7 +24,7 @@ export async function POST(request: NextRequest) {
   if (!secretKey) return NextResponse.json({ error: 'Payment service not configured' }, { status: 500 });
 
   const body = await request.json();
-  const { credits } = body as { credits: number; amount: number };
+  const { credits } = body as { credits: number };
 
   if (!credits || !PACKS[credits]) {
     return NextResponse.json({ error: 'Invalid credit pack' }, { status: 400 });
@@ -56,7 +57,7 @@ export async function POST(request: NextRequest) {
       body: JSON.stringify({
         email: email.trim().toLowerCase(),
         amount: PACKS[credits],
-        currency: 'USD',
+        currency: 'NGN',
         reference,
         callback_url: `${origin}/agency/billing?status=success`,
         metadata: {

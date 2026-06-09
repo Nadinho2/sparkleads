@@ -14,24 +14,24 @@ interface Workspace {
   status: string;
 }
 
-const PLAN_DETAILS: Record<string, { name: string; price: number; credits: number; seats: string; features: string[] }> = {
+const PLAN_DETAILS: Record<string, { name: string; price: string; credits: number; seats: string; features: string[] }> = {
   starter: {
     name: 'Starter',
-    price: 49,
+    price: '₦19,900',
     credits: 500,
     seats: '3',
     features: ['500 monthly credits', '3 team members', 'All services included', 'Email support'],
   },
   growth: {
     name: 'Growth',
-    price: 99,
+    price: '₦49,900',
     credits: 2000,
     seats: '8',
     features: ['2,000 monthly credits', '8 team members', 'All services included', 'Priority support', 'Analytics dashboard'],
   },
   pro: {
     name: 'Pro',
-    price: 199,
+    price: '₦99,900',
     credits: 10000,
     seats: 'Unlimited',
     features: ['10,000 monthly credits', 'Unlimited team members', 'All services included', 'Dedicated support', 'Advanced analytics', 'Custom branding'],
@@ -39,9 +39,9 @@ const PLAN_DETAILS: Record<string, { name: string; price: number; credits: numbe
 };
 
 const CREDIT_PACKS = [
-  { credits: 50, price: 9.99, label: '50 Credits' },
-  { credits: 200, price: 29.99, label: '200 Credits' },
-  { credits: 500, price: 59.99, label: '500 Credits' },
+  { credits: 50, price: 6600, label: '50 Credits' },
+  { credits: 150, price: 13300, label: '150 Credits' },
+  { credits: 500, price: 33200, label: '500 Credits' },
 ];
 
 export default function BillingPage() {
@@ -110,7 +110,7 @@ export default function BillingPage() {
           </div>
           <div>
             <p className="text-xs text-muted">Monthly Price</p>
-            <p className="text-lg font-bold text-text">${plan.price}/mo</p>
+            <p className="text-lg font-semibold text-text">{plan.price}/mo</p>
           </div>
           <div>
             <p className="text-xs text-muted">Team Seats</p>
@@ -170,7 +170,7 @@ export default function BillingPage() {
             >
               <p className="text-2xl font-bold text-text">{pack.credits}</p>
               <p className="text-xs text-muted mb-2">credits</p>
-              <p className="text-lg font-semibold text-primary">${pack.price}</p>
+              <p className="text-lg font-semibold text-primary">₦{pack.price.toLocaleString()}</p>
               <p className="text-xs text-muted mt-1">one-time</p>
             </button>
           ))}
@@ -198,7 +198,7 @@ export default function BillingPage() {
                 <span className="text-[10px] font-bold text-primary uppercase">Current</span>
               )}
               <h3 className="text-lg font-bold text-text">{p.name}</h3>
-              <p className="text-2xl font-bold text-text mt-1">${p.price}<span className="text-sm font-normal text-muted">/mo</span></p>
+              <p className="text-2xl font-bold text-text mt-1">{p.price}<span className="text-sm font-normal text-muted">/mo</span></p>
               <p className="text-xs text-muted mt-1">{p.credits.toLocaleString()} credits · {p.seats} seats</p>
             </div>
           ))}
