@@ -43,7 +43,7 @@ export async function GET(request: NextRequest) {
 
   // Current time for comparison
   const now = new Date();
-  let expiryInfo = 'no expiry column value';
+  let expiryInfo: unknown = 'no expiry column value';
   if (withExpiry?.[0]?.invite_expires_at) {
     const expiryDate = new Date(withExpiry[0].invite_expires_at);
     expiryInfo = {
