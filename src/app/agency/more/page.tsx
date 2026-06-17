@@ -1,11 +1,32 @@
 import Link from 'next/link';
+import { cookies } from 'next/headers';
+import { createSupabaseAdmin } from '@/lib/supabase';
 import {
   Search, Users, Settings, PieChart, CreditCard, Home,
   PenTool, Megaphone, Briefcase, MessageSquare, Bell,
   History, Sparkles, Globe, MapPin, FileText, Send, BarChart3,
 } from 'lucide-react';
 
-export default function MorePage() {
+export default async function MorePage() {
+  const cookieStore = cookies();
+  const token = cookieStore.get('sparkleads_token')?.value;
+  const workspaceId = cookieStore.get('sparkleads_workspace')?.value;
+
+  let role = 'member';
+  if (token && workspaceId) {
+    const supabase = createSupabaseAdmin();
+    const { data: member } = await supabase
+      .from('workspace_members')
+      .select('role')
+      .eq('user_token', token)
+      .eq('workspace_id', workspaceId)
+      .eq('status', 'active')
+      .single();
+    if (member) role = member.role;
+  }
+
+  const isOwnerOrManager = role === 'owner' || role === 'manager';
+
   const sections = [
     {
       title: 'Overview',
@@ -53,15 +74,15 @@ export default function MorePage() {
         { href: '/agency/outreach', icon: <Send size={20} />, label: 'Email Outreach' },
       ],
     },
-    {
+    ...(isOwnerOrManager ? [{
       title: 'Workspace',
       items: [
-        { href: '/agency/team', icon: <Users size={20} />, label: 'Team' },
-        { href: '/agency/billing', icon: <CreditCard size={20} />, label: 'Billing' },
+        ...(isOwnerOrManager ? [{ href: '/agency/team', icon: <Users size={20} />, label: 'Team' }] : []),
+        ...(role === 'owner' ? [{ href: '/agency/billing', icon: <CreditCard size={20} />, label: 'Billing' }] : []),
         { href: '/agency/credits', icon: <Sparkles size={20} />, label: 'Credits' },
         { href: '/agency/settings', icon: <Settings size={20} />, label: 'Settings' },
       ],
-    },
+    }] : []),
   ];
 
   return (

@@ -122,13 +122,15 @@ export default async function AgencyLayout({ children }: { children: React.React
           ))}
         </nav>
 
-        {/* Bottom section */}
-        <div className="px-3 py-3 border-t border-border space-y-0.5">
-          <p className="text-[10px] font-semibold text-muted uppercase tracking-wider px-3 mb-2">Workspace</p>
-          {bottomItems.map((item) => (
-            <NavLink key={item.href} href={item.href} icon={item.icon} label={item.label} />
-          ))}
-        </div>
+        {/* Bottom section — hidden from members */}
+        {role !== 'member' && (
+          <div className="px-3 py-3 border-t border-border space-y-0.5">
+            <p className="text-[10px] font-semibold text-muted uppercase tracking-wider px-3 mb-2">Workspace</p>
+            {bottomItems.map((item) => (
+              <NavLink key={item.href} href={item.href} icon={item.icon} label={item.label} />
+            ))}
+          </div>
+        )}
       </aside>
 
       <div className="lg:ml-60 flex-1 flex flex-col min-h-screen">
