@@ -78,6 +78,8 @@ export async function POST(request: NextRequest) {
   }
 
   const inviteToken = crypto.randomUUID();
+  // Temporary user_token placeholder for the invite record (replaced when member accepts)
+  const placeholderUserToken = `invite_${crypto.randomUUID()}`;
 
   // Calculate expiry (30 days)
   const expiresAt = new Date();
@@ -103,7 +105,7 @@ export async function POST(request: NextRequest) {
       email: normalizedEmail,
       credit_limit: finalCreditLimit,
       status: 'invited',
-      user_token: null,
+      user_token: placeholderUserToken,
       invite_expires_at: expiresAt.toISOString(),
     })
     .select()
@@ -124,7 +126,7 @@ export async function POST(request: NextRequest) {
           email: normalizedEmail,
           credit_limit: finalCreditLimit,
           status: 'invited',
-          user_token: null,
+          user_token: placeholderUserToken,
         });
       if (retryError) {
         console.error('[INVITE] Retry also failed:', retryError);
