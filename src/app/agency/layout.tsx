@@ -145,7 +145,7 @@ export default async function AgencyLayout({ children }: { children: React.React
         <MobileNavLink href="/agency/audit/grade" icon={<Globe size={20} />} label="Audit" />
         <MobileNavLink href="/agency/proposals" icon={<Briefcase size={20} />} label="Proposals" />
         <MobileNavLink href="/agency/messages" icon={<MessageSquare size={20} />} label="Messages" />
-        <MobileNavLink href="/agency/settings" icon={<Settings size={20} />} label="More" />
+        <MobileNavLink href="/agency/more" icon={<Settings size={20} />} label="More" />
       </nav>
     </div>
   );
