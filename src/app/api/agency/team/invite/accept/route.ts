@@ -15,6 +15,8 @@ export async function POST(request: NextRequest) {
     password: string;
   };
 
+  console.log('[INVITE_ACCEPT] Received request:', { token: token?.slice(0, 8) + '...', name });
+
   if (!token || !name || !password) {
     return NextResponse.json({ error: 'Token, name, and password required' }, { status: 400 });
   }
@@ -34,6 +36,7 @@ export async function POST(request: NextRequest) {
     .single();
 
   if (e1 && e1.message?.includes('invite_expires_at')) {
+    console.log('[INVITE_ACCEPT] invite_expires_at column missing, retrying without it');
     const { data: m2 } = await supabase
       .from('workspace_members')
       .select('id, workspace_id, role, status, created_at, credit_limit')
@@ -44,6 +47,8 @@ export async function POST(request: NextRequest) {
     member = m1;
   }
 
+  console.log('[INVITE_ACCEPT] Lookup result:', { found: !!member, status: member?.status });
+
   if (!member) {
     return NextResponse.json({ error: 'Invite not found' }, { status: 404 });
   }
@@ -52,19 +57,24 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'Invite already used or revoked' }, { status: 409 });
   }
 
-  // Check expiry — use stored invite_expires_at if available
-  let expiresAt: Date;
+  // Check expiry — only if invite_expires_at is set
+  // If null/undefined, treat as non-expiring (backward compat for old invites)
   const inviteExpires = member.invite_expires_at as string | null;
   if (inviteExpires) {
-    expiresAt = new Date(inviteExpires);
-  } else {
-    const createdAt = new Date((member.created_at as string) || Date.now());
-    expiresAt = new Date(createdAt);
-    expiresAt.setDate(expiresAt.getDate() + 30);
-  }
+    const expiryDate = new Date(inviteExpires);
+    const now = new Date();
 
-  if (new Date() > expiresAt) {
-    return NextResponse.json({ error: 'Invite has expired' }, { status: 410 });
+    console.log('[INVITE_ACCEPT] Expiry check:', {
+      expiryDate: expiryDate.toISOString(),
+      now: now.toISOString(),
+      isExpired: expiryDate < now,
+    });
+
+    if (now > expiryDate) {
+      return NextResponse.json({ error: 'Invite has expired' }, { status: 410 });
+    }
+  } else {
+    console.log('[INVITE_ACCEPT] No invite_expires_at set — treating as valid (non-expiring)');
   }
 
   const newUserToken = uuidv4();
@@ -92,6 +102,7 @@ export async function POST(request: NextRequest) {
     .eq('id', member.id);
 
   if (updateError) {
+    console.error('[INVITE_ACCEPT] Update error:', updateError);
     return NextResponse.json({ error: 'Failed to accept invite' }, { status: 500 });
   }
 

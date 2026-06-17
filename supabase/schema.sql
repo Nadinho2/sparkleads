@@ -466,3 +466,10 @@ CREATE INDEX IF NOT EXISTS idx_workspace_members_workspace_id ON workspace_membe
 CREATE INDEX IF NOT EXISTS idx_workspace_members_user_token ON workspace_members(user_token);
 CREATE INDEX IF NOT EXISTS idx_agency_clients_workspace_id ON agency_clients(workspace_id);
 CREATE INDEX IF NOT EXISTS idx_workspace_activity_workspace_id ON workspace_activity(workspace_id);
+
+-- =============================================================================
+-- MIGRATIONS (run in order)
+-- =============================================================================
+
+-- 2025-06-09: Add invite_expires_at to workspace_members
+-- ALTER TABLE workspace_members ADD COLUMN IF NOT EXISTS invite_expires_at TIMESTAMPTZ;

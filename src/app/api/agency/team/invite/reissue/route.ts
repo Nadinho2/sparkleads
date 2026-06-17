@@ -29,6 +29,8 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'Member ID is required' }, { status: 400 });
   }
 
+  console.log('[INVITE_REISSUE] Reissuing invite for member:', memberId);
+
   const supabase = createSupabaseAdmin();
 
   // Verify the member belongs to this workspace and is in invited status
@@ -49,6 +51,8 @@ export async function POST(request: NextRequest) {
   const expiresAt = new Date();
   expiresAt.setDate(expiresAt.getDate() + 30);
 
+  console.log('[INVITE_REISSUE] Updating with new expiry:', expiresAt.toISOString());
+
   const { error: updateError } = await supabase
     .from('workspace_members')
     .update({
@@ -60,11 +64,32 @@ export async function POST(request: NextRequest) {
     .eq('status', 'invited');
 
   if (updateError) {
-    return NextResponse.json({ error: 'Failed to reissue invite' }, { status: 500 });
+    console.error('[INVITE_REISSUE] Update error:', updateError);
+    // If column doesn't exist, try without invite_expires_at
+    if (updateError.message?.includes('invite_expires_at')) {
+      console.log('[INVITE_REISSUE] invite_expires_at column missing, retrying without it');
+      const { error: retryError } = await supabase
+        .from('workspace_members')
+        .update({
+          invite_token: newInviteToken,
+        })
+        .eq('id', memberId)
+        .eq('workspace_id', workspaceId)
+        .eq('status', 'invited');
+
+      if (retryError) {
+        console.error('[INVITE_REISSUE] Retry also failed:', retryError);
+        return NextResponse.json({ error: 'Failed to reissue invite' }, { status: 500 });
+      }
+    } else {
+      return NextResponse.json({ error: 'Failed to reissue invite' }, { status: 500 });
+    }
   }
 
   const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://sparkleads.io';
   const inviteLink = `${appUrl}/join?token=${newInviteToken}`;
+
+  console.log('[INVITE_REISSUE] Success — new link:', inviteLink);
 
   // Log activity
   await logActivity({

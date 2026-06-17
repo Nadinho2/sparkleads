@@ -86,20 +86,60 @@ export async function POST(request: NextRequest) {
   // creditLimit of 0 means 0 credits (no free credits), not unlimited
   const finalCreditLimit = creditLimit !== undefined ? creditLimit : 0;
 
-  await supabase.from('workspace_members').insert({
-    workspace_id: workspaceId,
-    invite_token: inviteToken,
+  console.log('[INVITE] Creating invite:', {
+    workspaceId,
     role: role || 'member',
-    name: name || 'Team Member',
     email: normalizedEmail,
-    credit_limit: finalCreditLimit,
-    status: 'invited',
-    user_token: null,
-    invite_expires_at: expiresAt.toISOString(),
+    expiry: expiresAt.toISOString(),
   });
+
+  const { data: inserted, error: insertError } = await supabase
+    .from('workspace_members')
+    .insert({
+      workspace_id: workspaceId,
+      invite_token: inviteToken,
+      role: role || 'member',
+      name: name || 'Team Member',
+      email: normalizedEmail,
+      credit_limit: finalCreditLimit,
+      status: 'invited',
+      user_token: null,
+      invite_expires_at: expiresAt.toISOString(),
+    })
+    .select()
+    .single();
+
+  if (insertError) {
+    console.error('[INVITE] Insert error:', insertError);
+    // If column doesn't exist, try without invite_expires_at
+    if (insertError.message?.includes('invite_expires_at')) {
+      console.log('[INVITE] Retrying without invite_expires_at column');
+      const { error: retryError } = await supabase
+        .from('workspace_members')
+        .insert({
+          workspace_id: workspaceId,
+          invite_token: inviteToken,
+          role: role || 'member',
+          name: name || 'Team Member',
+          email: normalizedEmail,
+          credit_limit: finalCreditLimit,
+          status: 'invited',
+          user_token: null,
+        });
+      if (retryError) {
+        console.error('[INVITE] Retry also failed:', retryError);
+        return NextResponse.json({ error: 'Failed to create invite record' }, { status: 500 });
+      }
+    } else {
+      return NextResponse.json({ error: 'Failed to create invite record' }, { status: 500 });
+    }
+  }
+
+  console.log('[INVITE] Created successfully:', inserted?.id);
 
   const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://sparkleads.io';
   const inviteLink = `${appUrl}/join?token=${inviteToken}`;
+  console.log('[INVITE] Generated link:', inviteLink);
 
   // Log activity
   await logActivity({
