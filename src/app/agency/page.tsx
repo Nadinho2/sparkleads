@@ -28,6 +28,7 @@ export default function AgencyOverviewPage() {
   const [clients, setClients] = useState<Client[]>([]);
   const [activity, setActivity] = useState<Activity[]>([]);
   const [stats, setStats] = useState({ totalClients: 0, activeClients: 0, leadsThisMonth: 0, creditsUsed: 0 });
+  const [role, setRole] = useState<string>('member');
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -35,7 +36,8 @@ export default function AgencyOverviewPage() {
       fetch('/api/agency/clients?limit=50').then((r) => r.json()).catch(() => ({ clients: [] })),
       fetch('/api/agency/activity?limit=10').then((r) => r.json()).catch(() => ({ activity: [] })),
       fetch('/api/agency/stats').then((r) => r.json()).catch(() => ({})),
-    ]).then(([clientData, activityData, statsData]) => {
+      fetch('/api/account/context').then((r) => r.json()).catch(() => ({})),
+    ]).then(([clientData, activityData, statsData, contextData]) => {
       setClients(clientData.clients || []);
       setActivity(activityData.activity || []);
       setStats({
@@ -44,6 +46,7 @@ export default function AgencyOverviewPage() {
         leadsThisMonth: statsData.leadsThisMonth || 0,
         creditsUsed: statsData.creditsUsed || 0,
       });
+      setRole(contextData?.member?.role || 'member');
       setLoading(false);
     });
   }, []);
@@ -60,12 +63,12 @@ export default function AgencyOverviewPage() {
   return (
     <div className="space-y-6">
       {/* Stats */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+      <div className={`grid grid-cols-2 ${role === 'owner' ? 'md:grid-cols-4' : 'md:grid-cols-2'} gap-4`}>
         {[
-          { label: 'Total Clients', value: stats.totalClients, icon: <Users size={18} /> },
+          ...(role !== 'member' ? [{ label: 'Total Clients', value: stats.totalClients, icon: <Users size={18} /> }] : []),
           { label: 'Active Clients', value: stats.activeClients, icon: <Users size={18} /> },
           { label: 'Leads This Month', value: stats.leadsThisMonth, icon: <Search size={18} /> },
-          { label: 'Credits Used', value: stats.creditsUsed, icon: <PieChart size={18} /> },
+          ...(role !== 'member' ? [{ label: 'Credits Used', value: stats.creditsUsed, icon: <PieChart size={18} /> }] : []),
         ].map((s) => (
           <div key={s.label} className="p-4 rounded-xl border border-border bg-surface">
             <div className="flex items-center gap-2 text-muted mb-2">{s.icon}<span className="text-xs">{s.label}</span></div>
@@ -116,7 +119,7 @@ export default function AgencyOverviewPage() {
 
       {/* Activity Feed */}
       <div>
-        <h2 className="text-lg font-semibold text-text mb-4">Team Activity</h2>
+        <h2 className="text-lg font-semibold text-text mb-4">{role === 'owner' ? 'Team Activity' : 'Your Activity'}</h2>
         <div className="space-y-2">
           {activity.length === 0 ? (
             <p className="text-sm text-muted">No activity yet.</p>
