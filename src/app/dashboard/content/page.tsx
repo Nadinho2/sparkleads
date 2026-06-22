@@ -392,6 +392,19 @@ export default function ContentPage() {
 
   return (
     <div className="space-y-6">
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-2xl font-bold text-text">AI Content</h1>
+          <p className="text-sm text-muted">Generate and schedule social media content</p>
+        </div>
+        <a
+          href={`${basePath}/content/calendar`}
+          className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-surface border border-border text-sm font-medium text-text hover:bg-surface2 hover:border-primary/30 transition-all"
+        >
+          <Calendar className="w-4 h-4" />
+          View Calendar
+        </a>
+      </div>
       <div className="grid lg:grid-cols-[280px_1fr] gap-6 items-start">
         {/* LEFT SIDEBAR */}
         <div className="rounded-xl border border-border bg-surface overflow-hidden">

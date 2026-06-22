@@ -129,6 +129,15 @@ export async function POST(request: NextRequest) {
 
         const serpResults = await searchBusinesses(query);
 
+        if (!serpResults || serpResults.length === 0) {
+          console.error('[SEARCH] No results from SerpAPI for query:', query);
+          controller.enqueue(sseEvent('error', { message: 'Search returned 0 results. The search engine may be rate-limited or need a different API key.' }));
+          controller.close();
+          return;
+        }
+
+        console.log('[SEARCH] SerpAPI results:', serpResults.length, 'leads found');
+
         console.log('SerpAPI leads sample:', JSON.stringify(serpResults.slice(0, 3), null, 2));
         console.log('Leads with websites:', serpResults.filter((l) => l.website).length);
         console.log('Leads without websites:', serpResults.filter((l) => !l.website).length);

@@ -5,6 +5,7 @@ import {
   Search, Users, Settings, PieChart, CreditCard, Home,
   PenTool, Megaphone, Briefcase, MessageSquare, Bell,
   History, Sparkles, Globe, MapPin, FileText, Send, BarChart3,
+  CalendarDays,
 } from 'lucide-react';
 import { createSupabaseAdmin } from '@/lib/supabase';
 import { AgencyTopBar } from '@/components/agency/AgencyTopBar';
@@ -71,6 +72,7 @@ export default async function AgencyLayout({ children }: { children: React.React
       items: [
         { href: '/agency/ads', icon: <Megaphone size={16} />, label: 'Ad Planner' },
         { href: '/agency/content', icon: <PenTool size={16} />, label: 'Content' },
+        { href: '/agency/content/calendar', icon: <CalendarDays size={16} />, label: 'Calendar' },
       ],
     },
     {

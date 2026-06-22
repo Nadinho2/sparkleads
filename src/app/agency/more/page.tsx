@@ -5,6 +5,7 @@ import {
   Search, Users, Settings, PieChart, CreditCard, Home,
   PenTool, Megaphone, Briefcase, MessageSquare, Bell,
   History, Sparkles, Globe, MapPin, FileText, Send, BarChart3,
+  CalendarDays,
 } from 'lucide-react';
 
 export default async function MorePage() {
@@ -65,6 +66,7 @@ export default async function MorePage() {
       items: [
         { href: '/agency/ads', icon: <Megaphone size={20} />, label: 'Ad Planner' },
         { href: '/agency/content', icon: <PenTool size={20} />, label: 'Content' },
+        { href: '/agency/content/calendar', icon: <CalendarDays size={20} />, label: 'Content Calendar' },
       ],
     },
     {
