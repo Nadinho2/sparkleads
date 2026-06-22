@@ -4,6 +4,7 @@ import { getToken } from '@/lib/auth';
 import { generateContent } from '@/lib/content-prompt';
 import type { ContentProfile } from '@/lib/content-prompt';
 import { deductCredits } from '@/lib/credits';
+import { getWorkspaceId } from '@/lib/agency-auth';
 
 export const runtime = 'nodejs';
 
@@ -207,6 +208,25 @@ export async function POST(request: NextRequest) {
     }
   }
 
+  // Get updated balance after deduction
+  let newBalance = 0;
+  const workspaceId = getWorkspaceId();
+  if (workspaceId) {
+    const { data: wsAfter } = await supabase
+      .from('workspaces')
+      .select('credits_remaining')
+      .eq('id', workspaceId)
+      .single();
+    if (wsAfter) newBalance = wsAfter.credits_remaining;
+  } else {
+    const { data: creditsAfter } = await supabase
+      .from('user_credits')
+      .select('balance')
+      .eq('user_token', userToken)
+      .single();
+    if (creditsAfter) newBalance = creditsAfter.balance;
+  }
+
   return NextResponse.json({
     success: true,
     month: targetMonth,
@@ -214,6 +234,7 @@ export async function POST(request: NextRequest) {
     platforms,
     posts_per_week: ppw,
     credits_used: creditCost,
+    new_balance: newBalance,
     events: calendarEvents,
     posts: generatedPosts.map((p) => ({
       date: p.date,

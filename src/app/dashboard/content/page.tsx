@@ -283,8 +283,9 @@ export default function ContentPage() {
       setActivePlatformTab(selectedPlatforms[0]);
       setBalance((prev) => prev - creditCost);
       toast.success('Content generated successfully!');
-    } catch {
-      toast.error('Something went wrong');
+    } catch (err) {
+      console.error('Content generation error:', err);
+      toast.error(err instanceof Error ? err.message : 'Something went wrong');
     } finally {
       setIsGenerating(false);
     }
@@ -325,8 +326,9 @@ export default function ContentPage() {
       setCalendarResult(data);
       setBalance(data.new_balance);
       toast.success(`${data.total_posts} posts generated and added to your calendar!`);
-    } catch {
-      toast.error('Something went wrong');
+    } catch (err) {
+      console.error('Calendar generation error:', err);
+      toast.error(err instanceof Error ? err.message : 'Something went wrong. Check console for details.');
     } finally {
       setIsGeneratingCalendar(false);
     }
