@@ -107,7 +107,9 @@ export function useSearchStream({
             try {
               const parsed = JSON.parse(eventData);
 
-              if (eventType === 'email' && parsed.place_id && parsed.email) {
+              if (eventType === 'error' && parsed.error) {
+                setError(parsed.error);
+              } else if (eventType === 'email' && parsed.place_id && parsed.email) {
                 console.log('Email event received:', parsed);
                 setLeads((prev) =>
                   prev.map((lead) =>

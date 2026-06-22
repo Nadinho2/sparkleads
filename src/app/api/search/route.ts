@@ -101,6 +101,8 @@ export async function POST(request: NextRequest) {
     }
   }
 
+  console.log('[SEARCH] Starting:', { query, sessionId, isPaid, hasSerpApiKey: !!process.env.SERPAPI_KEY });
+
   const stream = new ReadableStream({
     async start(controller) {
       let searchId: string | null = null;
@@ -131,7 +133,7 @@ export async function POST(request: NextRequest) {
 
         if (!serpResults || serpResults.length === 0) {
           console.error('[SEARCH] No results from SerpAPI for query:', query);
-          controller.enqueue(sseEvent('error', { message: 'Search returned 0 results. The search engine may be rate-limited or need a different API key.' }));
+          controller.enqueue(sseData({ type: 'error', error: 'Search returned 0 results. The search engine may be rate-limited or need a different API key.' }));
           controller.close();
           return;
         }

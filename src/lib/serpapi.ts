@@ -17,8 +17,8 @@ export async function searchBusinesses(query: string): Promise<SerpLead[]> {
     const allResults: SerpLead[] = [];
     const seenPlaceIds = new Set<string>();
 
-    // Fetch up to 12 pages (20 results each) = 240 max results
-    const maxPages = 12;
+    // Fetch up to 3 pages (20 results each) = 60 max results (avoid Vercel 10s timeout)
+    const maxPages = 3;
     const pageSize = 20;
 
     for (let page = 0; page < maxPages; page++) {
