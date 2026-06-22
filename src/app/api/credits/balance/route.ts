@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { createSupabaseAdmin } from '@/lib/supabase';
 import { getToken } from '@/lib/auth';
+import { getWorkspaceId } from '@/lib/agency-auth';
 
 export const runtime = 'nodejs';
 
@@ -10,6 +11,36 @@ export async function GET() {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
+  const workspaceId = getWorkspaceId();
+
+  // Agency user — return workspace credit pool balance
+  if (workspaceId) {
+    const supabase = createSupabaseAdmin();
+
+    const { data: workspace } = await supabase
+      .from('workspaces')
+      .select('credits_remaining, monthly_credits')
+      .eq('id', workspaceId)
+      .single();
+
+    const { data: member } = await supabase
+      .from('workspace_members')
+      .select('credit_limit, credits_used')
+      .eq('user_token', userToken)
+      .eq('workspace_id', workspaceId)
+      .single();
+
+    return NextResponse.json({
+      balance: workspace?.credits_remaining ?? 0,
+      type: 'workspace',
+      used: member?.credits_used || 0,
+      limit: member?.credit_limit || 0,
+      isSubscribed: false,
+      subscriptionEnd: null,
+    });
+  }
+
+  // Individual user — return personal balance
   const supabase = createSupabaseAdmin();
 
   let { data: credits } = await supabase
@@ -46,6 +77,7 @@ export async function GET() {
 
   return NextResponse.json({
     balance: credits.balance,
+    type: 'individual',
     isSubscribed: !!sub,
     subscriptionEnd: sub?.current_period_end ?? null,
     totalPurchased: credits.total_purchased,
