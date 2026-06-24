@@ -21,7 +21,7 @@ export async function GET() {
     supabase.from('workspace_members').select('*', { count: 'exact', head: true }).eq('workspace_id', workspaceId).eq('status', 'active'),
   ]);
 
-  const creditsUsed = (workspace?.monthly_credits || 0) - (workspace?.credits_remaining || 0);
+  const creditsUsed = Math.max(0, (workspace?.monthly_credits || 0) - (workspace?.credits_remaining || 0));
 
   return NextResponse.json({
     totalClients: totalClients || 0,
