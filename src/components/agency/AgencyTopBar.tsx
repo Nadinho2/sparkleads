@@ -1,5 +1,6 @@
 'use client';
 
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { Zap, Bell, History } from 'lucide-react';
 
@@ -9,6 +10,22 @@ interface TopBarProps {
 }
 
 export function AgencyTopBar({ workspace, member }: TopBarProps) {
+  const [credits, setCredits] = useState<number | null>(null);
+
+  useEffect(() => {
+    fetch('/api/credits/ensure')
+      .then((r) => r.json())
+      .then((data) => setCredits(data.balance ?? 0))
+      .catch(() => setCredits(member.role === 'member' ? 0 : workspace.credits_remaining));
+  }, [workspace.credits_remaining, member.role]);
+
+  // Show 0 for members until API confirms their actual allocation
+  const displayBalance = credits !== null
+    ? credits
+    : member.role === 'member'
+      ? 0
+      : workspace.credits_remaining;
+
   return (
     <header className="sticky top-0 z-30 bg-surface/80 backdrop-blur-xl border-b border-border h-14 lg:h-16 flex items-center justify-between px-3 sm:px-6 lg:px-8">
       <h1 className="text-base lg:text-lg font-semibold text-text truncate">{workspace.name}</h1>
@@ -25,7 +42,7 @@ export function AgencyTopBar({ workspace, member }: TopBarProps) {
           className="flex items-center gap-1 lg:gap-2 px-2 lg:px-3 py-1 lg:py-1.5 rounded-lg bg-primary/10 hover:bg-primary/20 transition-colors"
         >
           <Zap className="w-3.5 lg:w-4 h-3.5 lg:h-4 text-primary" />
-          <span className="text-sm lg:text-sm font-semibold text-text">{workspace.credits_remaining}</span>
+          <span className="text-sm lg:text-sm font-semibold text-text">{displayBalance}</span>
           <span className="hidden sm:inline text-xs text-muted">credits</span>
         </Link>
         <button className="relative p-2 rounded-lg text-muted hover:text-text hover:bg-surface2 transition-colors">
