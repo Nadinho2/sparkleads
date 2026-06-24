@@ -14,17 +14,39 @@ export async function GET() {
   const workspaceId = getWorkspaceId();
   const supabase = createSupabaseAdmin();
 
-  // Agency user — return workspace credit pool balance
+  // Agency user
   if (workspaceId) {
-    const { data: workspace } = await supabase
-      .from('workspaces')
-      .select('credits_remaining')
-      .eq('id', workspaceId)
+    // Check member's role
+    const { data: member } = await supabase
+      .from('workspace_members')
+      .select('role, credit_limit, credits_used')
+      .eq('user_token', userToken)
+      .eq('workspace_id', workspaceId)
       .single();
 
+    // Owners and managers see the workspace pool balance
+    if (member?.role === 'owner' || member?.role === 'manager') {
+      const { data: workspace } = await supabase
+        .from('workspaces')
+        .select('credits_remaining')
+        .eq('id', workspaceId)
+        .single();
+
+      return NextResponse.json({
+        balance: workspace?.credits_remaining ?? 0,
+        type: 'workspace',
+        role: member.role,
+      });
+    }
+
+    // Members see their own allocated credit balance
+    const memberBalance = (member?.credit_limit ?? 0) - (member?.credits_used ?? 0);
     return NextResponse.json({
-      balance: workspace?.credits_remaining ?? 0,
-      type: 'workspace',
+      balance: Math.max(0, memberBalance),
+      type: 'workspace_member',
+      limit: member?.credit_limit ?? 0,
+      used: member?.credits_used ?? 0,
+      role: member?.role ?? 'member',
     });
   }
 
