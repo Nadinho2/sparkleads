@@ -12,10 +12,7 @@ import {
   BarChart3,
   Globe,
   MapPin,
-  Sparkles,
   Users,
-  FileText,
-  Megaphone,
 } from 'lucide-react';
 import { Spinner } from '@/components/ui';
 import type { Lead } from '@/types';
