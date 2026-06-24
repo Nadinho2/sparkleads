@@ -77,16 +77,38 @@ export async function POST(request: NextRequest) {
       path: '/',
     });
 
-    // If this user is an agency member, also set the workspace cookie
-    const { data: memberWorkspace } = await supabase
+    // Look up workspace membership — try by user_token first, then by email
+    const { data: memberByToken } = await supabase
       .from('workspace_members')
-      .select('workspace_id')
+      .select('workspace_id, user_token')
       .eq('user_token', activation.user_token)
       .eq('status', 'active')
       .limit(1);
 
-    if (memberWorkspace?.[0]?.workspace_id) {
-      response.cookies.set(setWorkspaceCookie(memberWorkspace[0].workspace_id));
+    let workspaceId = memberByToken?.[0]?.workspace_id;
+
+    // If not found by token, try by email (legacy members with mismatched tokens)
+    if (!workspaceId) {
+      const { data: memberByEmail } = await supabase
+        .from('workspace_members')
+        .select('workspace_id, user_token, id')
+        .eq('email', email)
+        .eq('status', 'active')
+        .limit(1);
+
+      if (memberByEmail?.[0]) {
+        workspaceId = memberByEmail[0].workspace_id;
+
+        // Fix the token mismatch so future lookups work
+        await supabase
+          .from('workspace_members')
+          .update({ user_token: activation.user_token })
+          .eq('id', memberByEmail[0].id);
+      }
+    }
+
+    if (workspaceId) {
+      response.cookies.set(setWorkspaceCookie(workspaceId));
     }
 
     return response;
