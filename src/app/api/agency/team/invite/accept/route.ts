@@ -31,7 +31,7 @@ export async function POST(request: NextRequest) {
   let member: Record<string, unknown> | null = null;
   const { data: m1, error: e1 } = await supabase
     .from('workspace_members')
-    .select('id, workspace_id, role, status, created_at, invite_expires_at, credit_limit')
+    .select('id, workspace_id, role, status, created_at, invite_expires_at, credit_limit, email')
     .eq('invite_token', token)
     .single();
 
@@ -39,7 +39,7 @@ export async function POST(request: NextRequest) {
     console.log('[INVITE_ACCEPT] invite_expires_at column missing, retrying without it');
     const { data: m2 } = await supabase
       .from('workspace_members')
-      .select('id, workspace_id, role, status, created_at, credit_limit')
+      .select('id, workspace_id, role, status, created_at, credit_limit, email')
       .eq('invite_token', token)
       .single();
     member = m2;
@@ -58,42 +58,55 @@ export async function POST(request: NextRequest) {
   }
 
   // Check expiry — only if invite_expires_at is set
-  // If null/undefined, treat as non-expiring (backward compat for old invites)
   const inviteExpires = member.invite_expires_at as string | null;
   if (inviteExpires) {
     const expiryDate = new Date(inviteExpires);
     const now = new Date();
-
-    console.log('[INVITE_ACCEPT] Expiry check:', {
-      expiryDate: expiryDate.toISOString(),
-      now: now.toISOString(),
-      isExpired: expiryDate < now,
-    });
-
     if (now > expiryDate) {
       return NextResponse.json({ error: 'Invite has expired' }, { status: 410 });
     }
-  } else {
-    console.log('[INVITE_ACCEPT] No invite_expires_at set — treating as valid (non-expiring)');
   }
 
-  const newUserToken = uuidv4();
+  // Reuse existing user_token if they already have an account (activations record)
+  // This ensures they can log in from any device using email + password
+  let userToken: string;
+  const memberEmail = member.email as string | null;
+
+  if (memberEmail) {
+    const { data: existingActivation } = await supabase
+      .from('activations')
+      .select('user_token')
+      .eq('email', memberEmail)
+      .eq('used', true)
+      .maybeSingle();
+
+    if (existingActivation?.user_token) {
+      userToken = existingActivation.user_token;
+      console.log('[INVITE_ACCEPT] Reusing existing user_token from activation:', userToken.slice(0, 8) + '...');
+    } else {
+      userToken = uuidv4();
+      console.log('[INVITE_ACCEPT] No existing activation, generating new user_token:', userToken.slice(0, 8) + '...');
+    }
+  } else {
+    userToken = uuidv4();
+    console.log('[INVITE_ACCEPT] No email on record, generating new user_token:', userToken.slice(0, 8) + '...');
+  }
 
   // Hash password
   const hashedPassword = await bcrypt.hash(password, 12);
 
-  // Store credentials
-  await supabase.from('member_credentials').insert({
-    user_token: newUserToken,
+  // Store credentials (upsert — replace if token already exists)
+  await supabase.from('member_credentials').upsert({
+    user_token: userToken,
     password_hash: hashedPassword,
     name,
-  });
+  }, { onConflict: 'user_token' });
 
   // Update workspace_members record
   const { error: updateError } = await supabase
     .from('workspace_members')
     .update({
-      user_token: newUserToken,
+      user_token: userToken,
       name,
       status: 'active',
       joined_at: new Date().toISOString(),
@@ -108,7 +121,7 @@ export async function POST(request: NextRequest) {
 
   // Create user_credits record
   await supabase.from('user_credits').upsert({
-    user_token: newUserToken,
+    user_token: userToken,
     balance: 0,
     total_purchased: 0,
   }, { onConflict: 'user_token' });
@@ -116,16 +129,16 @@ export async function POST(request: NextRequest) {
   // Log activity
   await logActivity({
     workspaceId: member.workspace_id as string,
-    userToken: newUserToken,
+    userToken,
     memberName: name,
     action: 'joined the workspace',
     resourceType: 'member',
-    resourceId: newUserToken,
+    resourceId: userToken,
     metadata: { role: member.role },
   });
 
   const response = NextResponse.json({ success: true });
-  response.cookies.set('sparkleads_token', newUserToken, {
+  response.cookies.set('sparkleads_token', userToken, {
     httpOnly: true,
     secure: process.env.NODE_ENV === 'production',
     sameSite: 'lax',
@@ -133,7 +146,6 @@ export async function POST(request: NextRequest) {
     path: '/',
   });
   response.cookies.set(setWorkspaceCookie(member.workspace_id as string));
-  // Signal to show the welcome modal on first load
   response.cookies.set('sparkleads_new_member', 'true', {
     httpOnly: false,
     secure: process.env.NODE_ENV === 'production',
