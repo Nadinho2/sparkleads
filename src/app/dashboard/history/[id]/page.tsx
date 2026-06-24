@@ -6,6 +6,7 @@ import {
   ArrowLeft,
   Download,
   MessageCircle,
+  Mail,
   Copy,
   ExternalLink,
   Check,
@@ -417,17 +418,24 @@ export default function SearchDetailPage({
                       )}
                     </td>
                     <td className="py-3 px-4">
-                      <div className="flex items-center gap-1">
+                      <div className="flex items-center gap-2">
                         {lead.phone && cleanPhone(lead.phone) && (
-                          <a
-                            href={`https://wa.me/${cleanPhone(lead.phone)}`}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="p-1.5 rounded-lg text-muted hover:text-success hover:bg-success/10 transition-colors"
-                            title="WhatsApp"
+                          <button
+                            onClick={() => setWhatsappComposer({ isOpen: true, lead })}
+                            className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-green-600 hover:bg-green-500 text-white text-xs font-medium transition-colors"
+                            title="Send WhatsApp"
                           >
-                            <MessageCircle className="w-4 h-4" />
-                          </a>
+                            <MessageCircle className="w-3.5 h-3.5" />
+                          </button>
+                        )}
+                        {lead.email && (
+                          <button
+                            onClick={() => setEmailComposer({ isOpen: true, lead })}
+                            className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-500 text-white text-xs font-medium transition-colors"
+                            title="Send email"
+                          >
+                            <Mail className="w-3.5 h-3.5" />
+                          </button>
                         )}
                         {lead.phone && (
                           <button

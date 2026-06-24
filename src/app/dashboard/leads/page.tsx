@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
+import { useRouter } from 'next/navigation';
 import {
   Search,
   Download,
@@ -9,11 +10,18 @@ import {
   ExternalLink,
   Check,
   BarChart3,
+  Globe,
+  MapPin,
+  Sparkles,
+  Users,
+  FileText,
+  Megaphone,
 } from 'lucide-react';
 import { Spinner } from '@/components/ui';
 import type { Lead } from '@/types';
 
 export default function LeadsPage() {
+  const router = useRouter();
   const [leads, setLeads] = useState<Lead[]>([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState('all');
@@ -257,15 +265,62 @@ export default function LeadsPage() {
                     </span>
                   </td>
                   <td className="py-3 px-4">
-                    {lead.phone && (
-                      <button
-                        onClick={() => openWhatsApp(lead.phone!)}
-                        className="text-muted hover:text-success transition-colors"
-                        title="Open WhatsApp"
-                      >
-                        <MessageCircle className="w-4 h-4" />
-                      </button>
-                    )}
+                    <div className="flex items-center gap-1.5 flex-wrap">
+                      {lead.phone && (
+                        <button
+                          onClick={() => openWhatsApp(lead.phone!)}
+                          className="flex items-center gap-1 px-2 py-1.5 rounded-lg bg-green-600 hover:bg-green-500 text-white text-xs font-medium transition-colors"
+                          title="Send WhatsApp"
+                        >
+                          <MessageCircle className="w-3.5 h-3.5" />
+                        </button>
+                      )}
+                      {lead.email && (
+                        <a
+                          href={`mailto:${lead.email}`}
+                          className="flex items-center gap-1 px-2 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-500 text-white text-xs font-medium transition-colors"
+                          title="Send email"
+                        >
+                          <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" /></svg>
+                        </a>
+                      )}
+                      {lead.website && (
+                        <button
+                          onClick={() => {
+                            localStorage.setItem('sparkleads_grade_url', JSON.stringify({ url: lead.website, businessName: lead.name }));
+                            router.push('/dashboard/audit/grade');
+                          }}
+                          className="flex items-center gap-1 px-2 py-1.5 rounded-lg bg-orange-600 hover:bg-orange-500 text-white text-xs font-medium transition-colors"
+                          title="Grade Website"
+                        >
+                          <Globe className="w-3.5 h-3.5" />
+                        </button>
+                      )}
+                      {lead.website && (
+                        <button
+                          onClick={() => {
+                            localStorage.setItem('sparkleads_gbp_check', JSON.stringify({ businessName: lead.name, location: lead.address }));
+                            router.push('/dashboard/audit/gbp');
+                          }}
+                          className="flex items-center gap-1 px-2 py-1.5 rounded-lg bg-yellow-600 hover:bg-yellow-500 text-white text-xs font-medium transition-colors"
+                          title="GBP Audit"
+                        >
+                          <MapPin className="w-3.5 h-3.5" />
+                        </button>
+                      )}
+                      {lead.website && (
+                        <button
+                          onClick={() => {
+                            localStorage.setItem('sparkleads_competitor_check', JSON.stringify({ businessName: lead.name, location: lead.address }));
+                            router.push('/dashboard/audit/competitors');
+                          }}
+                          className="flex items-center gap-1 px-2 py-1.5 rounded-lg bg-teal-600 hover:bg-teal-500 text-white text-xs font-medium transition-colors"
+                          title="Competitor Analysis"
+                        >
+                          <Users className="w-3.5 h-3.5" />
+                        </button>
+                      )}
+                    </div>
                   </td>
                 </tr>
               ))}

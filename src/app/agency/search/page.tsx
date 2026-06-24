@@ -1,12 +1,15 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
+import { useRouter } from 'next/navigation';
 import {
   Search, Loader2, Star, Copy, Check,
   MessageCircle, Mail, Bell, StickyNote, ExternalLink, X,
   Sparkles, BarChart2, ChevronDown, ChevronUp,
+  Globe, MapPin, FileText, Megaphone,
 } from 'lucide-react';
 import { useSearchStream } from '@/hooks/useSearchStream';
+import { useBasePath } from '@/hooks/useBasePath';
 import { Spinner } from '@/components/ui';
 import { WhatsAppComposer } from '@/components/dashboard/WhatsAppComposer';
 import { EmailComposer } from '@/components/dashboard/EmailComposer';
@@ -50,6 +53,9 @@ export default function AgencySearchPage() {
     sessionId,
     isPaid: true,
   });
+
+  const router = useRouter();
+  const basePath = useBasePath();
 
   useEffect(() => {
     let id = localStorage.getItem('sparkleads_session_id');
@@ -259,6 +265,12 @@ export default function AgencySearchPage() {
                       <div className="flex flex-wrap gap-x-3 gap-y-1 text-xs text-muted">
                         {lead.address && <span className="truncate max-w-[200px]">{lead.address}</span>}
                         {lead.rating && <span className="flex items-center gap-1 shrink-0"><Star size={11} className="text-yellow-400" />{lead.rating}</span>}
+                        {lead.website && (
+                          <a href={lead.website} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1 text-primary hover:underline shrink-0">
+                            <ExternalLink size={11} />
+                            {lead.website.replace(/^https?:\/\/(www\.)?/, '').slice(0, 25)}
+                          </a>
+                        )}
                         <span className={`shrink-0 px-1.5 py-0.5 rounded-full text-[10px] ${
                           statusOptions.find((s) => s.value === lead.status)?.color || 'bg-surface2 text-muted'
                         }`}>
@@ -285,13 +297,15 @@ export default function AgencySearchPage() {
                         </button>
                       )}
                       {lead.phone && (
-                        <button onClick={() => setWhatsappComposer({ isOpen: true, lead })} className="p-2 rounded-lg hover:bg-surface2 text-muted hover:text-green-400" title="WhatsApp">
-                          <MessageCircle size={14} />
+                        <button onClick={() => setWhatsappComposer({ isOpen: true, lead })} className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-green-600 hover:bg-green-500 text-white text-xs font-medium transition-colors" title="Send WhatsApp">
+                          <MessageCircle size={12} />
+                          <span className="hidden sm:inline">WhatsApp</span>
                         </button>
                       )}
                       {lead.email && (
-                        <button onClick={() => setEmailComposer({ isOpen: true, lead })} className="p-2 rounded-lg hover:bg-surface2 text-muted hover:text-primary" title="Email">
-                          <Mail size={14} />
+                        <button onClick={() => setEmailComposer({ isOpen: true, lead })} className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-500 text-white text-xs font-medium transition-colors" title="Send email">
+                          <Mail size={12} />
+                          <span className="hidden sm:inline">Email</span>
                         </button>
                       )}
                       <button
@@ -366,6 +380,66 @@ export default function AgencySearchPage() {
                           <Sparkles size={11} /> View Score
                         </button>
                       )}
+                    </div>
+
+                    {/* Services */}
+                    <div>
+                      <p className="text-[10px] font-semibold text-muted uppercase tracking-wider mb-2">Services (uses credits)</p>
+                      <div className="flex flex-wrap gap-2">
+                        {lead.website && (
+                          <button
+                            onClick={() => {
+                              localStorage.setItem('sparkleads_grade_url', JSON.stringify({ url: lead.website, businessName: lead.name, leadId: lead.id, location: lead.address, phone: lead.phone }));
+                              router.push(`${basePath}/audit/grade`);
+                            }}
+                            className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-orange-600 hover:bg-orange-500 text-white text-xs font-medium transition-colors"
+                          >
+                            <Globe size={12} /> Grade Website
+                          </button>
+                        )}
+                        {lead.website && (
+                          <button
+                            onClick={() => {
+                              localStorage.setItem('sparkleads_grade_url', JSON.stringify({ url: lead.website, businessName: lead.name }));
+                              router.push(`${basePath}/audit/gbp`);
+                            }}
+                            className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-yellow-600 hover:bg-yellow-500 text-white text-xs font-medium transition-colors"
+                          >
+                            <MapPin size={12} /> GBP Audit
+                          </button>
+                        )}
+                        {lead.website && (
+                          <button
+                            onClick={() => {
+                              localStorage.setItem('sparkleads_proposal_lead', JSON.stringify(lead));
+                              router.push(`${basePath}/proposals`);
+                            }}
+                            className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-pink-600 hover:bg-pink-500 text-white text-xs font-medium transition-colors"
+                          >
+                            <FileText size={12} /> Proposal
+                          </button>
+                        )}
+                        <button
+                          onClick={() => {
+                            localStorage.setItem('sparkleads_content_lead', JSON.stringify(lead));
+                            router.push(`${basePath}/content`);
+                          }}
+                          className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-purple-600 hover:bg-purple-500 text-white text-xs font-medium transition-colors"
+                        >
+                          <Sparkles size={12} /> AI Message
+                        </button>
+                        {lead.website && (
+                          <button
+                            onClick={() => {
+                              localStorage.setItem('sparkleads_ad_lead', JSON.stringify({ ...lead, businessName: lead.name }));
+                              router.push(`${basePath}/ads`);
+                            }}
+                            className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-cyan-600 hover:bg-cyan-500 text-white text-xs font-medium transition-colors"
+                          >
+                            <Megaphone size={12} /> Ad Plan
+                          </button>
+                        )}
+                      </div>
                     </div>
                   </div>
                 )}
