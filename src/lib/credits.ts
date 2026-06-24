@@ -53,7 +53,7 @@ export async function deductCredits(
     // Check member's individual credit limit
     const { data: member } = await supabase
       .from('workspace_members')
-      .select('credit_limit, credits_used, name')
+      .select('credit_limit, credits_used, name, role')
       .eq('user_token', userToken)
       .eq('workspace_id', workspaceId)
       .single();
@@ -62,14 +62,16 @@ export async function deductCredits(
       return { success: false, error: 'Workspace member not found', required: amount, balance: 0 };
     }
 
-    // If member has a per-member credit limit (>= 0), check it. -1 or null means unlimited.
-    if (member.credit_limit !== null && member.credit_limit >= 0 && member.credits_used + amount > member.credit_limit) {
-      return {
-        success: false,
-        error: 'Your personal credit limit for this month has been reached',
-        required: amount,
-        balance: member.credit_limit - member.credits_used,
-      };
+    // Owners and managers are not limited by per-member credit limits
+    if (member.role !== 'owner' && member.role !== 'manager') {
+      if (member.credit_limit !== null && member.credit_limit >= 0 && member.credits_used + amount > member.credit_limit) {
+        return {
+          success: false,
+          error: 'Your personal credit limit for this month has been reached',
+          required: amount,
+          balance: member.credit_limit - member.credits_used,
+        };
+      }
     }
 
     // Deduct from workspace pool
