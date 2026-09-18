@@ -10,7 +10,7 @@ export async function GET() {
 
   const supabase = createSupabaseAdmin();
 
-  const { data: affiliate, error } = await supabase
+  const { data: affiliate } = await supabase
     .from('affiliates')
     .select('*')
     .eq('user_token', token)

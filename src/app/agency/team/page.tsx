@@ -68,7 +68,6 @@ export default function TeamPage() {
   const [allocatingMember, setAllocatingMember] = useState<Member | null>(null);
   const [allocateAmount, setAllocateAmount] = useState(0);
   const [allocating, setAllocating] = useState(false);
-  const [reissuingId, setReissuingId] = useState<string | null>(null);
 
   const loadData = useCallback(async () => {
     try {
@@ -126,28 +125,6 @@ export default function TeamPage() {
         loadData();
       }
     } catch { /* silent */ }
-  };
-
-  const reissueInvite = async (memberId: string) => {
-    setReissuingId(memberId);
-    try {
-      const res = await fetch('/api/agency/team/invite/reissue', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ memberId }),
-      });
-      const data = await res.json();
-      if (res.ok) {
-        setGeneratedInvite(data);
-        toast.success('New invite link generated');
-        loadData();
-      } else {
-        toast.error(data.error || 'Failed to refresh invite');
-      }
-    } catch {
-      toast.error('Something went wrong');
-    }
-    setReissuingId(null);
   };
 
   const updateMember = async (memberId: string, updates: Record<string, unknown>) => {

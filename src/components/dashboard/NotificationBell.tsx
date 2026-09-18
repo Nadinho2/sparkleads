@@ -73,7 +73,6 @@ export function NotificationBell({ className = '' }: { className?: string }) {
   const [open, setOpen] = useState(false);
   const [notifications, setNotifications] = useState<AppNotification[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
-  const [loading, setLoading] = useState(true);
   const menuRef = useRef<HTMLDivElement>(null);
 
   const fetchNotifications = useCallback(async () => {
@@ -86,8 +85,6 @@ export function NotificationBell({ className = '' }: { className?: string }) {
       }
     } catch {
       // Silent fail
-    } finally {
-      setLoading(false);
     }
   }, []);
 

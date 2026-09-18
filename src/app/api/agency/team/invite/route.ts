@@ -82,8 +82,6 @@ export async function POST(request: NextRequest) {
   const placeholderUserToken = `invite_${crypto.randomUUID()}`;
 
   // Invites do not expire — members remain permanently unless revoked or removed
-  const expiresAt = null;
-
   // creditLimit of 0 means 0 credits (no free credits), not unlimited
   const finalCreditLimit = creditLimit !== undefined ? creditLimit : 0;
 

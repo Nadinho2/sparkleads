@@ -20,9 +20,6 @@ import {
   Sliders,
   TrendingUp,
   PlusCircle,
-  Mail,
-  UserPlus,
-  Layers,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { Modal } from '@/components/ui';

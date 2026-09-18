@@ -28,7 +28,7 @@ function generateFallbackMessages(
   leads: LeadInput[],
   serviceDescription: string,
   tone: string,
-  messageType: string
+  _messageType?: string
 ) {
   return leads.map((lead, index) => {
     const loc = lead.address ? `in ${lead.address.split(',')[0].trim()}` : '';
