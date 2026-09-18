@@ -61,7 +61,7 @@ export async function POST(request: NextRequest) {
         httpOnly: true,
         secure: process.env.NODE_ENV === 'production',
         sameSite: 'lax',
-        maxAge: 30 * 24 * 60 * 60,
+        maxAge: 365 * 24 * 60 * 60,
         path: '/',
       });
       response.cookies.set(setWorkspaceCookie(member.workspace_id));

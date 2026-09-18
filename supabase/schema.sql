@@ -25,6 +25,9 @@ CREATE TABLE leads (
   website TEXT,
   address TEXT,
   rating NUMERIC(2,1),
+  reviews INTEGER DEFAULT 0,
+  type TEXT,
+  thumbnail TEXT,
   status TEXT DEFAULT 'new' CHECK (status IN ('new','contacted','interested','closed','not_interested')),
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
@@ -45,6 +48,7 @@ CREATE TABLE activations (
   used BOOLEAN DEFAULT FALSE,
   affiliate_ref TEXT,
   user_token TEXT,
+  password_hash TEXT,
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
@@ -473,3 +477,22 @@ CREATE INDEX IF NOT EXISTS idx_workspace_activity_workspace_id ON workspace_acti
 
 -- 2025-06-09: Add invite_expires_at to workspace_members
 -- ALTER TABLE workspace_members ADD COLUMN IF NOT EXISTS invite_expires_at TIMESTAMPTZ;
+
+-- =============================================================================
+-- IN-APP NOTIFICATIONS
+-- =============================================================================
+
+CREATE TABLE IF NOT EXISTS notifications (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  user_token TEXT NOT NULL,
+  title TEXT NOT NULL,
+  message TEXT NOT NULL,
+  type TEXT DEFAULT 'system' CHECK (type IN ('system', 'referral', 'payout', 'subscription', 'credit')),
+  link TEXT,
+  read BOOLEAN DEFAULT FALSE,
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_notifications_user_token ON notifications(user_token);
+CREATE INDEX IF NOT EXISTS idx_notifications_created_at ON notifications(created_at);
+

@@ -26,9 +26,13 @@ export async function GET() {
     .eq('workspace_id', workspaceId)
     .eq('status', 'active');
 
+  const totalMembersUsed = (members || []).reduce((sum, m) => sum + (m.credits_used || 0), 0);
+  const calculatedUsed = Math.max(0, (workspace?.monthly_credits || 0) - (workspace?.credits_remaining || 0));
+  const used = Math.max(totalMembersUsed, calculatedUsed);
+
   return NextResponse.json({
     total: workspace?.monthly_credits || 0,
-    used: (workspace?.monthly_credits || 0) - (workspace?.credits_remaining || 0),
+    used,
     remaining: workspace?.credits_remaining || 0,
     memberBreakdown: (members || []).map((m) => ({
       name: m.name,

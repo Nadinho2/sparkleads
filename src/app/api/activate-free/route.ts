@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createSupabaseAdmin } from '@/lib/supabase';
 import { hashPassword } from '@/lib/password';
 import { checkRateLimit } from '@/lib/rate-limit';
+import { createNotification } from '@/lib/notifications';
 import { v4 as uuidv4 } from 'uuid';
 
 export const runtime = 'nodejs';
@@ -27,7 +28,7 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  let body: { email?: string; password?: string };
+  let body: { email?: string; password?: string; referral_code?: string };
   try {
     body = await request.json();
   } catch {
@@ -36,6 +37,7 @@ export async function POST(request: NextRequest) {
 
   const email = body.email?.trim().toLowerCase();
   const password = body.password?.trim();
+  const refCode = body.referral_code?.trim() || null;
   if (!email || !email.includes('@')) {
     return NextResponse.json({ error: 'A valid email is required' }, { status: 400 });
   }
@@ -44,22 +46,20 @@ export async function POST(request: NextRequest) {
 
   const { data: existing } = await supabase
     .from('activations')
-    .select('user_token')
+    .select('id')
     .eq('email', email)
     .eq('used', true)
-    .limit(1)
-    .single();
+    .limit(1);
 
-  if (existing?.user_token) {
-    const response = NextResponse.json({ success: true, existing: true });
-    response.cookies.set('sparkleads_token', existing.user_token, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: 'lax',
-      maxAge: 60 * 60 * 24 * 365,
-      path: '/',
-    });
-    return response;
+  if (existing && existing.length > 0) {
+    return NextResponse.json(
+      {
+        success: false,
+        error: 'An account with this email already exists. Please log in to your account.',
+        code: 'EMAIL_ALREADY_USED',
+      },
+      { status: 409 }
+    );
   }
 
   const userToken = uuidv4();
@@ -73,6 +73,7 @@ export async function POST(request: NextRequest) {
     email,
     used: true,
     user_token: userToken,
+    affiliate_ref: refCode,
   };
   if (passwordHash) activationRecord.password_hash = passwordHash;
 
@@ -84,6 +85,38 @@ export async function POST(request: NextRequest) {
     referral_code: referralCode,
     total_referrals: 0,
     total_earnings: 0,
+  });
+
+  // Increment referring affiliate's total_referrals count
+  if (refCode) {
+    const { data: referringAffiliate } = await supabase
+      .from('affiliates')
+      .select('*')
+      .eq('referral_code', refCode)
+      .single();
+
+    if (referringAffiliate) {
+      await supabase
+        .from('affiliates')
+        .update({
+          total_referrals: referringAffiliate.total_referrals + 1,
+        })
+        .eq('id', referringAffiliate.id);
+
+      await createNotification(referringAffiliate.user_token, {
+        title: '🤝 New Referral Registered!',
+        message: `${email} just signed up using your referral link. You will earn ₦1,800/mo recurring commission when they activate a paid plan.`,
+        type: 'referral',
+        link: '/dashboard/affiliate',
+      });
+    }
+  }
+
+  await createNotification(userToken, {
+    title: '⚡ Welcome to SparkLeads!',
+    message: 'Your account is ready with 20 welcome tokens. Search businesses in any city and start reaching out today!',
+    type: 'subscription',
+    link: '/dashboard',
   });
 
   await supabase.from('user_credits').insert({

@@ -154,7 +154,7 @@ async function handleChargeSuccess(data: Record<string, unknown>) {
         .from('affiliates')
         .update({
           total_referrals: affiliate.total_referrals + 1,
-          total_earnings: Number(affiliate.total_earnings) + 7.5,
+          total_earnings: Number(affiliate.total_earnings) + 1800,
         })
         .eq('id', affiliate.id);
     }

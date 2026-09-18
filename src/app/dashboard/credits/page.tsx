@@ -8,10 +8,10 @@ import { Spinner } from '@/components/ui';
 const isFreeAccess = process.env.NEXT_PUBLIC_FREE_ACCESS === 'true';
 
 const creditPacks = [
-  { id: 'starter', name: 'Starter', credits: 50, price: 6600, currency: 'NGN', description: '50 credits — great for testing', popular: false },
-  { id: 'growth', name: 'Growth', credits: 150, price: 13300, currency: 'NGN', description: '150 credits — best value', popular: true },
-  { id: 'pro', name: 'Pro', credits: 500, price: 33200, currency: 'NGN', description: '500 credits — for power users', popular: false },
-  { id: 'mega', name: 'Mega', credits: 1000, price: 59700, currency: 'NGN', description: '1000 credits — for agencies', popular: false },
+  { id: 'starter', name: 'Starter', credits: 50, price: 2500, currency: 'NGN', description: '50 credits — great for testing', popular: false },
+  { id: 'growth', name: 'Growth', credits: 150, price: 6000, currency: 'NGN', description: '150 credits — best value', popular: true },
+  { id: 'pro', name: 'Pro', credits: 500, price: 15000, currency: 'NGN', description: '500 credits — for power users', popular: false },
+  { id: 'mega', name: 'Mega', credits: 1000, price: 25000, currency: 'NGN', description: '1000 credits — for agencies', popular: false },
 ];
 
 interface Transaction {

@@ -8,9 +8,10 @@ export const runtime = 'nodejs';
 
 // Prices in kobo (Paystack uses smallest currency unit)
 const PACKS: Record<number, number> = {
-  50: 660000,     // ₦6,600
-  150: 1330000,   // ₦13,300
-  500: 3320000,   // ₦33,200
+  50: 250000,    // ₦2,500
+  150: 600000,   // ₦6,000
+  500: 1500000,  // ₦15,000
+  1000: 2500000, // ₦25,000
 };
 
 export async function POST(request: NextRequest) {

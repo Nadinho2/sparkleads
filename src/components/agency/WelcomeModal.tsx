@@ -86,9 +86,9 @@ export function WelcomeModal() {
           </div>
         </div>
 
-        <div className="rounded-xl bg-yellow-500/10 border border-yellow-500/20 p-3">
-          <p className="text-xs text-yellow-400">
-            💡 Bookmark this page. Your session lasts 30 days. After that, ask your admin for a new invite link to log back in.
+        <div className="rounded-xl bg-blue-500/10 border border-blue-500/20 p-3">
+          <p className="text-xs text-blue-400">
+            💡 Your account access is permanent. You can log in anytime from any device at <span className="font-semibold text-text">/login</span> using your email or name and password.
           </p>
         </div>
 

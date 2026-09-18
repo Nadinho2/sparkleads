@@ -1,14 +1,17 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, Suspense } from 'react';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { ArrowRight, Mail, Lock, Eye, EyeOff, Zap, Users, Building2 } from 'lucide-react';
 import { toast } from 'sonner';
+import { Spinner } from '@/components/ui';
 
-export default function LoginPage() {
+function LoginFormContent() {
   const router = useRouter();
-  const [email, setEmail] = useState('');
+  const searchParams = useSearchParams();
+  const initialEmail = searchParams.get('email') || '';
+  const [email, setEmail] = useState(initialEmail);
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -45,7 +48,8 @@ export default function LoginPage() {
 
       if (data.success) {
         toast.success('Welcome back!');
-        router.push('/dashboard');
+        const redirectUrl = searchParams.get('redirect') || data.redirect || '/dashboard';
+        router.push(redirectUrl);
       } else {
         toast.error(data.error || 'Login failed');
       }
@@ -177,7 +181,7 @@ export default function LoginPage() {
               <p className="text-sm text-muted">
                 Don&apos;t have an account?{' '}
                 <Link href="/checkout" className="text-primary hover:underline font-medium">
-                  Get access for ₦19,900
+                  Subscribe for ₦8,999/mo
                 </Link>
               </p>
             </div>
@@ -248,5 +252,19 @@ export default function LoginPage() {
         </div>
       </div>
     </div>
+  );
+}
+
+export default function LoginPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="min-h-screen bg-background flex items-center justify-center">
+          <Spinner size="lg" />
+        </div>
+      }
+    >
+      <LoginFormContent />
+    </Suspense>
   );
 }

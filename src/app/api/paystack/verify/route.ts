@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createSupabaseAdmin } from '@/lib/supabase';
 import { hashPassword } from '@/lib/password';
+import { createNotification } from '@/lib/notifications';
 import { v4 as uuidv4 } from 'uuid';
 
 export const runtime = 'nodejs';
@@ -81,6 +82,39 @@ export async function POST(request: NextRequest) {
         amount: 20,
         description: 'Subscription bonus — 20 welcome credits',
         balance_after: newBalance,
+      });
+
+      // Track affiliate referral if applicable
+      if (referralCode) {
+        const { data: affiliate } = await supabase
+          .from('affiliates')
+          .select('*')
+          .eq('referral_code', referralCode)
+          .single();
+
+        if (affiliate) {
+          await supabase
+            .from('affiliates')
+            .update({
+              total_referrals: affiliate.total_referrals + 1,
+              total_earnings: Number(affiliate.total_earnings) + 1800,
+            })
+            .eq('id', affiliate.id);
+
+          await createNotification(affiliate.user_token, {
+            title: '🎉 Referral Commission Earned!',
+            message: 'A subscriber just upgraded using your referral link. +₦1,800 has been credited to your affiliate balance.',
+            type: 'referral',
+            link: '/dashboard/affiliate',
+          });
+        }
+      }
+
+      await createNotification(existingUser.user_token, {
+        title: '⚡ Subscription Activated',
+        message: 'Your monthly subscription is active! 20 rollover tokens have been added to your balance.',
+        type: 'subscription',
+        link: '/dashboard',
       });
 
       const response = NextResponse.json({
@@ -176,11 +210,25 @@ export async function POST(request: NextRequest) {
           .from('affiliates')
           .update({
             total_referrals: affiliate.total_referrals + 1,
-            total_earnings: Number(affiliate.total_earnings) + 7.5,
+            total_earnings: Number(affiliate.total_earnings) + 1800,
           })
           .eq('id', affiliate.id);
+
+        await createNotification(affiliate.user_token, {
+          title: '🎉 Referral Commission Earned!',
+          message: 'A new user just subscribed with your referral link. +₦1,800 has been credited to your affiliate balance.',
+          type: 'referral',
+          link: '/dashboard/affiliate',
+        });
       }
     }
+
+    await createNotification(userToken, {
+      title: '⚡ Welcome to SparkLeads!',
+      message: 'Your monthly subscription is active! 20 rollover outreach tokens are ready for use.',
+      type: 'subscription',
+      link: '/dashboard',
+    });
 
     // Also send activation email as backup (non-blocking)
     try {

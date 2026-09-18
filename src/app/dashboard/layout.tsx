@@ -1,8 +1,9 @@
 import { cookies } from 'next/headers';
 import { redirect } from 'next/navigation';
-import { Bell, Search } from 'lucide-react';
+import { Search } from 'lucide-react';
 import { Sidebar, BottomNav } from '@/components/dashboard/Sidebar';
 import { CreditsBadge } from '@/components/dashboard/CreditsBadge';
+import { NotificationBell } from '@/components/dashboard/NotificationBell';
 import { Footer } from '@/components/layout/Footer';
 
 export default async function DashboardLayout({
@@ -55,9 +56,7 @@ async function TopBar({ token }: { token: string }) {
           <span>{count ?? 0} searches run</span>
         </div>
 
-        <button className="relative p-2 rounded-lg text-muted hover:text-text hover:bg-surface2 transition-colors">
-          <Bell className="w-5 h-5" />
-        </button>
+        <NotificationBell />
       </div>
     </header>
   );

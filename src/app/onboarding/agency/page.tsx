@@ -6,9 +6,9 @@ import { Check, ArrowRight } from 'lucide-react';
 import { Spinner } from '@/components/ui';
 
 const PLANS = [
-  { id: 'starter', name: 'Starter', price: 49, seats: 3, credits: 500, desc: 'Solo to small team' },
-  { id: 'growth', name: 'Growth', price: 99, seats: 8, credits: 2000, desc: 'Growing agencies' },
-  { id: 'pro', name: 'Pro', price: 199, seats: 'Unlimited', credits: 10000, desc: 'Established agencies' },
+  { id: 'starter', name: 'Starter', price: '₦19,900', seats: 3, credits: 500, desc: 'Solo to small team' },
+  { id: 'growth', name: 'Growth', price: '₦49,900', seats: 8, credits: 2000, desc: 'Growing agencies' },
+  { id: 'pro', name: 'Pro', price: '₦99,900', seats: 'Unlimited', credits: 10000, desc: 'Established agencies' },
 ];
 
 export default function AgencyOnboardingPage() {
@@ -142,7 +142,7 @@ export default function AgencyOnboardingPage() {
                 >
                   <div className="flex items-center justify-between mb-2">
                     <h3 className="text-lg font-bold text-text">{plan.name}</h3>
-                    <span className="text-xl font-bold text-primary">${plan.price}<span className="text-sm text-muted">/mo</span></span>
+                    <span className="text-xl font-bold text-primary">{plan.price}<span className="text-sm text-muted">/mo</span></span>
                   </div>
                   <p className="text-xs text-muted mb-2">{plan.desc}</p>
                   <div className="flex gap-4 text-xs text-muted">

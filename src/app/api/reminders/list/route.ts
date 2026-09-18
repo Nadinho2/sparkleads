@@ -19,7 +19,7 @@ export async function GET(request: NextRequest) {
 
   let query = supabase
     .from('follow_up_reminders')
-    .select('*, lead:leads(id, name, phone, email, place_id, website, address, rating, reviews, status)')
+    .select('*, lead:leads(id, name, phone, email, place_id, website, address, rating, status)')
     .eq('user_token', userToken)
     .order('due_date', { ascending: true });
 

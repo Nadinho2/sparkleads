@@ -46,18 +46,16 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'Invite not found or already used' }, { status: 404 });
   }
 
-  // Generate new token and expiry
+  // Generate new token — permanent, never expires
   const newInviteToken = crypto.randomUUID();
-  const expiresAt = new Date();
-  expiresAt.setDate(expiresAt.getDate() + 30);
 
-  console.log('[INVITE_REISSUE] Updating with new expiry:', expiresAt.toISOString());
+  console.log('[INVITE_REISSUE] Updating with permanent token');
 
   const { error: updateError } = await supabase
     .from('workspace_members')
     .update({
       invite_token: newInviteToken,
-      invite_expires_at: expiresAt.toISOString(),
+      invite_expires_at: null,
     })
     .eq('id', memberId)
     .eq('workspace_id', workspaceId)
@@ -105,7 +103,7 @@ export async function POST(request: NextRequest) {
   return NextResponse.json({
     inviteLink,
     inviteToken: newInviteToken,
-    expiresAt: expiresAt.toISOString(),
+    expiresAt: null,
     role: member.role,
     creditLimit: member.credit_limit,
     email: member.email,

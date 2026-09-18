@@ -54,24 +54,8 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ valid: false, error: 'already_used', message: 'This invite has already been accepted.' }, { status: 409 });
   }
 
-  // Check expiry — only if invite_expires_at is set
-  // If null/undefined, treat as non-expiring (backward compat for old invites)
-  if (member.invite_expires_at) {
-    const expiryDate = new Date(member.invite_expires_at as string);
-    const now = new Date();
-
-    console.log('[INVITE_VERIFY] Expiry check:', {
-      expiryDate: expiryDate.toISOString(),
-      now: now.toISOString(),
-      isExpired: expiryDate < now,
-    });
-
-    if (expiryDate < now) {
-      return NextResponse.json({ valid: false, error: 'expired', message: 'This invite link has expired.' }, { status: 410 });
-    }
-  } else {
-    console.log('[INVITE_VERIFY] No invite_expires_at set — treating as valid (non-expiring)');
-  }
+  // Invites are permanent until used or revoked by an agency admin
+  console.log('[INVITE_VERIFY] Invite is permanent and valid');
 
   const workspace = member.workspaces as unknown as { name: string; logo_url: string | null } | null;
 

@@ -23,11 +23,15 @@ export interface AIResponse {
 }
 
 function getProvider(): { provider: AIProvider; apiKey: string } | null {
-  const deepseekKey = process.env.DEEPSEEK_API_KEY;
-  if (deepseekKey) return { provider: 'deepseek', apiKey: deepseekKey };
+  const deepseekKey = process.env.DEEPSEEK_API_KEY?.trim();
+  if (deepseekKey && !deepseekKey.includes('your-') && !deepseekKey.includes('placeholder')) {
+    return { provider: 'deepseek', apiKey: deepseekKey };
+  }
 
-  const geminiKey = process.env.GEMINI_API_KEY;
-  if (geminiKey) return { provider: 'gemini', apiKey: geminiKey };
+  const geminiKey = process.env.GEMINI_API_KEY?.trim();
+  if (geminiKey && !geminiKey.includes('your-') && !geminiKey.includes('placeholder')) {
+    return { provider: 'gemini', apiKey: geminiKey };
+  }
 
   return null;
 }

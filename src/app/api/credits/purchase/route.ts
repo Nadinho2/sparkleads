@@ -6,10 +6,10 @@ import { v4 as uuidv4 } from 'uuid';
 export const runtime = 'nodejs';
 
 const CREDIT_PACKS: Record<string, { credits: number; amount: number; label: string }> = {
-  starter: { credits: 50, amount: 660000, label: '50 Credits' },    // ₦6,600 in kobo
-  growth: { credits: 150, amount: 1330000, label: '150 Credits' },   // ₦13,300 in kobo
-  pro: { credits: 500, amount: 3320000, label: '500 Credits' },      // ₦33,200 in kobo
-  mega: { credits: 1000, amount: 5970000, label: '1000 Credits' },   // ₦59,700 in kobo
+  starter: { credits: 50, amount: 250000, label: '50 Credits' },    // ₦2,500 in kobo (₦50/lead)
+  growth: { credits: 150, amount: 600000, label: '150 Credits' },   // ₦6,000 in kobo (₦40/lead)
+  pro: { credits: 500, amount: 1500000, label: '500 Credits' },     // ₦15,000 in kobo (₦30/lead)
+  mega: { credits: 1000, amount: 2500000, label: '1000 Credits' },  // ₦25,000 in kobo (₦25/lead)
 };
 
 export async function POST(request: NextRequest) {

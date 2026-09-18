@@ -54,7 +54,7 @@ const gettingStarted = [
     icon: CreditCard,
     title: 'Activate your account',
     steps: [
-      'Purchase SparkLeads from the checkout page (₦19,900 one-time)',
+      'Subscribe to SparkLeads from the checkout page (₦8,999/month)',
       'Check your email for the activation link',
       'Click the link to activate your account',
       'You\'ll be redirected to the dashboard — ready to search',
@@ -67,7 +67,7 @@ const gettingStarted = [
       'After activation, go to the Affiliate page in your dashboard',
       'Copy your unique referral link',
       'Share it on social media, WhatsApp, or with friends',
-      'Earn ₦9,950 (50%) for every sale made through your link',
+      'Earn ₦1,800 (20%) recurring commission every month for every active subscriber through your link',
     ],
   },
 ];
@@ -98,8 +98,8 @@ const faqSections = [
     category: 'Payments & Billing',
     items: [
       {
-        q: 'Is this a subscription?',
-        a: 'No. SparkLeads is a one-time payment of ₦19,900 for lifetime access. No monthly fees, no hidden charges.',
+        q: 'How does the subscription & rollover work?',
+        a: 'SparkLeads is an affordable monthly subscription at ₦8,999/month. Unused outreach tokens roll over automatically every month so you never lose them, and you can cancel anytime with one click.',
       },
       {
         q: 'What payment methods do you accept?',

@@ -16,7 +16,23 @@ export async function GET() {
     .eq('user_token', token)
     .single();
 
-  if (error || !affiliate) {
+  let currentAffiliate = affiliate;
+
+  if (!currentAffiliate) {
+    const { data: created } = await supabase
+      .from('affiliates')
+      .insert({
+        user_token: token,
+        referral_code: token.slice(0, 8),
+        total_referrals: 0,
+        total_earnings: 0,
+      })
+      .select('*')
+      .single();
+    currentAffiliate = created;
+  }
+
+  if (!currentAffiliate) {
     return NextResponse.json({ error: 'Affiliate record not found' }, { status: 404 });
   }
 
@@ -31,15 +47,15 @@ export async function GET() {
     .reduce((sum, p) => sum + Number(p.amount), 0);
 
   const conversionRate =
-    affiliate.total_referrals > 0
-      ? Math.round((affiliate.total_referrals / (affiliate.total_referrals * 3)) * 100)
+    currentAffiliate.total_referrals > 0
+      ? Math.round((currentAffiliate.total_referrals / (currentAffiliate.total_referrals * 3)) * 100)
       : 0;
 
   return NextResponse.json({
     affiliate: {
-      referral_code: affiliate.referral_code,
-      total_referrals: affiliate.total_referrals,
-      total_earnings: Number(affiliate.total_earnings),
+      referral_code: currentAffiliate.referral_code,
+      total_referrals: currentAffiliate.total_referrals,
+      total_earnings: Number(currentAffiliate.total_earnings),
       pending_payout: pendingPayout,
       conversion_rate: conversionRate,
     },

@@ -18,6 +18,7 @@ import {
   X,
   Check,
   BarChart3,
+  AlertCircle,
 } from 'lucide-react';
 import { Spinner } from '@/components/ui';
 import { useSearchStream } from '@/hooks/useSearchStream';
@@ -38,6 +39,8 @@ export default function FreeTrialPage() {
   const [signupPassword, setSignupPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [signupLoading, setSignupLoading] = useState(false);
+  const [emailAlreadyUsed, setEmailAlreadyUsed] = useState(false);
+  const [errorMessage, setErrorMessage] = useState('');
   const [sessionId, setSessionId] = useState('');
   const [searchCount, setSearchCount] = useState(0);
   const [query, setQuery] = useState('');
@@ -64,6 +67,12 @@ export default function FreeTrialPage() {
         localStorage.setItem('sparkleads_session_id', sid);
       }
       setSessionId(sid);
+
+      const params = new URLSearchParams(window.location.search);
+      const ref = params.get('ref') || params.get('referral');
+      if (ref && ref.trim()) {
+        localStorage.setItem('sparkleads_referral', ref.trim());
+      }
       setSearchCount(parseInt(localStorage.getItem('sparkleads_search_count') || '0', 10));
     }
   }, []);
@@ -101,9 +110,16 @@ export default function FreeTrialPage() {
       const data = await res.json();
 
       if (data.success) {
+        setEmailAlreadyUsed(false);
+        setErrorMessage('');
         toast.success(data.message || 'Account created! You have 5 free credits.');
         router.push('/dashboard');
       } else {
+        if (data.code === 'EMAIL_ALREADY_USED' || res.status === 409) {
+          setEmailAlreadyUsed(true);
+          setErrorMessage(data.error || 'This email has already been used for an account or free trial.');
+          setSignupPassword('');
+        }
         toast.error(data.error || 'Signup failed');
       }
     } catch {
@@ -175,14 +191,52 @@ export default function FreeTrialPage() {
                 <input
                   type="email"
                   value={signupEmail}
-                  onChange={(e) => setSignupEmail(e.target.value)}
+                  onChange={(e) => {
+                    setSignupEmail(e.target.value);
+                    if (emailAlreadyUsed) {
+                      setEmailAlreadyUsed(false);
+                      setErrorMessage('');
+                    }
+                  }}
                   placeholder="you@business.com"
                   required
                   autoFocus
-                  className="w-full pl-10 pr-4 py-3 bg-surface border border-border rounded-xl text-text placeholder:text-muted focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary"
+                  className={`w-full pl-10 pr-4 py-3 bg-surface border rounded-xl text-text placeholder:text-muted focus:outline-none focus:ring-2 transition-colors ${
+                    emailAlreadyUsed
+                      ? 'border-amber-500/70 focus:ring-amber-500/40 focus:border-amber-500'
+                      : 'border-border focus:ring-primary/50 focus:border-primary'
+                  }`}
                 />
               </div>
             </div>
+
+            {emailAlreadyUsed && (
+              <div className="p-4 rounded-xl bg-amber-500/10 border border-amber-500/30 text-amber-200 flex flex-col gap-2.5">
+                <div className="flex items-start gap-2.5">
+                  <AlertCircle className="w-5 h-5 text-amber-400 shrink-0 mt-0.5" />
+                  <div>
+                    <p className="text-sm font-semibold text-amber-300">Email Already Registered</p>
+                    <p className="text-xs text-amber-200/90 mt-1 leading-relaxed">
+                      {errorMessage || 'This email has already been used for an account or free trial. Each email can only claim free testing once.'}
+                    </p>
+                  </div>
+                </div>
+                <div className="flex flex-wrap items-center gap-2.5 pt-2.5 border-t border-amber-500/20 text-xs">
+                  <Link
+                    href={`/login?email=${encodeURIComponent(signupEmail.trim())}`}
+                    className="px-3.5 py-2 rounded-lg bg-primary text-white font-medium hover:bg-primary/90 transition-colors flex items-center gap-1.5"
+                  >
+                    Log in to account →
+                  </Link>
+                  <Link
+                    href={`/checkout?email=${encodeURIComponent(signupEmail.trim())}`}
+                    className="px-3.5 py-2 rounded-lg bg-surface2 border border-amber-500/40 text-amber-300 font-medium hover:bg-surface transition-colors flex items-center gap-1.5"
+                  >
+                    Upgrade (₦8,999/mo)
+                  </Link>
+                </div>
+              </div>
+            )}
 
             <div>
               <label className="block text-sm font-medium text-text mb-1.5">Password</label>
@@ -445,7 +499,7 @@ export default function FreeTrialPage() {
               Free searches used up
             </h2>
             <p className="text-muted mb-6">
-              Unlock unlimited searches, email extraction, and AI ad tools for a one-time payment.
+              Unlock unlimited searches, email extraction, and AI ad tools with a flexible monthly subscription.
             </p>
 
             <div className="flex flex-col gap-3 mb-6">
@@ -461,12 +515,12 @@ export default function FreeTrialPage() {
               href="/checkout"
               className="w-full inline-flex items-center justify-center gap-2 px-6 py-3.5 rounded-xl bg-primary text-white font-semibold hover:bg-primary/90 transition-colors"
             >
-              Get Full Access — ₦19,900
+              Get Full Access — ₦8,999/mo
               <ArrowRight className="w-4 h-4" />
             </Link>
 
             <p className="mt-3 text-xs text-muted">
-              One-time payment. Lifetime access. No subscription.
+              Monthly subscription. Unused tokens roll over. Cancel anytime.
             </p>
           </div>
         </div>
@@ -495,7 +549,7 @@ export default function FreeTrialPage() {
                 href="/checkout"
                 className="px-5 py-2.5 rounded-lg bg-primary text-white text-sm font-medium hover:bg-primary/90 transition-colors flex items-center gap-2 whitespace-nowrap"
               >
-                Get Full Access — ₦19,900
+                Get Full Access — ₦8,999/mo
                 <ArrowRight className="w-4 h-4" />
               </Link>
             </div>

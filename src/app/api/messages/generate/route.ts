@@ -24,6 +24,52 @@ function calculateCreditCost(leadCount: number): number {
   return Math.ceil(leadCount / 20) * 5;
 }
 
+function generateFallbackMessages(
+  leads: LeadInput[],
+  serviceDescription: string,
+  tone: string,
+  messageType: string
+) {
+  return leads.map((lead, index) => {
+    const loc = lead.address ? `in ${lead.address.split(',')[0].trim()}` : '';
+    const name = lead.name || 'there';
+    const bizType = lead.type || 'business';
+
+    let hook = '';
+    let painPoint = '';
+    if (!lead.website) {
+      hook = `noticed that ${name} doesn't have an active website yet`;
+      painPoint = `Most potential clients looking for ${bizType}s ${loc} search online first — having a modern site with direct booking/contact brings a steady flow of customers.`;
+    } else if (lead.rating && lead.rating < 4.0) {
+      hook = `noticed your Google profile rating is currently ${lead.rating}★`;
+      painPoint = `A quick reputation boost with automated customer reviews can push your profile past 4.5★ and help you dominate local search rankings.`;
+    } else {
+      hook = `came across ${name} while searching top ${bizType} services ${loc}`;
+      painPoint = `Your business has great potential to capture more clients online with a tailored digital presence.`;
+    }
+
+    const whatsapp = tone === 'bold'
+      ? `Hi ${name}! ${hook}. ${serviceDescription}. We can have this live and delivering results in 5 days. Are you free for a quick 5-min chat?`
+      : tone === 'professional'
+      ? `Hello Team ${name}, I ${hook}. ${serviceDescription}. I would welcome the opportunity to share a brief proposal. Would you be open to a short call this week?`
+      : `Hey ${name}! Hope things are going well ${loc}. I ${hook} and wanted to reach out. ${serviceDescription}. Would love to help you grow. Can I send over a quick preview?`;
+
+    const emailSubject = !lead.website
+      ? `Quick idea for ${name}'s website & online booking`
+      : `Growth opportunity for ${name} ${loc}`;
+
+    const emailBody = `Hi ${name},\n\nI was looking into ${bizType}s ${loc} and ${hook}.\n\n${painPoint}\n\n${serviceDescription}\n\nI would love to put together a complimentary quick mockup for ${name}. Would you be open to taking a look later this week?\n\nBest regards,\nOutreach Team`;
+
+    return {
+      lead_index: index,
+      whatsapp_message: whatsapp.slice(0, 320),
+      email_subject: emailSubject,
+      email_body: emailBody,
+      personalization_hook: hook,
+    };
+  });
+}
+
 export async function POST(request: NextRequest) {
   const userToken = getToken();
   if (!userToken) {
@@ -131,9 +177,13 @@ Each must be genuinely different based on that business's specific details.`;
       maxOutputTokens: 8192,
     });
   } catch (err) {
-    const errMsg = err instanceof Error ? err.message : String(err);
-    console.error('AI message generation failed:', errMsg);
-    return NextResponse.json({ error: errMsg.includes('429') ? 'AI service is busy. Please wait a moment and try again.' : errMsg }, { status: 500 });
+    console.warn('AI provider unavailable, utilizing fallback generation engine:', err);
+    messages = generateFallbackMessages(
+      leads,
+      serviceDescription.trim(),
+      tone || 'friendly',
+      messageType || 'whatsapp'
+    );
   }
 
   // Map messages back to leads

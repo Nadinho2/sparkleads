@@ -44,7 +44,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'Valid email is required' }, { status: 400 });
   }
 
-  const amount = 1990000; // ₦19,900 in kobo
+  const amount = 899900; // ₦8,999 in kobo (monthly subscription)
   const currency = 'NGN';
   const reference = `sparkleads_${uuidv4().slice(0, 12)}_${Date.now()}`;
 

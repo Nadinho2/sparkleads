@@ -104,11 +104,34 @@ export function Sidebar({ userToken }: SidebarProps) {
     'AI Messages': pathname.startsWith('/dashboard/messages'),
   });
 
+  const [agencyInfo, setAgencyInfo] = useState<{
+    hasAgency: boolean;
+    workspaceId: string | null;
+    name: string | null;
+  }>({
+    hasAgency: false,
+    workspaceId: null,
+    name: null,
+  });
+
   useEffect(() => {
     fetch('/api/credits/ensure')
       .then((res) => res.json())
       .then((data) => setBalance(data.balance ?? 0))
       .catch(() => setBalance(0));
+
+    fetch('/api/account/context')
+      .then((res) => res.json())
+      .then((data) => {
+        if (data.hasAgency || data.agencyWorkspaceId) {
+          setAgencyInfo({
+            hasAgency: true,
+            workspaceId: data.agencyWorkspaceId,
+            name: data.agencyWorkspaceName,
+          });
+        }
+      })
+      .catch(() => {});
 
     fetch('/api/reminders/list?status=pending')
       .then((res) => res.json())
@@ -122,6 +145,18 @@ export function Sidebar({ userToken }: SidebarProps) {
       })
       .catch(() => setReminderCount(0));
   }, []);
+
+  async function handleSwitchToAgency(e: React.MouseEvent) {
+    if (agencyInfo.hasAgency && agencyInfo.workspaceId) {
+      e.preventDefault();
+      await fetch('/api/account/switch', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ workspaceId: agencyInfo.workspaceId }),
+      });
+      window.location.href = '/agency';
+    }
+  }
 
   function handleLogout() {
     document.cookie = 'sparkleads_token=; path=/; max-age=0';
@@ -247,21 +282,35 @@ export function Sidebar({ userToken }: SidebarProps) {
       {/* Bottom section */}
       <div className="px-3 py-3 border-t border-border space-y-0.5">
         {bottomItems.map((item) => {
-          const isActive = item.href ? pathname.startsWith(item.href) : false;
+          const isAgencyItem = item.label === 'Agency Workspace';
+          const href = isAgencyItem
+            ? (agencyInfo.hasAgency ? '/agency' : '/onboarding/agency')
+            : item.href!;
+          const label = isAgencyItem && agencyInfo.hasAgency && agencyInfo.name
+            ? agencyInfo.name
+            : item.label;
+          const isActive = href ? pathname.startsWith(href) : false;
+
           return (
             <Link
-              key={item.href}
-              href={item.href!}
+              key={item.label}
+              href={href}
+              onClick={isAgencyItem && agencyInfo.hasAgency ? handleSwitchToAgency : undefined}
               className={`flex items-center justify-between px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
                 isActive
                   ? 'bg-primary/10 text-primary'
                   : 'text-muted hover:text-text hover:bg-surface2'
               }`}
             >
-              <div className="flex items-center gap-3">
-                <item.icon className="w-4 h-4" />
-                {item.label}
+              <div className="flex items-center gap-3 truncate">
+                <item.icon className="w-4 h-4 shrink-0" />
+                <span className="truncate">{label}</span>
               </div>
+              {isAgencyItem && agencyInfo.hasAgency && (
+                <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded-full bg-primary/10 text-primary border border-primary/20 shrink-0">
+                  Agency
+                </span>
+              )}
               {item.href === '/dashboard/credits' && balance !== null && (
                 <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full ${
                   balance === 0 ? 'bg-red-500/20 text-red-400'

@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import { UserPlus, UserCircle, Check, Copy, CheckCircle, MessageCircle, Send, ClipboardCopy, Sparkles } from 'lucide-react';
+import { UserPlus, UserCircle, Check, Copy, CheckCircle, MessageCircle, Send, ClipboardCopy, Sparkles, Trash2, LogOut } from 'lucide-react';
 import { Spinner } from '@/components/ui';
 import { toast } from 'sonner';
 
@@ -29,7 +29,7 @@ interface PendingInvite {
 interface GeneratedInvite {
   inviteLink: string;
   inviteToken: string;
-  expiresAt: string;
+  expiresAt?: string | null;
   role: string;
   creditLimit: number;
   email?: string;
@@ -50,21 +50,13 @@ function timeAgo(dateStr: string, future = false) {
   return `${days}d${future ? ' remaining' : ' ago'}`;
 }
 
-function getInviteExpiryDate(createdAt: string) {
-  const d = new Date(createdAt);
-  d.setDate(d.getDate() + 30);
-  return d.toISOString();
-}
-
-function isInviteExpired(createdAt: string) {
-  return new Date() > new Date(getInviteExpiryDate(createdAt));
-}
-
 export default function TeamPage() {
   const [members, setMembers] = useState<Member[]>([]);
   const [pendingInvites, setPendingInvites] = useState<PendingInvite[]>([]);
   const [loading, setLoading] = useState(true);
   const [seatsInfo, setSeatsInfo] = useState({ used: 0, limit: 3 });
+  const [currentUser, setCurrentUser] = useState<{ id: string; role: string; name: string } | null>(null);
+  const [leavingWorkspace, setLeavingWorkspace] = useState(false);
 
   // Invite form state
   const [inviteEmail, setInviteEmail] = useState('');
@@ -80,16 +72,21 @@ export default function TeamPage() {
 
   const loadData = useCallback(async () => {
     try {
-      const [membersRes, invitesRes] = await Promise.all([
+      const [membersRes, invitesRes, contextRes] = await Promise.all([
         fetch('/api/agency/members'),
         fetch('/api/agency/team/invites'),
+        fetch('/api/account/context'),
       ]);
       const membersData = await membersRes.json();
       const invitesData = await invitesRes.json();
+      const contextData = await contextRes.json();
 
       setMembers(membersData.members || []);
       setSeatsInfo({ used: (membersData.members || []).filter((m: Member) => m.status === 'active').length, limit: membersData.seatsLimit || 3 });
       setPendingInvites(invitesData.invites || []);
+      if (contextData.member) {
+        setCurrentUser(contextData.member);
+      }
     } catch { /* silent */ }
     setLoading(false);
   }, []);
@@ -186,6 +183,46 @@ export default function TeamPage() {
     setAllocating(false);
   };
 
+  const handleRemoveMember = async (memberId: string, memberName: string) => {
+    if (!confirm(`Are you sure you want to remove ${memberName} from this workspace? They will lose access immediately.`)) {
+      return;
+    }
+    try {
+      const res = await fetch(`/api/agency/members?memberId=${memberId}`, { method: 'DELETE' });
+      const data = await res.json();
+      if (res.ok) {
+        toast.success(`${memberName} has been removed`);
+        loadData();
+      } else {
+        toast.error(data.error || 'Failed to remove member');
+      }
+    } catch {
+      toast.error('Something went wrong');
+    }
+  };
+
+  const handleLeaveWorkspace = async () => {
+    if (!currentUser) return;
+    if (!confirm('Are you sure you want to leave this workspace? You will lose access to its shared leads, credits, and campaigns.')) {
+      return;
+    }
+    setLeavingWorkspace(true);
+    try {
+      const res = await fetch(`/api/agency/members?memberId=${currentUser.id}`, { method: 'DELETE' });
+      const data = await res.json();
+      if (res.ok) {
+        toast.success('You have left the workspace');
+        window.location.href = '/login';
+      } else {
+        toast.error(data.error || 'Failed to leave workspace');
+        setLeavingWorkspace(false);
+      }
+    } catch {
+      toast.error('Something went wrong');
+      setLeavingWorkspace(false);
+    }
+  };
+
   const appUrl = typeof window !== 'undefined' ? window.location.origin : '';
 
   if (loading) return <div className="flex justify-center py-20"><Spinner size="lg" /></div>;
@@ -202,7 +239,7 @@ export default function TeamPage() {
         <h3 className="font-semibold text-text mb-1">Invite Team Member</h3>
         <p className="text-sm text-muted mb-4">
           Enter their email, set their role and credit limit, then share the generated link.
-          Link expires in 30 days.
+          Invite links are permanent until accepted or revoked.
         </p>
 
         <div className="space-y-4 mb-4">
@@ -280,7 +317,7 @@ export default function TeamPage() {
           <div className="flex items-center gap-2 mb-3">
             <CheckCircle size={18} className="text-green-400" />
             <p className="font-semibold text-green-400">Invite link ready</p>
-            <span className="text-xs text-muted ml-auto">Expires in 30 days</span>
+            <span className="text-xs text-muted ml-auto">Permanent link</span>
           </div>
 
           {/* Link display */}
@@ -307,7 +344,7 @@ export default function TeamPage() {
               <button
                 onClick={() => {
                   const message = encodeURIComponent(
-                    `Hi! You've been invited to join our team on SparkLeads as a ${generatedInvite.role}.\n\nClick this link to set up your account:\n${generatedInvite.inviteLink}\n\nThe link expires in 30 days.`
+                    `Hi! You've been invited to join our team on SparkLeads as a ${generatedInvite.role}.\n\nClick this link to set up your account:\n${generatedInvite.inviteLink}`
                   );
                   window.open(`https://wa.me/?text=${message}`, '_blank');
                 }}
@@ -330,7 +367,7 @@ export default function TeamPage() {
 
               <button
                 onClick={() => {
-                  const message = `Hi! You've been invited to join our team on SparkLeads as a ${generatedInvite.role}.\n\nClick this link to set up your account:\n${generatedInvite.inviteLink}\n\nThe link expires in 30 days.`;
+                  const message = `Hi! You've been invited to join our team on SparkLeads as a ${generatedInvite.role}.\n\nClick this link to set up your account:\n${generatedInvite.inviteLink}`;
                     navigator.clipboard.writeText(message);
                   toast.success('Full message copied — paste it anywhere');
                 }}
@@ -367,48 +404,33 @@ export default function TeamPage() {
                     <p className="text-sm text-text capitalize">
                       {invite.role} invite
                       {invite.email && <span className="normal-case text-muted ml-1">({invite.email})</span>}
-                      {isInviteExpired(invite.created_at) && (
-                        <span className="ml-2 text-xs px-2 py-0.5 rounded-full bg-red-500/20 text-red-400">expired</span>
-                      )}
                     </p>
                     <p className="text-xs text-muted">
-                      Created {timeAgo(invite.created_at)} · {isInviteExpired(invite.created_at) ? 'Expired' : `Expires ${timeAgo(getInviteExpiryDate(invite.created_at), true)}`}
+                      Created {timeAgo(invite.created_at)} · Permanent link
                     </p>
                   </div>
                 </div>
                 <div className="flex items-center gap-2">
-                  {isInviteExpired(invite.created_at) ? (
-                    <button
-                      onClick={() => reissueInvite(invite.id)}
-                      disabled={reissuingId === invite.id}
-                      className="text-xs text-primary hover:underline disabled:opacity-50"
-                    >
-                      {reissuingId === invite.id ? 'Refreshing...' : 'Refresh Link'}
-                    </button>
-                  ) : (
-                    <>
-                      <button
-                        onClick={() => {
-                          navigator.clipboard.writeText(`${appUrl}/join?token=${invite.invite_token}`);
-                          toast.success('Invite link copied');
-                        }}
-                        className="text-xs text-primary hover:underline"
-                      >
-                        Copy Link
-                      </button>
-                      <button
-                        onClick={() => {
-                          const message = encodeURIComponent(
-                            `Reminder: You've been invited to join SparkLeads.\n\nJoin here: ${appUrl}/join?token=${invite.invite_token}`
-                          );
-                          window.open(`https://wa.me/?text=${message}`, '_blank');
-                        }}
-                        className="text-xs text-primary hover:underline"
-                      >
-                        Resend
-                      </button>
-                    </>
-                  )}
+                  <button
+                    onClick={() => {
+                      navigator.clipboard.writeText(`${appUrl}/join?token=${invite.invite_token}`);
+                      toast.success('Invite link copied');
+                    }}
+                    className="text-xs text-primary hover:underline"
+                  >
+                    Copy Link
+                  </button>
+                  <button
+                    onClick={() => {
+                      const message = encodeURIComponent(
+                        `Reminder: You've been invited to join SparkLeads.\n\nJoin here: ${appUrl}/join?token=${invite.invite_token}`
+                      );
+                      window.open(`https://wa.me/?text=${message}`, '_blank');
+                    }}
+                    className="text-xs text-primary hover:underline"
+                  >
+                    Resend
+                  </button>
                   <button
                     onClick={() => revokeInvite(invite.invite_token)}
                     className="text-xs text-red-400 hover:underline"
@@ -463,6 +485,15 @@ export default function TeamPage() {
                       <button onClick={() => updateMember(m.id, { status: m.status === 'suspended' ? 'active' : 'suspended' })} className="text-xs text-muted hover:text-text">
                         {m.status === 'suspended' ? 'Activate' : 'Suspend'}
                       </button>
+                      {m.role !== 'owner' && (currentUser?.role === 'owner' || (currentUser?.role === 'manager' && m.role === 'member')) && (
+                        <button
+                          onClick={() => handleRemoveMember(m.id, m.name)}
+                          className="flex items-center gap-1 text-xs text-red-400 hover:text-red-300 hover:underline ml-1"
+                          title="Remove from agency"
+                        >
+                          <Trash2 size={12} /> Remove
+                        </button>
+                      )}
                     </div>
                   </td>
                 </tr>
@@ -503,7 +534,7 @@ export default function TeamPage() {
                   <span className="text-sm font-medium text-text">{m.credits_used}{m.credit_limit > 0 ? ` / ${m.credit_limit}` : ''}</span>
                 </div>
               </div>
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2 flex-wrap">
                 <button
                   onClick={() => setAllocatingMember(m)}
                   className="flex items-center gap-1 text-xs text-primary hover:underline"
@@ -512,10 +543,18 @@ export default function TeamPage() {
                 </button>
                 <button
                   onClick={() => updateMember(m.id, { status: m.status === 'suspended' ? 'active' : 'suspended' })}
-                  className="text-xs text-red-400 hover:underline"
+                  className="text-xs text-muted hover:text-text"
                 >
                   {m.status === 'suspended' ? 'Activate' : 'Suspend'}
                 </button>
+                {m.role !== 'owner' && (currentUser?.role === 'owner' || (currentUser?.role === 'manager' && m.role === 'member')) && (
+                  <button
+                    onClick={() => handleRemoveMember(m.id, m.name)}
+                    className="flex items-center gap-1 text-xs text-red-400 hover:underline"
+                  >
+                    <Trash2 size={12} /> Remove
+                  </button>
+                )}
               </div>
             </div>
           ))}
@@ -563,6 +602,25 @@ export default function TeamPage() {
               </button>
             </div>
           </div>
+        </div>
+      )}
+
+      {/* Leave Workspace Option for non-owners */}
+      {currentUser && currentUser.role !== 'owner' && (
+        <div className="rounded-xl border border-red-500/20 bg-red-500/5 p-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 mt-6">
+          <div>
+            <p className="text-sm font-semibold text-text">Leave this Agency Workspace</p>
+            <p className="text-xs text-muted">
+              Once you leave, you will immediately lose access to this agency, its leads, and allocated credits.
+            </p>
+          </div>
+          <button
+            onClick={handleLeaveWorkspace}
+            disabled={leavingWorkspace}
+            className="flex items-center gap-1.5 px-3.5 py-2 rounded-lg bg-red-500/10 text-red-400 hover:bg-red-500/20 text-xs font-semibold transition-colors disabled:opacity-50 shrink-0"
+          >
+            <LogOut size={13} /> {leavingWorkspace ? 'Leaving...' : 'Leave Workspace'}
+          </button>
         </div>
       )}
     </div>

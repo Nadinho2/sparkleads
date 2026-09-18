@@ -14,12 +14,28 @@ import { Footer } from '@/components/layout/Footer';
 export default async function AgencyLayout({ children }: { children: React.ReactNode }) {
   const cookieStore = cookies();
   const token = cookieStore.get('sparkleads_token')?.value;
-  const workspaceId = cookieStore.get('sparkleads_workspace')?.value;
+  let workspaceId = cookieStore.get('sparkleads_workspace')?.value;
 
   if (!token) redirect('/freetrial');
-  if (!workspaceId) redirect('/dashboard');
 
   const supabase = createSupabaseAdmin();
+
+  // If no workspace cookie, check if user belongs to an active workspace
+  if (!workspaceId) {
+    const { data: memberRecord } = await supabase
+      .from('workspace_members')
+      .select('workspace_id')
+      .eq('user_token', token)
+      .eq('status', 'active')
+      .limit(1)
+      .maybeSingle();
+
+    if (memberRecord?.workspace_id) {
+      workspaceId = memberRecord.workspace_id;
+    } else {
+      redirect('/onboarding/agency');
+    }
+  }
 
   const { data: member } = await supabase
     .from('workspace_members')
@@ -29,7 +45,21 @@ export default async function AgencyLayout({ children }: { children: React.React
     .eq('status', 'active')
     .single();
 
-  if (!member || !member.workspaces) redirect('/dashboard');
+  if (!member || !member.workspaces) {
+    // If specific workspace not found, check if they have another active one
+    const { data: fallbackMember } = await supabase
+      .from('workspace_members')
+      .select('*, workspaces(*)')
+      .eq('user_token', token)
+      .eq('status', 'active')
+      .limit(1)
+      .maybeSingle();
+
+    if (fallbackMember?.workspaces) {
+      redirect('/agency');
+    }
+    redirect('/onboarding/agency');
+  }
 
   const workspace = member.workspaces as unknown as { id: string; name: string; logo_url: string | null; brand_color: string; credits_remaining: number; seats_limit: number };
   const role = member.role as string;

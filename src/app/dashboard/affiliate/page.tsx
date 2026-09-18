@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import {
   Users,
-  DollarSign,
+  Banknote,
   Clock,
   TrendingUp,
   Copy,
@@ -56,7 +56,7 @@ export default function AffiliatePage() {
     : '';
 
   const tweetTemplate = affiliate
-    ? `I've been using @SparkLeads to find 200+ business leads in 60 seconds. Real phone numbers, emails, addresses — all for a one-time ₦19,900. No monthly fees. Check it out: ${referralLink}`
+    ? `I've been using @SparkLeads to find 200+ business leads in 60 seconds. Real phone numbers, emails, addresses — all for ₦8,999/month with rollover tokens. Check it out: ${referralLink}`
     : '';
 
   useEffect(() => {
@@ -197,10 +197,10 @@ export default function AffiliatePage() {
         <div className="p-5 rounded-xl border border-border bg-surface">
           <div className="flex items-center gap-3 mb-3">
             <div className="w-10 h-10 rounded-lg bg-success/10 flex items-center justify-center">
-              <DollarSign className="w-5 h-5 text-success" />
+              <Banknote className="w-5 h-5 text-success" />
             </div>
           </div>
-          <p className="text-2xl font-bold text-text">${affiliate.total_earnings.toFixed(2)}</p>
+          <p className="text-2xl font-bold text-text">₦{affiliate.total_earnings.toLocaleString()}</p>
           <p className="text-sm text-muted">Total Earnings</p>
         </div>
 
@@ -210,7 +210,7 @@ export default function AffiliatePage() {
               <Clock className="w-5 h-5 text-warning" />
             </div>
           </div>
-          <p className="text-2xl font-bold text-text">${affiliate.pending_payout.toFixed(2)}</p>
+          <p className="text-2xl font-bold text-text">₦{affiliate.pending_payout.toLocaleString()}</p>
           <p className="text-sm text-muted">Pending Payout</p>
         </div>
 
@@ -296,19 +296,19 @@ export default function AffiliatePage() {
           </div>
           <div className="p-5 rounded-xl border border-border bg-surface text-center">
             <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center mx-auto mb-3">
-              <DollarSign className="w-6 h-6 text-primary" />
+              <Banknote className="w-6 h-6 text-primary" />
             </div>
             <h4 className="font-semibold text-text mb-1">Get paid</h4>
-            <p className="text-sm text-muted">Earn ₦9,950 for every sale. No cap on earnings.</p>
+            <p className="text-sm text-muted">Earn ₦1,800 every month for every active subscriber. Recurring income.</p>
           </div>
         </div>
         <div className="mt-4 flex items-center gap-2">
           <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-primary/10 text-primary text-sm font-medium">
             <Zap className="w-4 h-4" />
-            50% commission = ₦9,950 per sale
+            20% recurring commission = ₦1,800/mo per subscriber
           </span>
           <span className="inline-flex items-center px-3 py-1.5 rounded-full bg-success/10 text-success text-sm font-medium">
-            No cap on earnings
+            Recurring monthly payouts
           </span>
         </div>
       </div>
@@ -332,7 +332,7 @@ export default function AffiliatePage() {
               >
                 <div>
                   <p className="text-sm font-medium text-text">
-                    ${Number(payout.amount).toFixed(2)}
+                    ₦{Number(payout.amount).toLocaleString()}
                   </p>
                   <p className="text-xs text-muted">{formatDate(payout.created_at)}</p>
                 </div>
@@ -351,7 +351,7 @@ export default function AffiliatePage() {
         {!showPayoutForm ? (
           <button
             onClick={() => setShowPayoutForm(true)}
-            disabled={affiliate.total_earnings < 10}
+            disabled={affiliate.total_earnings < 5000}
             className="flex items-center gap-2 px-5 py-2.5 rounded-lg bg-primary text-white text-sm font-medium hover:bg-primary/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
           >
             <Send className="w-4 h-4" />
@@ -408,9 +408,9 @@ export default function AffiliatePage() {
           </div>
         )}
 
-        {affiliate.total_earnings < 10 && !showPayoutForm && (
+        {affiliate.total_earnings < 5000 && !showPayoutForm && (
           <p className="mt-2 text-xs text-muted">
-            Minimum payout is ₦13,300. You need ${(10 - affiliate.total_earnings).toFixed(2)} more.
+            Minimum payout is ₦5,000. You need ₦{(5000 - affiliate.total_earnings).toLocaleString()} more.
           </p>
         )}
       </div>

@@ -19,7 +19,7 @@ export function setWorkspaceCookie(workspaceId: string | null) {
     httpOnly: true,
     secure: process.env.NODE_ENV === 'production',
     sameSite: 'lax' as const,
-    maxAge: workspaceId ? 30 * 24 * 60 * 60 : 0,
+    maxAge: workspaceId ? 365 * 24 * 60 * 60 : 0,
     path: '/',
   };
 }

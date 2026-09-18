@@ -39,9 +39,10 @@ const PLAN_DETAILS: Record<string, { name: string; price: string; credits: numbe
 };
 
 const CREDIT_PACKS = [
-  { credits: 50, price: 6600, label: '50 Credits' },
-  { credits: 150, price: 13300, label: '150 Credits' },
-  { credits: 500, price: 33200, label: '500 Credits' },
+  { credits: 50, price: 2500, label: '50 Credits' },
+  { credits: 150, price: 6000, label: '150 Credits' },
+  { credits: 500, price: 15000, label: '500 Credits' },
+  { credits: 1000, price: 25000, label: '1,000 Credits' },
 ];
 
 export default function BillingPage() {
@@ -108,8 +109,8 @@ export default function BillingPage() {
   if (loading) return <div className="flex justify-center py-20"><Spinner size="lg" /></div>;
 
   const plan = PLAN_DETAILS[workspace?.plan || 'starter'] || PLAN_DETAILS.starter;
-  const creditsUsed = (workspace?.monthly_credits || 0) - (workspace?.credits_remaining || 0);
-  const usagePercent = workspace?.monthly_credits ? Math.round((creditsUsed / workspace.monthly_credits) * 100) : 0;
+  const creditsUsed = Math.max(0, (workspace?.monthly_credits || 0) - (workspace?.credits_remaining || 0));
+  const usagePercent = workspace?.monthly_credits ? Math.min(100, Math.round((creditsUsed / workspace.monthly_credits) * 100)) : 0;
 
   return (
     <div className="space-y-8 max-w-4xl">

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createSupabaseAdmin } from '@/lib/supabase';
 import { getToken } from '@/lib/auth';
+import { createNotification } from '@/lib/notifications';
 import { v4 as uuidv4 } from 'uuid';
 
 export async function POST(request: NextRequest) {
@@ -24,9 +25,9 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  if (amount < 10) {
+  if (amount < 5000) {
     return NextResponse.json(
-      { error: 'Minimum payout is ₦13,300' },
+      { error: 'Minimum payout is ₦5,000' },
       { status: 400 }
     );
   }
@@ -61,6 +62,13 @@ export async function POST(request: NextRequest) {
       { status: 500 }
     );
   }
+
+  await createNotification(token, {
+    title: '⏳ Payout Request Submitted',
+    message: `Your withdrawal request of ₦${amount.toLocaleString()} has been submitted and is pending admin review.`,
+    type: 'payout',
+    link: '/dashboard/affiliate',
+  });
 
   return NextResponse.json({ success: true });
 }

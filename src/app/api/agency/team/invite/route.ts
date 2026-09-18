@@ -81,18 +81,16 @@ export async function POST(request: NextRequest) {
   // Temporary user_token placeholder for the invite record (replaced when member accepts)
   const placeholderUserToken = `invite_${crypto.randomUUID()}`;
 
-  // Calculate expiry (30 days)
-  const expiresAt = new Date();
-  expiresAt.setDate(expiresAt.getDate() + 30);
+  // Invites do not expire — members remain permanently unless revoked or removed
+  const expiresAt = null;
 
   // creditLimit of 0 means 0 credits (no free credits), not unlimited
   const finalCreditLimit = creditLimit !== undefined ? creditLimit : 0;
 
-  console.log('[INVITE] Creating invite:', {
+  console.log('[INVITE] Creating permanent invite:', {
     workspaceId,
     role: role || 'member',
     email: normalizedEmail,
-    expiry: expiresAt.toISOString(),
   });
 
   const { data: inserted, error: insertError } = await supabase
@@ -106,7 +104,7 @@ export async function POST(request: NextRequest) {
       credit_limit: finalCreditLimit,
       status: 'invited',
       user_token: placeholderUserToken,
-      invite_expires_at: expiresAt.toISOString(),
+      invite_expires_at: null,
     })
     .select()
     .single();
@@ -157,7 +155,7 @@ export async function POST(request: NextRequest) {
   return NextResponse.json({
     inviteLink,
     inviteToken,
-    expiresAt: expiresAt.toISOString(),
+    expiresAt: null,
     role: role || 'member',
     creditLimit: finalCreditLimit,
     email: normalizedEmail,

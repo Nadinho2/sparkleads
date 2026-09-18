@@ -57,15 +57,6 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'Invite already used or revoked' }, { status: 409 });
   }
 
-  // Check expiry — only if invite_expires_at is set
-  const inviteExpires = member.invite_expires_at as string | null;
-  if (inviteExpires) {
-    const expiryDate = new Date(inviteExpires);
-    const now = new Date();
-    if (now > expiryDate) {
-      return NextResponse.json({ error: 'Invite has expired' }, { status: 410 });
-    }
-  }
 
   // Reuse existing user_token if they already have an account (activations record)
   // This ensures they can log in from any device using email + password
@@ -142,7 +133,7 @@ export async function POST(request: NextRequest) {
     httpOnly: true,
     secure: process.env.NODE_ENV === 'production',
     sameSite: 'lax',
-    maxAge: 30 * 24 * 60 * 60,
+    maxAge: 365 * 24 * 60 * 60,
     path: '/',
   });
   response.cookies.set(setWorkspaceCookie(member.workspace_id as string));

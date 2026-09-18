@@ -148,25 +148,26 @@ const testimonials = [
 ];
 
 const pricingFeatures = [
-  'Unlimited searches forever',
+  'Unlimited searches every month',
   '200+ leads per search',
-  'Real phone numbers & emails',
+  'Monthly outreach tokens included',
+  'Unused tokens roll over automatically',
+  'Real phone numbers & verified emails',
   'One-click CSV export',
-  'Lead status tracking',
+  'Lead status tracking & CRM pipeline',
   'Email discovery engine',
-  '195+ countries supported',
-  'Priority support',
-  'Lifetime updates included',
+  'Priority customer support',
+  'Cancel anytime with 1 click',
 ];
 
 const faqItems = [
   {
-    question: 'What exactly do I get?',
-    answer: 'You get lifetime access to SparkLeads — unlimited searches, 200+ leads per search with real phone numbers, emails, addresses, and ratings. Plus CSV export, lead tracking, and email discovery.',
+    question: 'What exactly do I get with the monthly subscription?',
+    answer: 'You get full access to SparkLeads — unlimited searches, 200+ leads per search with real phone numbers, verified emails, addresses, and ratings. Plus CSV export, lead tracking, email discovery, and monthly outreach tokens that roll over automatically every month.',
   },
   {
-    question: 'Is this a subscription?',
-    answer: 'No! It\'s a one-time payment of ₦19,900 for lifetime access. No monthly fees, no hidden charges, no upsells. Pay once, use forever.',
+    question: 'How does the monthly subscription and rollover work?',
+    answer: 'It\'s a flat monthly subscription of ₦8,999/month. You get unlimited searches and monthly outreach tokens. Any tokens you don\'t use roll over automatically to next month — your credits never expire. You can cancel anytime with one click.',
   },
   {
     question: 'Where does the data come from?',
@@ -239,6 +240,16 @@ export default function Home() {
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 
+  // Save referral code to localStorage if user arrives via ?ref= or ?referral=
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const params = new URLSearchParams(window.location.search);
+    const ref = params.get('ref') || params.get('referral');
+    if (ref && ref.trim()) {
+      localStorage.setItem('sparkleads_referral', ref.trim());
+    }
+  }, []);
+
   return (
     <main ref={containerRef} className="min-h-screen bg-background text-text">
       <script
@@ -254,8 +265,8 @@ export default function Home() {
             brand: { '@type': 'Brand', name: 'SparkLeads' },
             offers: {
               '@type': 'Offer',
-              price: '15.00',
-              priceCurrency: 'USD',
+              price: '8999',
+              priceCurrency: 'NGN',
               availability: 'https://schema.org/InStock',
             },
             aggregateRating: {
@@ -711,24 +722,25 @@ export default function Home() {
           ) : (
             <>
               <div className="text-center mb-16">
-                <h2 className="text-3xl sm:text-4xl font-bold text-text mb-4">Simple, Transparent Pricing</h2>
+                <h2 className="text-3xl sm:text-4xl font-bold text-text mb-4">Simple, Transparent Subscription</h2>
                 <p className="text-lg text-muted max-w-xl mx-auto">
-                  No subscriptions. No hidden fees. Pay once, use forever.
+                  Affordable monthly plan. Unused tokens roll over automatically. Cancel anytime.
                 </p>
               </div>
 
               <div className="max-w-lg mx-auto">
                 <div className="relative p-8 rounded-2xl border-2 border-primary bg-surface animate-pulse-glow">
                   <div className="absolute -top-4 left-1/2 -translate-x-1/2 px-4 py-1 bg-primary text-white text-sm font-bold rounded-full">
-                    LIFETIME ACCESS
+                    MONTHLY SUBSCRIPTION
                   </div>
 
                   <div className="text-center mt-4 mb-8">
                     <div className="flex items-center justify-center gap-3 mb-2">
-                      <span className="text-2xl text-muted line-through">₦59,700</span>
-                      <span className="text-5xl font-bold text-text">₦19,900</span>
+                      <span className="text-2xl text-muted line-through">₦19,900</span>
+                      <span className="text-5xl font-bold text-text">₦8,999</span>
+                      <span className="text-muted text-lg">/month</span>
                     </div>
-                    <p className="text-sm text-muted">One-time payment &bull; Lifetime access</p>
+                    <p className="text-sm text-muted">Monthly subscription &bull; Unused tokens roll over</p>
                   </div>
 
                   <ul className="space-y-4 mb-8">
@@ -784,10 +796,10 @@ export default function Home() {
                   Affiliate Program
                 </div>
                 <h2 className="text-3xl sm:text-4xl font-bold text-text mb-4">
-                  Earn 50% Commission
+                  Earn 20% Recurring Commission
                 </h2>
                 <p className="text-lg text-muted mb-6">
-                  Share SparkLeads with your audience and earn ₦9,950 for every sale. It&apos;s that simple.
+                  Share SparkLeads with your audience and earn ₦1,800 every month for every active subscriber. It&apos;s that simple.
                 </p>
                 <Link
                   href={isAuthenticated ? '/dashboard/affiliate' : '/freetrial'}
@@ -800,12 +812,12 @@ export default function Home() {
 
               <div className="grid grid-cols-2 gap-3 sm:gap-4">
                 <div className="p-4 sm:p-6 rounded-xl bg-surface2 text-center">
-                  <div className="text-2xl sm:text-3xl font-bold text-primary mb-1">50%</div>
-                  <div className="text-xs sm:text-sm text-muted">Commission</div>
+                  <div className="text-2xl sm:text-3xl font-bold text-primary mb-1">20%</div>
+                  <div className="text-xs sm:text-sm text-muted">Recurring Commission</div>
                 </div>
                 <div className="p-4 sm:p-6 rounded-xl bg-surface2 text-center">
-                  <div className="text-2xl sm:text-3xl font-bold text-primary mb-1">₦9,950</div>
-                  <div className="text-xs sm:text-sm text-muted">Per Referral</div>
+                  <div className="text-2xl sm:text-3xl font-bold text-primary mb-1">₦1,800</div>
+                  <div className="text-xs sm:text-sm text-muted">Per Referral / Mo</div>
                 </div>
               </div>
             </div>

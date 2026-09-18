@@ -137,7 +137,7 @@ export async function POST(request: NextRequest) {
         return NextResponse.json({ error: 'Incorrect password' }, { status: 401 });
       }
 
-      const response = NextResponse.json({ success: true });
+      const response = NextResponse.json({ success: true, redirect: '/agency' });
       response.cookies.set('sparkleads_token', workspaceMember.user_token, {
         httpOnly: true,
         secure: process.env.NODE_ENV === 'production',

@@ -43,35 +43,36 @@ export async function POST(request: NextRequest) {
   const supabase = createSupabaseAdmin();
 
   // Check if email already has an account
-  const { data: existing } = await supabase
+  const { data: existingRows, error: checkError } = await supabase
     .from('activations')
     .select('user_token')
     .eq('email', email)
-    .eq('used', true)
-    .limit(1)
-    .single();
+    .limit(1);
 
-  if (existing?.user_token) {
-    // Already has an account — just log them in
-    const response = NextResponse.json({
-      success: true,
-      message: 'Account already exists. Logged in.',
-    });
-    response.cookies.set('sparkleads_token', existing.user_token, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: 'lax',
-      maxAge: 60 * 60 * 24 * 365,
-      path: '/',
-    });
-    return response;
+  if (checkError) {
+    console.error('[SIGNUP_TRIAL] Error checking existing email:', checkError);
+    return NextResponse.json(
+      { error: 'Database service unavailable. Please check your connection or project status.' },
+      { status: 503 }
+    );
+  }
+
+  if (existingRows && existingRows.length > 0) {
+    return NextResponse.json(
+      {
+        success: false,
+        error: 'This email has already been used for an account or free trial. Please log in to your account.',
+        code: 'EMAIL_ALREADY_USED',
+      },
+      { status: 409 }
+    );
   }
 
   // Create new trial account
   const userToken = uuidv4();
   const passwordHash = await hashPassword(password);
 
-  await supabase.from('activations').insert({
+  const { error: insertError } = await supabase.from('activations').insert({
     id: uuidv4(),
     token: userToken,
     email,
@@ -79,6 +80,14 @@ export async function POST(request: NextRequest) {
     user_token: userToken,
     password_hash: passwordHash,
   });
+
+  if (insertError) {
+    console.error('[SIGNUP_TRIAL] Error inserting activation:', insertError);
+    return NextResponse.json(
+      { error: 'Failed to create trial account. Please try again.' },
+      { status: 500 }
+    );
+  }
 
   // Give 5 trial credits
   await supabase.from('user_credits').insert({

@@ -83,10 +83,10 @@ export async function POST(request: NextRequest) {
       if (!resolvedCredits) {
         const amountPaid = paystackData.data.amount; // in kobo
         // Determine credits from amount
-        if (amountPaid >= 5970000) resolvedCredits = 1000;
-        else if (amountPaid >= 3320000) resolvedCredits = 500;
-        else if (amountPaid >= 1330000) resolvedCredits = 150;
-        else if (amountPaid >= 660000) resolvedCredits = 50;
+        if (amountPaid >= 2500000) resolvedCredits = 1000;
+        else if (amountPaid >= 1500000) resolvedCredits = 500;
+        else if (amountPaid >= 600000) resolvedCredits = 150;
+        else if (amountPaid >= 250000) resolvedCredits = 50;
         else resolvedCredits = 50; // minimum
       }
     }

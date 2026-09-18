@@ -263,7 +263,7 @@ export default function SettingsPage() {
             <span className="text-sm text-muted">Plan</span>
             <span className="flex items-center gap-2 text-sm font-medium text-success">
               <Shield className="w-4 h-4" />
-              Lifetime Access ✓
+              Monthly Subscription ✓ (Tokens roll over)
             </span>
           </div>
 

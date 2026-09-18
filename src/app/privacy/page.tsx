@@ -77,7 +77,7 @@ export default function PrivacyPage() {
             <h2 className="text-xl font-bold text-text mb-3">3. How We Use Your Information</h2>
             <ul className="text-sm space-y-2 list-disc pl-5">
               <li>To provide and maintain the SparkLeads service</li>
-              <li>To process your one-time payment and activate your account</li>
+              <li>To process your subscription payments and activate your account</li>
               <li>To send you activation links and important service updates</li>
               <li>To track affiliate referrals and calculate commissions</li>
               <li>To improve and optimize the service based on usage patterns</li>

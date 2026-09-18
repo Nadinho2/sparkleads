@@ -3,10 +3,13 @@
 import { useState, useEffect, useCallback } from 'react';
 import { FREELANCER_TYPES } from '@/lib/freelancer-types';
 import { Spinner } from '@/components/ui';
-import { Mail } from 'lucide-react';
+import { Mail, LogOut } from 'lucide-react';
+import { toast } from 'sonner';
 
 export default function AgencySettingsPage() {
   const [workspace, setWorkspace] = useState<{ name: string; brand_color: string } | null>(null);
+  const [currentMember, setCurrentMember] = useState<{ id: string; role: string } | null>(null);
+  const [leaving, setLeaving] = useState(false);
   const [freelancerType, setFreelancerType] = useState('');
   const [saving, setSaving] = useState(false);
 
@@ -24,6 +27,7 @@ export default function AgencySettingsPage() {
       .then((r) => r.json())
       .then((data) => {
         setWorkspace(data.workspace);
+        if (data.member) setCurrentMember(data.member);
       });
     const saved = localStorage.getItem('sparkleads_freelancer_type') || '';
     setFreelancerType(saved);
@@ -92,6 +96,28 @@ export default function AgencySettingsPage() {
       setTestingEmail(false);
     }
   }, []);
+
+  const handleLeaveWorkspace = async () => {
+    if (!currentMember) return;
+    if (!confirm('Are you sure you want to leave this workspace? You will lose access to its shared leads, credits, and campaigns.')) {
+      return;
+    }
+    setLeaving(true);
+    try {
+      const res = await fetch(`/api/agency/members?memberId=${currentMember.id}`, { method: 'DELETE' });
+      const data = await res.json();
+      if (res.ok) {
+        toast.success('You have left the workspace');
+        window.location.href = '/login';
+      } else {
+        toast.error(data.error || 'Failed to leave workspace');
+        setLeaving(false);
+      }
+    } catch {
+      toast.error('Something went wrong');
+      setLeaving(false);
+    }
+  };
 
   return (
     <div className="space-y-8">
@@ -237,6 +263,26 @@ export default function AgencySettingsPage() {
           </div>
         </div>
       </div>
+
+      {/* Leave Workspace Option for non-owners */}
+      {currentMember && currentMember.role !== 'owner' && (
+        <div className="p-6 rounded-xl border border-red-500/20 bg-surface">
+          <div className="flex items-center gap-3 mb-2">
+            <LogOut className="w-5 h-5 text-red-400" />
+            <h2 className="text-lg font-semibold text-text">Leave this Workspace</h2>
+          </div>
+          <p className="text-sm text-muted mb-4">
+            If you no longer work with this agency, you can leave this workspace on your own. You will immediately lose access to all shared agency data, clients, and allocated credits.
+          </p>
+          <button
+            onClick={handleLeaveWorkspace}
+            disabled={leaving}
+            className="flex items-center gap-2 px-4 py-2.5 rounded-lg bg-red-500/10 text-red-400 hover:bg-red-500/20 text-sm font-semibold transition-colors disabled:opacity-50"
+          >
+            <LogOut size={15} /> {leaving ? 'Leaving workspace...' : 'Leave Workspace'}
+          </button>
+        </div>
+      )}
     </div>
   );
 }

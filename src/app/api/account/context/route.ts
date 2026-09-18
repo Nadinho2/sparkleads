@@ -15,6 +15,9 @@ export async function GET() {
   const workspaceId = getWorkspaceId();
   const supabase = createSupabaseAdmin();
 
+  // Check if user has an active agency workspace regardless of current mode
+  const { workspace: userWorkspace, member: userMember } = await getWorkspaceForUser(token);
+
   if (!workspaceId) {
     // Individual account
     const { data: credits } = await supabase
@@ -31,6 +34,10 @@ export async function GET() {
       member: null,
       role: null,
       creditBalance: credits?.balance ?? 0,
+      hasAgency: Boolean(userWorkspace),
+      agencyWorkspaceId: userWorkspace?.id || null,
+      agencyWorkspaceName: userWorkspace?.name || null,
+      agencyRole: userMember?.role || null,
     });
   }
 

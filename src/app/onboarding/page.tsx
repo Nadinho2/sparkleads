@@ -11,11 +11,18 @@ export default function OnboardingPage() {
   const [checking, setChecking] = useState(true);
 
   useEffect(() => {
-    // If user already has a workspace, go straight to agency dashboard
+    // If user already has an agency workspace, switch cookie and go straight to agency dashboard
     fetch('/api/account/context')
       .then((r) => r.json())
-      .then((data) => {
-        if (data.accountType === 'agency' && data.workspaceId) {
+      .then(async (data) => {
+        if (data.workspaceId || data.hasAgency) {
+          if (data.agencyWorkspaceId && !data.workspaceId) {
+            await fetch('/api/account/switch', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ workspaceId: data.agencyWorkspaceId }),
+            });
+          }
           router.replace('/agency');
         } else {
           setChecking(false);
@@ -77,13 +84,13 @@ export default function OnboardingPage() {
               <li className="flex items-center gap-2"><span className="text-green-400">✓</span> Personal lead search</li>
               <li className="flex items-center gap-2"><span className="text-green-400">✓</span> Individual outreach</li>
               <li className="flex items-center gap-2"><span className="text-green-400">✓</span> Content for your clients</li>
-              <li className="flex items-center gap-2"><span className="text-green-400">✓</span> Pay-as-you-go credits</li>
+              <li className="flex items-center gap-2"><span className="text-green-400">✓</span> Unused tokens roll over monthly</li>
             </ul>
             <div className="flex items-center justify-between">
               <span className="text-sm font-medium text-primary group-hover:underline">
                 {saving === 'individual' ? <Spinner size="sm" /> : 'Start as Individual →'}
               </span>
-              <span className="text-xs text-muted">Your $15 covers this</span>
+              <span className="text-xs text-muted">Your ₦8,999/month covers this</span>
             </div>
           </button>
 
@@ -109,7 +116,7 @@ export default function OnboardingPage() {
               <span className="text-sm font-medium text-primary group-hover:underline">
                 {saving === 'agency' ? <Spinner size="sm" /> : 'Upgrade to Agency →'}
               </span>
-              <span className="text-xs text-muted">From $49/month</span>
+              <span className="text-xs text-muted">From ₦19,900/month</span>
             </div>
           </button>
         </div>
