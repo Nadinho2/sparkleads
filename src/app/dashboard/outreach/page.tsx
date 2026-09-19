@@ -713,7 +713,8 @@ UltimaSpark Agency`
                     <tr>
                       <th className="py-3 px-4">Recipient</th>
                       <th className="py-3 px-4">Current Step</th>
-                      <th className="py-3 px-4">Status</th>
+                      <th className="py-3 px-4">Status & Sentiment</th>
+                      <th className="py-3 px-4">Engagement</th>
                       <th className="py-3 px-4">Last Sent</th>
                       <th className="py-3 px-4">Next Scheduled Follow-up</th>
                       <th className="py-3 px-4 text-right">Action</th>
@@ -728,11 +729,39 @@ UltimaSpark Agency`
                       );
 
                       if (item.status === 'replied') {
-                        statusBadge = (
-                          <span className="px-2 py-0.5 rounded-full bg-success/15 text-success font-semibold flex items-center gap-1 w-max">
-                            <Check className="w-3 h-3" /> Replied (Stopped)
-                          </span>
-                        );
+                        if (item.reply_sentiment === 'interested') {
+                          statusBadge = (
+                            <div className="space-y-1">
+                              <span className="px-2.5 py-0.5 rounded-full bg-emerald-500/20 text-emerald-400 font-bold border border-emerald-500/30 flex items-center gap-1 w-max">
+                                🔥 Hot Lead (Interested)
+                              </span>
+                              {item.reply_summary && (
+                                <p className="text-[10px] text-emerald-300/80 max-w-[220px] truncate" title={item.reply_summary}>
+                                  "{item.reply_summary}"
+                                </p>
+                              )}
+                            </div>
+                          );
+                        } else if (item.reply_sentiment === 'out_of_office') {
+                          statusBadge = (
+                            <div className="space-y-1">
+                              <span className="px-2.5 py-0.5 rounded-full bg-amber-500/20 text-amber-300 font-medium border border-amber-500/30 flex items-center gap-1 w-max">
+                                💤 Out of Office
+                              </span>
+                              {item.reply_summary && (
+                                <p className="text-[10px] text-amber-200/70 max-w-[220px] truncate" title={item.reply_summary}>
+                                  {item.reply_summary}
+                                </p>
+                              )}
+                            </div>
+                          );
+                        } else {
+                          statusBadge = (
+                            <span className="px-2 py-0.5 rounded-full bg-success/15 text-success font-semibold flex items-center gap-1 w-max">
+                              <Check className="w-3 h-3" /> Replied (Stopped)
+                            </span>
+                          );
+                        }
                       } else if (item.status === 'completed') {
                         statusBadge = (
                           <span className="px-2 py-0.5 rounded-full bg-indigo-500/15 text-indigo-400 font-medium">
@@ -768,6 +797,22 @@ UltimaSpark Agency`
                             <span className="text-muted"> of 3</span>
                           </td>
                           <td className="py-3 px-4">{statusBadge}</td>
+                          <td className="py-3 px-4">
+                            <div className="flex items-center gap-1.5 flex-wrap">
+                              {typeof item.open_count === 'number' && item.open_count > 0 ? (
+                                <span className="px-2 py-0.5 rounded-md bg-cyan-500/15 text-cyan-300 font-mono text-[11px] border border-cyan-500/20" title={`Opened ${item.open_count} time${item.open_count > 1 ? 's' : ''}`}>
+                                  👁️ {item.open_count} open{item.open_count > 1 ? 's' : ''}
+                                </span>
+                              ) : (
+                                <span className="text-muted/40 text-[11px]">—</span>
+                              )}
+                              {item.clicked_at && (
+                                <span className="px-1.5 py-0.5 rounded bg-emerald-500/15 text-emerald-400 font-medium text-[10px]">
+                                  Clicked
+                                </span>
+                              )}
+                            </div>
+                          </td>
                           <td className="py-3 px-4 text-muted">
                             {item.last_sent_at
                               ? new Date(item.last_sent_at).toLocaleString(undefined, {

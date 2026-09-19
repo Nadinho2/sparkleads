@@ -32,6 +32,7 @@ import { WhatsAppComposer } from '@/components/dashboard/WhatsAppComposer';
 import { EmailComposer } from '@/components/dashboard/EmailComposer';
 import { BulkWhatsAppComposer } from '@/components/dashboard/BulkWhatsAppComposer';
 import { BulkEmailComposer } from '@/components/dashboard/BulkEmailComposer';
+import { EnrollSequenceModal } from '@/components/dashboard/EnrollSequenceModal';
 import { FollowUpModal } from '@/components/dashboard/FollowUpModal';
 import { NotesPanel } from '@/components/dashboard/NotesPanel';
 import { OpportunityModal } from '@/components/dashboard/OpportunityModal';
@@ -106,6 +107,7 @@ export default function DashboardPage() {
   const [selectAll, setSelectAll] = useState(false);
   const [bulkWhatsApp, setBulkWhatsApp] = useState(false);
   const [bulkEmail, setBulkEmail] = useState(false);
+  const [enrollSequence, setEnrollSequence] = useState(false);
   const [followUpModal, setFollowUpModal] = useState<{ isOpen: boolean; lead: Lead | null }>({ isOpen: false, lead: null });
   const [dueReminders, setDueReminders] = useState<DueReminder[]>([]);
   const [showReminders, setShowReminders] = useState(true);
@@ -1308,6 +1310,17 @@ export default function DashboardPage() {
         }}
       />
 
+      <EnrollSequenceModal
+        leads={selectedLeadObjects}
+        isOpen={enrollSequence}
+        onClose={() => setEnrollSequence(false)}
+        onSuccess={(count) => {
+          setEnrollSequence(false);
+          setSelectedLeads(new Set());
+          setSelectAll(false);
+        }}
+      />
+
       {/* Floating Bulk Action Bar */}
       <AnimatePresence>
         {selectedLeads.size > 0 && (
@@ -1324,6 +1337,14 @@ export default function DashboardPage() {
             <div className="w-px h-5 bg-border" />
 
             <button
+              onClick={() => setEnrollSequence(true)}
+              className="flex items-center gap-2 px-4 py-2 rounded-xl bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white text-sm font-semibold shadow-lg shadow-purple-500/25 transition-all"
+            >
+              <Zap size={15} />
+              Enroll in Sequence
+            </button>
+
+            <button
               onClick={() => setBulkWhatsApp(true)}
               className="flex items-center gap-2 px-4 py-2 rounded-xl bg-green-600 hover:bg-green-500 text-white text-sm font-medium transition-colors"
             >
@@ -1336,7 +1357,7 @@ export default function DashboardPage() {
               className="flex items-center gap-2 px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-sm font-medium transition-colors"
             >
               <Mail size={15} />
-              Email All
+              Quick Email
             </button>
 
             <div className="text-xs text-muted">

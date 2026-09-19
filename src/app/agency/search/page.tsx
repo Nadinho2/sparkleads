@@ -6,13 +6,14 @@ import {
   Search, Loader2, Star, Copy, Check,
   MessageCircle, Mail, Bell, StickyNote, ExternalLink, X,
   Sparkles, BarChart2, ChevronDown, ChevronUp,
-  Globe, MapPin, FileText, Megaphone,
+  Globe, MapPin, FileText, Megaphone, Zap,
 } from 'lucide-react';
 import { useSearchStream } from '@/hooks/useSearchStream';
 import { useBasePath } from '@/hooks/useBasePath';
 import { Spinner } from '@/components/ui';
 import { WhatsAppComposer } from '@/components/dashboard/WhatsAppComposer';
 import { EmailComposer } from '@/components/dashboard/EmailComposer';
+import { EnrollSequenceModal } from '@/components/dashboard/EnrollSequenceModal';
 import { FollowUpModal } from '@/components/dashboard/FollowUpModal';
 import { NotesPanel } from '@/components/dashboard/NotesPanel';
 import { OpportunityModal } from '@/components/dashboard/OpportunityModal';
@@ -39,6 +40,8 @@ export default function AgencySearchPage() {
   const [followUpModal, setFollowUpModal] = useState<{ isOpen: boolean; lead: Lead | null }>({ isOpen: false, lead: null });
   const [notesPanel, setNotesPanel] = useState<{ isOpen: boolean; lead: Lead | null }>({ isOpen: false, lead: null });
   const [expandedId, setExpandedId] = useState<string | null>(null);
+  const [selectedLeads, setSelectedLeads] = useState<Set<string>>(new Set());
+  const [enrollSequence, setEnrollSequence] = useState(false);
 
   // Freelancer opportunity scores
   const [freelancerType, setFreelancerType] = useState('');
@@ -193,19 +196,45 @@ export default function AgencySearchPage() {
 
       {/* Filters bar */}
       {leads.length > 0 && !isSearching && (
-        <div className="flex items-center gap-3 flex-wrap">
-          <span className="text-xs text-muted">{displayLeads.length} results</span>
-          {freelancerType && (
+        <div className="flex items-center justify-between gap-3 flex-wrap">
+          <div className="flex items-center gap-3">
+            <label className="flex items-center gap-2 text-xs text-muted cursor-pointer hover:text-text">
+              <input
+                type="checkbox"
+                checked={selectedLeads.size > 0 && selectedLeads.size === displayLeads.length}
+                onChange={(e) => {
+                  if (e.target.checked) {
+                    setSelectedLeads(new Set(displayLeads.map((l) => l.place_id)));
+                  } else {
+                    setSelectedLeads(new Set());
+                  }
+                }}
+                className="w-4 h-4 rounded border-border text-primary focus:ring-primary bg-surface2"
+              />
+              <span>Select All</span>
+            </label>
+            <span className="text-xs text-muted">{displayLeads.length} results</span>
+            {freelancerType && (
+              <button
+                onClick={() => setFilterHighOpportunity(!filterHighOpportunity)}
+                className={`text-xs px-3 py-1.5 rounded-lg border transition-colors ${
+                  filterHighOpportunity
+                    ? 'border-primary bg-primary/10 text-primary'
+                    : 'border-border text-muted hover:border-primary/50'
+                }`}
+              >
+                <Sparkles size={12} className="inline mr-1" />
+                High Opportunity Only
+              </button>
+            )}
+          </div>
+          {selectedLeads.size > 0 && (
             <button
-              onClick={() => setFilterHighOpportunity(!filterHighOpportunity)}
-              className={`text-xs px-3 py-1.5 rounded-lg border transition-colors ${
-                filterHighOpportunity
-                  ? 'border-primary bg-primary/10 text-primary'
-                  : 'border-border text-muted hover:border-primary/50'
-              }`}
+              onClick={() => setEnrollSequence(true)}
+              className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white text-xs font-semibold shadow-md shadow-purple-500/20 transition-all"
             >
-              <Sparkles size={12} className="inline mr-1" />
-              High Opportunity Only
+              <Zap size={13} />
+              Enroll Selected ({selectedLeads.size}) in Sequence
             </button>
           )}
         </div>
@@ -247,9 +276,24 @@ export default function AgencySearchPage() {
                 <div className="p-4">
                   <div className="flex items-start justify-between gap-3">
                     {/* Info */}
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2 mb-1">
-                        <h3 className="text-sm font-semibold text-text truncate">{lead.name}</h3>
+                    <div className="flex items-start gap-3 flex-1 min-w-0">
+                      <input
+                        type="checkbox"
+                        checked={selectedLeads.has(lead.place_id)}
+                        onChange={(e) => {
+                          const next = new Set(selectedLeads);
+                          if (e.target.checked) {
+                            next.add(lead.place_id);
+                          } else {
+                            next.delete(lead.place_id);
+                          }
+                          setSelectedLeads(next);
+                        }}
+                        className="w-4 h-4 rounded border-border text-primary focus:ring-primary bg-surface2 shrink-0 mt-1 cursor-pointer"
+                      />
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 mb-1">
+                          <h3 className="text-sm font-semibold text-text truncate">{lead.name}</h3>
                         {/* Opportunity badge */}
                         {opp && !opp.loading && (
                           <span className={`shrink-0 text-[10px] font-bold px-1.5 py-0.5 rounded-full ${
@@ -278,6 +322,7 @@ export default function AgencySearchPage() {
                         </span>
                       </div>
                     </div>
+                  </div>
 
                     {/* Actions */}
                     <div className="flex items-center gap-1 shrink-0">
@@ -505,6 +550,15 @@ export default function AgencySearchPage() {
           }}
         />
       )}
+      <EnrollSequenceModal
+        leads={leads.filter((l) => selectedLeads.has(l.place_id))}
+        isOpen={enrollSequence}
+        onClose={() => setEnrollSequence(false)}
+        onSuccess={() => {
+          setEnrollSequence(false);
+          setSelectedLeads(new Set());
+        }}
+      />
     </div>
   );
 }

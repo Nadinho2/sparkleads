@@ -318,3 +318,61 @@ export async function getCampaignStats(
     step3Sent,
   };
 }
+
+export async function enrollLeadsIntoCampaign(
+  campaignId: string,
+  userToken: string,
+  leads: Array<{ email: string; name?: string; company?: string }>
+): Promise<{ added: number }> {
+  const now = new Date().toISOString();
+  const queueItems: OutreachQueueItem[] = leads.map((l) => ({
+    id: uuidv4(),
+    campaign_id: campaignId,
+    user_token: userToken,
+    recipient_email: l.email.trim().toLowerCase(),
+    recipient_name: l.name || '',
+    company_name: l.company || '',
+    current_step: 1,
+    status: 'scheduled',
+    last_sent_at: null,
+    next_run_at: now,
+    original_message_id: null,
+    last_message_id: null,
+    error_message: null,
+    created_at: now,
+    updated_at: now,
+  }));
+
+  const supabase = createSupabaseAdmin();
+  const { error } = await supabase.from('outreach_queue').insert(queueItems);
+  if (!error) {
+    return { added: queueItems.length };
+  }
+
+  const local = ensureLocalStore();
+  local.queue.push(...queueItems);
+  saveLocalStore(local);
+  return { added: queueItems.length };
+}
+
+export async function getActiveUserTokens(): Promise<string[]> {
+  const supabase = createSupabaseAdmin();
+  const { data, error } = await supabase
+    .from('outreach_queue')
+    .select('user_token')
+    .in('status', ['scheduled', 'sent']);
+
+  if (!error && data) {
+    const set = new Set(data.map((d: any) => d.user_token));
+    return Array.from(set);
+  }
+
+  const local = ensureLocalStore();
+  const set = new Set(
+    local.queue
+      .filter((q) => q.status === 'scheduled' || q.status === 'sent')
+      .map((q) => q.user_token)
+  );
+  return Array.from(set);
+}
+

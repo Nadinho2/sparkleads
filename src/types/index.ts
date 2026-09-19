@@ -74,6 +74,12 @@ export interface OutreachQueueItem {
   next_run_at: string;
   original_message_id: string | null;
   last_message_id: string | null;
+  reply_sentiment?: 'interested' | 'neutral' | 'not_interested' | 'out_of_office' | null;
+  reply_summary?: string | null;
+  suggested_reply?: string | null;
+  open_count?: number;
+  opened_at?: string | null;
+  clicked_at?: string | null;
   error_message: string | null;
   created_at: string;
   updated_at: string;

@@ -9,7 +9,25 @@ export interface ImapRepliesResult {
     subject: string;
     date: Date;
     inReplyTo?: string;
+    bodySnippet?: string;
   }>;
+}
+
+function extractCleanText(raw: string): string {
+  if (!raw) return '';
+  const bodySplit = raw.split(/\r?\n\r?\n/);
+  const body = bodySplit.slice(1).join('\n');
+  return body
+    .replace(/<style[^>]*>[\s\S]*?<\/style>/gi, '')
+    .replace(/<script[^>]*>[\s\S]*?<\/script>/gi, '')
+    .replace(/<[^>]+>/g, ' ')
+    .replace(/&nbsp;/g, ' ')
+    .replace(/&amp;/g, '&')
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>')
+    .replace(/\s+/g, ' ')
+    .trim()
+    .slice(0, 1500);
 }
 
 /**
@@ -61,10 +79,15 @@ export async function checkInboxReplies(
     try {
       const messageUids = await client.search({ since: searchSince });
       if (messageUids && messageUids.length > 0) {
-        for await (const msg of client.fetch(messageUids, { envelope: true })) {
+        // Inspect latest 50 messages with source to extract reply snippets
+        const targetUids = messageUids.slice(-50);
+        for await (const msg of client.fetch(targetUids, { envelope: true, source: true })) {
           if (!msg.envelope) continue;
           const envelope = msg.envelope;
           const fromAddresses = envelope.from || [];
+          const rawSource = msg.source ? msg.source.toString('utf8') : '';
+          const bodySnippet = extractCleanText(rawSource);
+
           for (const sender of fromAddresses) {
             if (sender.address) {
               const lowerEmail = sender.address.toLowerCase().trim();
@@ -76,6 +99,7 @@ export async function checkInboxReplies(
                   subject: envelope.subject || '',
                   date: envelope.date ? new Date(envelope.date) : new Date(),
                   inReplyTo: envelope.inReplyTo,
+                  bodySnippet,
                 });
               }
             }

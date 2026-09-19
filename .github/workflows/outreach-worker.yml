@@ -1,0 +1,58 @@
+name: Outreach Autopilot Worker
+
+on:
+  schedule:
+    # Runs twice every weekday: 8:00 AM UTC (9:00 AM WAT) and 2:00 PM UTC (3:00 PM WAT)
+    - cron: '0 8,14 * * 1-5'
+  workflow_dispatch:
+    inputs:
+      manual_note:
+        description: 'Optional trigger reason / note'
+        required: false
+        default: 'Manual trigger from GitHub Actions'
+
+jobs:
+  run-outreach:
+    name: Process Due Follow-ups & Check Replies
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Trigger SparkLeads Outreach Follow-up Runner
+        run: |
+          echo "========================================================"
+          echo "🚀 SparkLeads Autopilot Worker Started"
+          echo "Time: $(date -u)"
+          echo "Trigger: ${{ github.event_name }}"
+          echo "========================================================"
+
+          # Uses CRON_SECRET if configured in GitHub Secrets, with fallback to ADMIN_SECRET_KEY
+          AUTH_TOKEN="${{ secrets.CRON_SECRET }}"
+          if [ -z "$AUTH_TOKEN" ]; then
+            AUTH_TOKEN="sparkleads-admin-2024"
+          fi
+
+          TARGET_URL="${{ secrets.SPARKLEADS_URL }}"
+          if [ -z "$TARGET_URL" ]; then
+            TARGET_URL="https://www.trysparkleads.com"
+          fi
+
+          echo "Target Endpoint: ${TARGET_URL}/api/cron/process-followups"
+
+          RESPONSE=$(curl -s -w "\nHTTP_STATUS:%{http_code}" \
+            -X POST "${TARGET_URL}/api/cron/process-followups" \
+            -H "Authorization: Bearer ${AUTH_TOKEN}" \
+            -H "Content-Type: application/json" \
+            -d '{"source": "github_actions_worker"}')
+
+          HTTP_BODY=$(echo "$RESPONSE" | sed -e '$d')
+          HTTP_STATUS=$(echo "$RESPONSE" | tail -n1 | cut -d: -f2)
+
+          echo "HTTP Status: $HTTP_STATUS"
+          echo "Response Body: $HTTP_BODY"
+
+          if [ "$HTTP_STATUS" -ne 200 ]; then
+            echo "❌ Worker failed with status code $HTTP_STATUS"
+            exit 1
+          fi
+
+          echo "✅ Worker successfully completed!"

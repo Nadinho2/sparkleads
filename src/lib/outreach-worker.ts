@@ -1,11 +1,14 @@
 import nodemailer from 'nodemailer';
 import { createSupabaseAdmin } from './supabase';
 import { checkInboxReplies } from './imap-replies';
+import { classifyProspectReply } from './reply-sentiment';
+import { createNotification } from './notifications';
 import {
   getCampaignById,
   getDueQueueItems,
   getQueueItems,
   updateQueueItem,
+  getActiveUserTokens,
 } from './outreach-store';
 import { OutreachQueueItem, OutreachSequenceStep } from '@/types';
 
@@ -26,7 +29,8 @@ function interpolate(template: string, item: OutreachQueueItem): string {
 }
 
 /**
- * Checks IMAP inbox for any prospect replies and marks matching queue items as 'replied'.
+ * Checks IMAP inbox for any prospect replies, classifies sentiment with AI,
+ * triggers hot-lead notifications, and stops or reschedules follow-ups accordingly.
  */
 export async function detectAndMarkReplies(userToken: string): Promise<number> {
   const imapResult = await checkInboxReplies(userToken);
@@ -49,11 +53,69 @@ export async function detectAndMarkReplies(userToken: string): Promise<number> {
       item.last_message_id && inReplyToIds.has(item.last_message_id.trim());
 
     if (emailMatch || originalMsgMatch || lastMsgMatch) {
-      await updateQueueItem(item.id, {
-        status: 'replied',
+      // Find matching reply details if available
+      const matchedReply = imapResult.replyDetails.find(
+        (r) =>
+          r.from === item.recipient_email.toLowerCase() ||
+          (item.original_message_id && r.inReplyTo?.trim() === item.original_message_id.trim()) ||
+          (item.last_message_id && r.inReplyTo?.trim() === item.last_message_id.trim())
+      );
+
+      // Classify sentiment using AI
+      const classification = await classifyProspectReply({
+        replyText: matchedReply?.bodySnippet || '',
+        subject: matchedReply?.subject || '',
+        senderEmail: item.recipient_email,
+        recipientName: item.recipient_name,
+        companyName: item.company_name,
       });
-      newlyReplied++;
-      console.log(`[Follow-up Engine] Marked prospect ${item.recipient_email} as REPLIED! Follow-ups stopped.`);
+
+      if (classification.sentiment === 'out_of_office') {
+        // If prospect is out of office, don't cancel sequence; reschedule for when they return!
+        let nextDate = new Date(Date.now() + 4 * 24 * 60 * 60 * 1000);
+        if (classification.returnDate) {
+          const parsedReturn = new Date(classification.returnDate);
+          if (!isNaN(parsedReturn.getTime()) && parsedReturn.getTime() > Date.now()) {
+            nextDate = new Date(parsedReturn.getTime() + 24 * 60 * 60 * 1000);
+          }
+        }
+
+        await updateQueueItem(item.id, {
+          status: 'scheduled',
+          next_run_at: nextDate.toISOString(),
+          reply_sentiment: 'out_of_office',
+          reply_summary: classification.summary,
+        });
+
+        console.log(
+          `[Follow-up Engine] Prospect ${item.recipient_email} is Out of Office until ${nextDate.toDateString()}. Rescheduled follow-up.`
+        );
+      } else {
+        // Stopped for interested, neutral, or not_interested
+        await updateQueueItem(item.id, {
+          status: 'replied',
+          reply_sentiment: classification.sentiment,
+          reply_summary: classification.summary,
+          suggested_reply: classification.suggestedReply,
+        });
+        newlyReplied++;
+
+        if (classification.sentiment === 'interested') {
+          // Trigger In-App Notification alert for Hot Lead
+          const leadTitle = item.recipient_name || item.company_name || item.recipient_email;
+          await createNotification(userToken, {
+            title: `🔥 Hot Lead: ${leadTitle} is Interested!`,
+            message: `"${classification.summary}". Suggested response: "${classification.suggestedReply}"`,
+            type: 'system',
+            link: '/dashboard/outreach',
+          });
+          console.log(`[Follow-up Engine] 🔥 HOT LEAD detected for ${item.recipient_email}! Alert sent.`);
+        } else {
+          console.log(
+            `[Follow-up Engine] Marked prospect ${item.recipient_email} as REPLIED (${classification.sentiment}). Follow-ups stopped.`
+          );
+        }
+      }
     }
   }
 
@@ -94,9 +156,16 @@ export async function processOutreachQueue(options?: {
     details: [],
   };
 
-  // Step 1: Detect replies for user
+  // Step 1: Detect replies for single user or across all active users
   if (options?.userToken) {
     result.repliedDetected = await detectAndMarkReplies(options.userToken);
+  } else {
+    // System-wide run (GitHub Actions worker / cron)
+    const activeTokens = await getActiveUserTokens();
+    for (const token of activeTokens) {
+      const count = await detectAndMarkReplies(token);
+      result.repliedDetected += count;
+    }
   }
 
   // Step 2: Fetch due items
@@ -157,7 +226,9 @@ export async function processOutreachQueue(options?: {
 
     const subject = interpolate(currentStepDef.subject, item);
     const textBody = interpolate(currentStepDef.body, item);
-    const htmlBody = textBody.replace(/\n/g, '<br>');
+    const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://www.trysparkleads.com';
+    const trackingPixel = `<img src="${appUrl}/api/outreach/track/open/${item.id}" width="1" height="1" style="display:none;width:1px;height:1px;border:0;" alt="" />`;
+    const htmlBody = `${textBody.replace(/\n/g, '<br>')}<br>${trackingPixel}`;
 
     // Threading setup for follow-ups (step > 1)
     let emailSubject = subject;
