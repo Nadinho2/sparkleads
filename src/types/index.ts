@@ -41,3 +41,50 @@ export interface Affiliate {
   total_referrals: number;
   total_earnings: number;
 }
+
+export interface OutreachCampaign {
+  id: string;
+  user_token: string;
+  name: string;
+  status: 'active' | 'paused' | 'completed';
+  created_at: string;
+  updated_at: string;
+}
+
+export interface OutreachSequenceStep {
+  id: string;
+  campaign_id: string;
+  step_number: number;
+  delay_days: number;
+  subject: string;
+  body: string;
+  created_at: string;
+}
+
+export interface OutreachQueueItem {
+  id: string;
+  campaign_id: string;
+  user_token: string;
+  recipient_email: string;
+  recipient_name: string;
+  company_name: string;
+  current_step: number;
+  status: 'scheduled' | 'sent' | 'replied' | 'completed' | 'failed' | 'paused';
+  last_sent_at: string | null;
+  next_run_at: string;
+  original_message_id: string | null;
+  last_message_id: string | null;
+  error_message: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface OutreachSequenceStats {
+  totalLeads: number;
+  activeCount: number;
+  repliedCount: number;
+  completedCount: number;
+  step1Sent: number;
+  step2Sent: number;
+  step3Sent: number;
+}
