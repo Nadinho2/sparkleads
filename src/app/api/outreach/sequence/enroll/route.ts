@@ -68,10 +68,17 @@ export async function POST(request: NextRequest) {
   let body: {
     campaignId?: string;
     campaignName?: string;
+    clientId?: string;
+    clientName?: string;
     recipients: Array<{
       email: string;
       name?: string;
       company?: string;
+      website?: string;
+      audit_score?: number | string;
+      audit_issue?: string;
+      client_id?: string;
+      lead_id?: string;
     }>;
     sendFirstStepImmediately?: boolean;
   };
@@ -82,7 +89,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'Invalid JSON body' }, { status: 400 });
   }
 
-  const { campaignId, campaignName, recipients, sendFirstStepImmediately = true } = body;
+  const { campaignId, campaignName, clientId, clientName, recipients, sendFirstStepImmediately = true } = body;
 
   if (!recipients || !Array.isArray(recipients) || recipients.length === 0) {
     return NextResponse.json({ error: 'No recipients provided' }, { status: 400 });
@@ -105,7 +112,7 @@ export async function POST(request: NextRequest) {
 
     if (targetCampaignId) {
       // Enroll into existing campaign
-      await enrollLeadsIntoCampaign(targetCampaignId, userToken, validRecipients);
+      await enrollLeadsIntoCampaign(targetCampaignId, userToken, validRecipients, clientId);
     } else {
       // Create new sequence campaign
       const finalName = campaignName?.trim() || `Leads Campaign - ${new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}`;
@@ -113,9 +120,26 @@ export async function POST(request: NextRequest) {
         userToken,
         finalName,
         DEFAULT_SEQUENCE_STEPS,
-        validRecipients
+        validRecipients,
+        clientId,
+        clientName
       );
       targetCampaignId = created.campaign.id;
+    }
+
+    // Automatically sync lead status to 'contacted' in the CRM leads table
+    try {
+      const { createSupabaseAdmin } = await import('@/lib/supabase');
+      const supabase = createSupabaseAdmin();
+      const leadEmails = validRecipients.map((r) => r.email.toLowerCase().trim());
+      if (leadEmails.length > 0) {
+        await supabase
+          .from('leads')
+          .update({ status: 'contacted' })
+          .in('email', leadEmails);
+      }
+    } catch (statusSyncErr) {
+      console.warn('[Enroll API] Could not batch update lead status to contacted:', statusSyncErr);
     }
 
     let runResult = null;

@@ -31,6 +31,8 @@ export function EnrollSequenceModal({
   const [campaigns, setCampaigns] = useState<OutreachCampaign[]>([]);
   const [selectedCampaignId, setSelectedCampaignId] = useState<string>('new');
   const [newCampaignName, setNewCampaignName] = useState<string>('');
+  const [clients, setClients] = useState<Array<{ id: string; name: string }>>([]);
+  const [selectedClientId, setSelectedClientId] = useState<string>('');
   const [sendImmediately, setSendImmediately] = useState<boolean>(true);
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [loadingCampaigns, setLoadingCampaigns] = useState<boolean>(false);
@@ -62,6 +64,16 @@ export function EnrollSequenceModal({
       }
     }
 
+    // Fetch agency clients if available
+    fetch('/api/agency/clients')
+      .then((r) => r.json())
+      .then((data) => {
+        if (data.clients && Array.isArray(data.clients)) {
+          setClients(data.clients.map((c: any) => ({ id: c.id, name: c.name })));
+        }
+      })
+      .catch(() => {});
+
     fetchCampaigns();
   }, [isOpen, leads]);
 
@@ -81,13 +93,18 @@ export function EnrollSequenceModal({
     setIsLoading(true);
 
     try {
+      const selectedClient = clients.find((c) => c.id === selectedClientId);
       const payload = {
         campaignId: selectedCampaignId !== 'new' ? selectedCampaignId : undefined,
         campaignName: selectedCampaignId === 'new' ? newCampaignName.trim() : undefined,
+        clientId: selectedClientId || undefined,
+        clientName: selectedClient?.name || undefined,
         recipients: validLeads.map((l) => ({
           email: l.email!,
           name: l.name,
           company: l.name,
+          website: l.website || undefined,
+          lead_id: l.id,
         })),
         sendFirstStepImmediately: sendImmediately,
       };
@@ -190,9 +207,30 @@ export function EnrollSequenceModal({
                 type="text"
                 value={newCampaignName}
                 onChange={(e) => setNewCampaignName(e.target.value)}
-                placeholder="e.g. Lagos Hotels Outreach (May 2026)"
+                placeholder="e.g. Austin Marketing Agencies (Oct 2026)"
                 className="w-full bg-[#181924] border border-white/10 rounded-xl px-3.5 py-2.5 text-sm text-white focus:outline-none focus:border-purple-500 placeholder:text-white/30"
               />
+            </div>
+          )}
+
+          {/* Client Tagging (Optional) */}
+          {clients.length > 0 && (
+            <div className="space-y-2">
+              <label className="block text-xs font-medium text-white/70 uppercase tracking-wider">
+                Assign to Client (Optional)
+              </label>
+              <select
+                value={selectedClientId}
+                onChange={(e) => setSelectedClientId(e.target.value)}
+                className="w-full bg-[#181924] border border-white/10 rounded-xl px-3.5 py-2.5 text-sm text-white focus:outline-none focus:border-purple-500"
+              >
+                <option value="">No Client (General Workspace Outreach)</option>
+                {clients.map((c) => (
+                  <option key={c.id} value={c.id}>
+                    {c.name}
+                  </option>
+                ))}
+              </select>
             </div>
           )}
 

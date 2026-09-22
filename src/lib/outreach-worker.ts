@@ -20,12 +20,19 @@ function interpolate(template: string, item: OutreachQueueItem): string {
   const name = item.recipient_name || 'there';
   const firstName = item.recipient_name ? item.recipient_name.split(' ')[0] : 'there';
   const company = item.company_name || 'your company';
+  const website = item.website || 'your website';
+  const auditScore = item.audit_score ? `${item.audit_score}/100` : 'an initial audit';
+  const auditIssue = item.audit_issue || 'several key optimization opportunities';
 
   return template
     .replace(/\{name\}/gi, name)
     .replace(/\{firstName\}/gi, firstName)
     .replace(/\{company\}/gi, company)
-    .replace(/\{email\}/gi, item.recipient_email);
+    .replace(/\{email\}/gi, item.recipient_email)
+    .replace(/\{website\}/gi, website)
+    .replace(/\{audit_score\}/gi, auditScore)
+    .replace(/\{audit_issue\}/gi, auditIssue)
+    .replace(/\{audit_issues\}/gi, auditIssue);
 }
 
 /**
@@ -109,6 +116,74 @@ export async function detectAndMarkReplies(userToken: string): Promise<number> {
             type: 'system',
             link: '/dashboard/outreach',
           });
+
+          // 1. Sync CRM lead status: automatically mark lead as 'interested' in Supabase
+          const supabase = createSupabaseAdmin();
+          try {
+            await supabase
+              .from('leads')
+              .update({ status: 'interested' })
+              .eq('email', item.recipient_email.toLowerCase().trim());
+          } catch (leadUpdateErr) {
+            console.warn('[Follow-up Engine] Could not update leads table status:', leadUpdateErr);
+          }
+
+          // 2. Dispatch Instant Email Alert to the user
+          try {
+            const { data: activation } = await supabase
+              .from('activations')
+              .select('email')
+              .eq('user_token', userToken)
+              .maybeSingle();
+
+            const userEmail = activation?.email;
+            if (userEmail) {
+              const { data: senderSettings } = await supabase
+                .from('sender_settings')
+                .select('*')
+                .eq('user_token', userToken)
+                .maybeSingle();
+
+              if (senderSettings?.sender_email && senderSettings?.app_password) {
+                const transporter = nodemailer.createTransport({
+                  service: 'gmail',
+                  auth: {
+                    user: senderSettings.sender_email,
+                    pass: senderSettings.app_password,
+                  },
+                });
+
+                await transporter.sendMail({
+                  from: `"SparkLeads Alerts" <${senderSettings.sender_email}>`,
+                  to: userEmail,
+                  subject: `🔥 Hot Lead Alert: ${leadTitle} is Interested!`,
+                  html: `
+                    <div style="font-family: sans-serif; max-width: 550px; margin: 0 auto; padding: 20px; border: 1px solid #e2e8f0; border-radius: 12px;">
+                      <h2 style="color: #2563eb; margin-top: 0;">🔥 Hot Lead Reply Detected!</h2>
+                      <p><strong>Lead:</strong> ${leadTitle} (${item.recipient_email})</p>
+                      <p><strong>Prospect Reply:</strong></p>
+                      <blockquote style="background: #f8fafc; border-left: 4px solid #2563eb; padding: 12px; margin: 12px 0;">
+                        "${classification.summary}"
+                      </blockquote>
+                      <p><strong>AI Suggested Response:</strong></p>
+                      <div style="background: #f1f5f9; padding: 12px; border-radius: 8px; font-size: 14px;">
+                        ${classification.suggestedReply}
+                      </div>
+                      <p style="margin-top: 20px;">
+                        <a href="https://sparkleads.ai/dashboard/outreach" style="background: #2563eb; color: #ffffff; padding: 10px 18px; text-decoration: none; border-radius: 6px; font-weight: bold; display: inline-block;">
+                          Open Outreach Dashboard
+                        </a>
+                      </p>
+                    </div>
+                  `,
+                });
+                console.log(`[Follow-up Engine] Dispatched instant email alert to ${userEmail} for hot lead.`);
+              }
+            }
+          } catch (emailAlertErr) {
+            console.warn('[Follow-up Engine] Could not send hot lead email alert:', emailAlertErr);
+          }
+
           console.log(`[Follow-up Engine] 🔥 HOT LEAD detected for ${item.recipient_email}! Alert sent.`);
         } else {
           console.log(

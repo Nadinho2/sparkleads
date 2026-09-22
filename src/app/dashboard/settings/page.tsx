@@ -352,7 +352,7 @@ export default function SettingsPage() {
                 type="text"
                 value={senderName}
                 onChange={(e) => setSenderName(e.target.value)}
-                placeholder="e.g. Nadinho — UltimaSpark Agency"
+                placeholder="e.g. Nadinho | UltimaSpark Academy"
                 className="w-full px-4 py-2.5 rounded-lg border border-border bg-surface2 text-text placeholder:text-muted focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition-colors text-sm"
               />
             </div>
@@ -414,7 +414,7 @@ export default function SettingsPage() {
           <div className="flex gap-3">
             <button
               onClick={saveSenderSettings}
-              disabled={savingSender || !senderEmail || !senderPassword}
+              disabled={savingSender || !senderEmail || (!senderPassword && !hasPassword)}
               className="px-4 py-2.5 rounded-lg bg-primary text-white text-sm font-medium hover:bg-primary/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
             >
               {savingSender ? <Spinner size="sm" /> : 'Save Sender Settings'}

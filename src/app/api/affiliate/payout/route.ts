@@ -25,9 +25,9 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  if (amount < 5000) {
+  if (amount < 50) {
     return NextResponse.json(
-      { error: 'Minimum payout is ₦5,000' },
+      { error: 'Minimum payout is $50' },
       { status: 400 }
     );
   }
@@ -65,7 +65,7 @@ export async function POST(request: NextRequest) {
 
   await createNotification(token, {
     title: '⏳ Payout Request Submitted',
-    message: `Your withdrawal request of ₦${amount.toLocaleString()} has been submitted and is pending admin review.`,
+    message: `Your withdrawal request of $${amount.toLocaleString()} has been submitted and is pending admin review.`,
     type: 'payout',
     link: '/dashboard/affiliate',
   });

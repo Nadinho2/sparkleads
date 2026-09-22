@@ -9,18 +9,10 @@ function getCurrencySymbol(currency: string) {
   return currency;
 }
 
+import { getProposalById } from '@/lib/proposals-store';
+
 export default async function PrintProposalPage({ params }: { params: { id: string } }) {
-  const supabase = createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!
-  );
-
-  const { data: proposal } = await supabase
-    .from('proposals')
-    .select('*')
-    .eq('id', params.id)
-    .single();
-
+  const proposal = await getProposalById(params.id);
   if (!proposal) notFound();
 
   const p = proposal.proposal_data || {};
@@ -39,7 +31,11 @@ export default async function PrintProposalPage({ params }: { params: { id: stri
         /* Override dark theme for this page */
         html { background: #ffffff !important; }
         body { background: #ffffff !important; color: #1a1a1a !important; font-family: 'Georgia', 'Times New Roman', serif !important; }
-        nav, aside, header, .no-print, [data-sidebar] { display: none !important; }
+        nav, aside, header, [data-sidebar] { display: none !important; }
+
+        @media print {
+          .no-print { display: none !important; }
+        }
 
         #print-root * {
           font-family: 'Georgia', 'Times New Roman', serif !important;
@@ -53,7 +49,13 @@ export default async function PrintProposalPage({ params }: { params: { id: stri
         fontFamily: "'Georgia', 'Times New Roman', serif",
       }}>
         {/* Print bar */}
-        <PrintBar businessName={proposal.business_name} />
+        <PrintBar
+          proposalId={proposal.id}
+          businessName={proposal.business_name}
+          initialStatus={proposal.status}
+          acceptedAt={p.accepted_at}
+          acceptedBy={p.accepted_by}
+        />
 
         <div style={{
           maxWidth: '800px',
@@ -295,6 +297,34 @@ export default async function PrintProposalPage({ params }: { params: { id: stri
               color: '#555', fontSize: '10pt',
             }}>
               <strong>P.S.</strong> {p.ps_line}
+            </div>
+          )}
+
+          {/* Digital Acceptance Certificate */}
+          {(proposal.status === 'accepted' || p.accepted_at) && (
+            <div style={{
+              marginTop: '40px',
+              padding: '20px 24px',
+              border: '2px solid #10b981',
+              borderRadius: '8px',
+              backgroundColor: '#f0fdf4',
+              breakInside: 'avoid',
+            }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
+                <span style={{ color: '#10b981', fontSize: '16pt', fontWeight: 'bold' }}>✓</span>
+                <strong style={{ fontSize: '12pt', color: '#065f46' }}>Digitally Accepted & Approved</strong>
+              </div>
+              <p style={{ margin: '4px 0', fontSize: '10.5pt', color: '#1f2937' }}>
+                Accepted by: <strong>{p.accepted_by || proposal.business_name}</strong> {p.signer_email ? `(${p.signer_email})` : ''}
+              </p>
+              <p style={{ margin: '4px 0', fontSize: '9.5pt', color: '#4b5563' }}>
+                Timestamp: {p.accepted_at ? new Date(p.accepted_at).toLocaleString('en-US', { dateStyle: 'long', timeStyle: 'short' }) : 'Confirmed'}
+              </p>
+              {p.acceptance_notes && (
+                <p style={{ margin: '6px 0 0', fontSize: '9.5pt', color: '#4b5563', fontStyle: 'italic' }}>
+                  Notes: &ldquo;{p.acceptance_notes}&rdquo;
+                </p>
+              )}
             </div>
           )}
 

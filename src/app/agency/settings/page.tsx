@@ -3,11 +3,12 @@
 import { useState, useEffect, useCallback } from 'react';
 import { FREELANCER_TYPES } from '@/lib/freelancer-types';
 import { Spinner } from '@/components/ui';
-import { Mail, LogOut } from 'lucide-react';
+import { Mail, LogOut, Shield, Lock, Sparkles, ArrowRight } from 'lucide-react';
 import { toast } from 'sonner';
+import Link from 'next/link';
 
 export default function AgencySettingsPage() {
-  const [workspace, setWorkspace] = useState<{ name: string; brand_color: string } | null>(null);
+  const [workspace, setWorkspace] = useState<{ name: string; brand_color: string; plan?: string; logo_url?: string | null } | null>(null);
   const [currentMember, setCurrentMember] = useState<{ id: string; role: string } | null>(null);
   const [leaving, setLeaving] = useState(false);
   const [freelancerType, setFreelancerType] = useState('');
@@ -123,22 +124,76 @@ export default function AgencySettingsPage() {
     <div className="space-y-8">
       <h1 className="text-2xl font-bold text-text">Settings</h1>
 
-      {/* Workspace Info */}
+      {/* Workspace Info & Plan */}
       {workspace && (
         <div className="p-6 rounded-xl border border-border bg-surface">
-          <h2 className="text-lg font-semibold text-text mb-4">Workspace</h2>
-          <div className="grid grid-cols-2 gap-4">
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-lg font-semibold text-text">Workspace Information</h2>
+            <span className="text-xs px-2.5 py-1 rounded-full bg-primary/10 text-primary font-bold uppercase tracking-wider">
+              {workspace.plan === 'pro' || workspace.plan === 'agency' ? 'Agency / Scale Plan' : workspace.plan === 'growth' ? 'Growth Plan' : 'Starter Plan'}
+            </span>
+          </div>
+          <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 mb-6">
             <div>
-              <p className="text-xs text-muted">Name</p>
-              <p className="text-sm font-medium text-text">{workspace.name}</p>
+              <p className="text-xs text-muted">Workspace Name</p>
+              <p className="text-sm font-semibold text-text mt-0.5">{workspace.name}</p>
             </div>
             <div>
               <p className="text-xs text-muted">Brand Color</p>
               <div className="flex items-center gap-2 mt-1">
-                <div className="w-6 h-6 rounded border border-border" style={{ backgroundColor: workspace.brand_color }} />
-                <span className="text-sm font-mono text-muted">{workspace.brand_color}</span>
+                <div className="w-5 h-5 rounded border border-border" style={{ backgroundColor: workspace.brand_color }} />
+                <span className="text-xs font-mono text-muted">{workspace.brand_color}</span>
               </div>
             </div>
+            <div>
+              <p className="text-xs text-muted">Billing Cycle</p>
+              <p className="text-sm font-semibold text-text mt-0.5">Active</p>
+            </div>
+          </div>
+
+          {/* White-Label Custom Branding Tier Gating */}
+          <div className="pt-4 border-t border-border">
+            {workspace.plan === 'pro' || workspace.plan === 'agency' ? (
+              <div className="p-4 rounded-xl bg-surface2 border border-border flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="w-9 h-9 rounded-lg bg-emerald-500/10 flex items-center justify-center text-emerald-400">
+                    <Sparkles className="w-5 h-5" />
+                  </div>
+                  <div>
+                    <p className="text-sm font-semibold text-text">White-Label Custom Branding Unlocked</p>
+                    <p className="text-xs text-muted">Your agency logo and brand colors appear on all client reports & proposals.</p>
+                  </div>
+                </div>
+                <span className="text-xs font-bold text-emerald-400 bg-emerald-500/10 px-2.5 py-1 rounded-md border border-emerald-500/20">
+                  Active
+                </span>
+              </div>
+            ) : (
+              <div className="p-4 rounded-xl bg-surface2 border border-border flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                <div className="flex items-start gap-3">
+                  <div className="w-9 h-9 rounded-lg bg-amber-500/10 flex items-center justify-center text-amber-400 shrink-0 mt-0.5">
+                    <Lock className="w-4 h-4" />
+                  </div>
+                  <div>
+                    <p className="text-sm font-semibold text-text flex items-center gap-1.5">
+                      White-Label & Custom Branding
+                      <span className="text-[10px] uppercase font-bold px-1.5 py-0.5 rounded bg-amber-500/20 text-amber-300">
+                        Agency Feature
+                      </span>
+                    </p>
+                    <p className="text-xs text-muted mt-0.5">
+                      Upgrade to the Agency ($199/mo) tier to remove SparkLeads badges, upload custom agency logos, and white-label client audit reports.
+                    </p>
+                  </div>
+                </div>
+                <Link
+                  href="/agency/billing"
+                  className="px-3.5 py-2 rounded-lg bg-primary text-white text-xs font-semibold hover:bg-primary/90 transition-colors flex items-center gap-1.5 shrink-0 self-start sm:self-auto"
+                >
+                  Upgrade to Agency ($199) <ArrowRight className="w-3.5 h-3.5" />
+                </Link>
+              </div>
+            )}
           </div>
         </div>
       )}
@@ -182,7 +237,7 @@ export default function AgencySettingsPage() {
                 type="text"
                 value={senderName}
                 onChange={(e) => setSenderName(e.target.value)}
-                placeholder="e.g. Nadinho — UltimaSpark Agency"
+                placeholder="e.g. Nadinho | UltimaSpark Academy"
                 className="w-full px-4 py-2.5 rounded-lg border border-border bg-surface2 text-text placeholder:text-muted focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition-colors text-sm"
               />
             </div>

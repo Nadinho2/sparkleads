@@ -89,19 +89,19 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  // Give 5 trial credits
+  // Give 50 trial credits
   await supabase.from('user_credits').insert({
     user_token: userToken,
-    balance: 5,
+    balance: 50,
     total_purchased: 0,
   });
 
   await supabase.from('credit_transactions').insert({
     user_token: userToken,
     type: 'bonus',
-    amount: 5,
-    description: 'Free trial — 5 credits to explore SparkLeads',
-    balance_after: 5,
+    amount: 50,
+    description: 'Free trial bonus — 50 credits to explore SparkLeads',
+    balance_after: 50,
   });
 
   // Create affiliate record
@@ -115,7 +115,7 @@ export async function POST(request: NextRequest) {
 
   const response = NextResponse.json({
     success: true,
-    message: 'Trial account created! You have 5 free credits.',
+    message: 'Trial account created! You have 50 free credits.',
   });
   response.cookies.set('sparkleads_token', userToken, {
     httpOnly: true,

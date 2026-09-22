@@ -47,6 +47,8 @@ export interface OutreachCampaign {
   user_token: string;
   name: string;
   status: 'active' | 'paused' | 'completed';
+  client_id?: string | null;
+  client_name?: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -68,6 +70,11 @@ export interface OutreachQueueItem {
   recipient_email: string;
   recipient_name: string;
   company_name: string;
+  website?: string | null;
+  audit_score?: number | string | null;
+  audit_issue?: string | null;
+  client_id?: string | null;
+  lead_id?: string | null;
   current_step: number;
   status: 'scheduled' | 'sent' | 'replied' | 'completed' | 'failed' | 'paused';
   last_sent_at: string | null;

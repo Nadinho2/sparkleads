@@ -9,7 +9,9 @@ import {
   OutreachSequenceStats,
 } from '@/types';
 
-const LOCAL_STORE_PATH = path.join(process.cwd(), 'data', 'outreach_store.json');
+const LOCAL_STORE_PATH = process.env.VERCEL
+  ? path.join('/tmp', 'outreach_store.json')
+  : path.join(process.cwd(), 'data', 'outreach_store.json');
 
 interface LocalStoreData {
   campaigns: OutreachCampaign[];
@@ -18,16 +20,16 @@ interface LocalStoreData {
 }
 
 function ensureLocalStore(): LocalStoreData {
-  const dir = path.dirname(LOCAL_STORE_PATH);
-  if (!fs.existsSync(dir)) {
-    fs.mkdirSync(dir, { recursive: true });
-  }
-  if (!fs.existsSync(LOCAL_STORE_PATH)) {
-    const initial: LocalStoreData = { campaigns: [], steps: [], queue: [] };
-    fs.writeFileSync(LOCAL_STORE_PATH, JSON.stringify(initial, null, 2));
-    return initial;
-  }
   try {
+    const dir = path.dirname(LOCAL_STORE_PATH);
+    if (!fs.existsSync(dir)) {
+      fs.mkdirSync(dir, { recursive: true });
+    }
+    if (!fs.existsSync(LOCAL_STORE_PATH)) {
+      const initial: LocalStoreData = { campaigns: [], steps: [], queue: [] };
+      fs.writeFileSync(LOCAL_STORE_PATH, JSON.stringify(initial, null, 2));
+      return initial;
+    }
     const content = fs.readFileSync(LOCAL_STORE_PATH, 'utf-8');
     return JSON.parse(content);
   } catch {
@@ -113,7 +115,18 @@ export async function createCampaign(
   userToken: string,
   name: string,
   steps: Array<{ step_number: number; delay_days: number; subject: string; body: string }>,
-  recipients: Array<{ email: string; name?: string; company?: string }>
+  recipients: Array<{
+    email: string;
+    name?: string;
+    company?: string;
+    website?: string;
+    audit_score?: number | string;
+    audit_issue?: string;
+    client_id?: string;
+    lead_id?: string;
+  }>,
+  clientId?: string | null,
+  clientName?: string | null
 ): Promise<{ campaign: OutreachCampaign; steps: OutreachSequenceStep[]; queue: OutreachQueueItem[] }> {
   const campaignId = uuidv4();
   const now = new Date().toISOString();
@@ -123,6 +136,8 @@ export async function createCampaign(
     user_token: userToken,
     name,
     status: 'active',
+    client_id: clientId || null,
+    client_name: clientName || null,
     created_at: now,
     updated_at: now,
   };
@@ -144,6 +159,11 @@ export async function createCampaign(
     recipient_email: r.email.toLowerCase().trim(),
     recipient_name: r.name?.trim() || '',
     company_name: r.company?.trim() || '',
+    website: r.website?.trim() || null,
+    audit_score: r.audit_score || null,
+    audit_issue: r.audit_issue || null,
+    client_id: r.client_id || clientId || null,
+    lead_id: r.lead_id || null,
     current_step: 1,
     status: 'scheduled',
     last_sent_at: null,
@@ -322,7 +342,17 @@ export async function getCampaignStats(
 export async function enrollLeadsIntoCampaign(
   campaignId: string,
   userToken: string,
-  leads: Array<{ email: string; name?: string; company?: string }>
+  leads: Array<{
+    email: string;
+    name?: string;
+    company?: string;
+    website?: string;
+    audit_score?: number | string;
+    audit_issue?: string;
+    client_id?: string;
+    lead_id?: string;
+  }>,
+  clientId?: string | null
 ): Promise<{ added: number }> {
   const now = new Date().toISOString();
   const queueItems: OutreachQueueItem[] = leads.map((l) => ({
@@ -332,6 +362,11 @@ export async function enrollLeadsIntoCampaign(
     recipient_email: l.email.trim().toLowerCase(),
     recipient_name: l.name || '',
     company_name: l.company || '',
+    website: l.website?.trim() || null,
+    audit_score: l.audit_score || null,
+    audit_issue: l.audit_issue || null,
+    client_id: l.client_id || clientId || null,
+    lead_id: l.lead_id || null,
     current_step: 1,
     status: 'scheduled',
     last_sent_at: null,

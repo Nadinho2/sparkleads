@@ -48,21 +48,37 @@ export async function POST(request: NextRequest) {
 
   const { senderName, senderEmail, senderPassword } = body;
 
-  if (!senderEmail || !senderPassword) {
+  if (!senderEmail) {
     return NextResponse.json(
-      { error: 'Email and App Password are required' },
+      { error: 'Email is required' },
       { status: 400 }
     );
   }
 
   const supabase = createSupabaseAdmin();
 
+  let finalPassword = senderPassword;
+  if (!finalPassword) {
+    const { data: existing } = await supabase
+      .from('user_email_settings')
+      .select('sender_password')
+      .eq('user_token', userToken)
+      .single();
+    if (!existing?.sender_password) {
+      return NextResponse.json(
+        { error: 'Email and App Password are required' },
+        { status: 400 }
+      );
+    }
+    finalPassword = existing.sender_password;
+  }
+
   await supabase.from('user_email_settings').upsert(
     {
       user_token: userToken,
       sender_name: senderName || '',
       sender_email: senderEmail,
-      sender_password: senderPassword,
+      sender_password: finalPassword,
       updated_at: new Date().toISOString(),
     },
     { onConflict: 'user_token' }

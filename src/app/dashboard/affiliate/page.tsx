@@ -44,7 +44,11 @@ export default function AffiliatePage() {
   const [showPayoutForm, setShowPayoutForm] = useState(false);
   const [payoutLoading, setPayoutLoading] = useState(false);
   const [payoutSuccess, setPayoutSuccess] = useState(false);
+  const [payoutMethod, setPayoutMethod] = useState<'paypal' | 'wise' | 'bank_wire'>('paypal');
+  const [paypalEmail, setPaypalEmail] = useState('');
+  const [wiseAccount, setWiseAccount] = useState('');
   const [bankName, setBankName] = useState('');
+  const [swiftCode, setSwiftCode] = useState('');
   const [accountNumber, setAccountNumber] = useState('');
   const [accountName, setAccountName] = useState('');
 
@@ -52,11 +56,11 @@ export default function AffiliatePage() {
   const referralLink = affiliate ? `${appUrl}/?ref=${affiliate.referral_code}` : '';
 
   const whatsappTemplate = affiliate
-    ? `Hey! I've been using SparkLeads to find business leads and it's incredible. You can search any business type in any city and get real phone numbers, emails, and addresses instantly. Check it out: ${referralLink}`
+    ? `Hey! I've been using SparkLeads to find high-intent business leads and it's incredible. You can search any business type in any city worldwide and get real verified emails, phone numbers, and automated outreach sequences. Check it out: ${referralLink}`
     : '';
 
   const tweetTemplate = affiliate
-    ? `I've been using @SparkLeads to find 200+ business leads in 60 seconds. Real phone numbers, emails, addresses — all for ₦8,999/month with rollover tokens. Check it out: ${referralLink}`
+    ? `I've been using @SparkLeads to find 200+ verified B2B leads in 60 seconds with automated multi-step cold outreach — starting at only $19/mo. Check it out: ${referralLink}`
     : '';
 
   useEffect(() => {
@@ -113,7 +117,24 @@ export default function AffiliatePage() {
   }, [tweetTemplate]);
 
   const handlePayoutSubmit = useCallback(async () => {
-    if (!affiliate || !bankName || !accountNumber || !accountName) return;
+    if (!affiliate) return;
+
+    let finalBankName = '';
+    let finalAccountNumber = '';
+
+    if (payoutMethod === 'paypal') {
+      if (!paypalEmail || !accountName) return;
+      finalBankName = 'PayPal';
+      finalAccountNumber = paypalEmail;
+    } else if (payoutMethod === 'wise') {
+      if (!wiseAccount || !accountName) return;
+      finalBankName = 'Wise';
+      finalAccountNumber = wiseAccount;
+    } else {
+      if (!bankName || !accountNumber || !accountName) return;
+      finalBankName = swiftCode ? `${bankName} (SWIFT: ${swiftCode})` : bankName;
+      finalAccountNumber = accountNumber;
+    }
 
     setPayoutLoading(true);
     try {
@@ -122,8 +143,8 @@ export default function AffiliatePage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           amount: affiliate.total_earnings,
-          bank_name: bankName,
-          account_number: accountNumber,
+          bank_name: finalBankName,
+          account_number: finalAccountNumber,
           account_name: accountName,
         }),
       });
@@ -132,8 +153,11 @@ export default function AffiliatePage() {
         setPayoutSuccess(true);
         setShowPayoutForm(false);
         setBankName('');
+        setSwiftCode('');
         setAccountNumber('');
         setAccountName('');
+        setPaypalEmail('');
+        setWiseAccount('');
 
         const statsRes = await fetch('/api/affiliate/stats');
         if (statsRes.ok) {
@@ -147,7 +171,7 @@ export default function AffiliatePage() {
     } finally {
       setPayoutLoading(false);
     }
-  }, [affiliate, bankName, accountNumber, accountName]);
+  }, [affiliate, payoutMethod, paypalEmail, wiseAccount, bankName, swiftCode, accountNumber, accountName]);
 
   const formatDate = (dateStr: string) => {
     return new Date(dateStr).toLocaleDateString('en-US', {
@@ -200,7 +224,7 @@ export default function AffiliatePage() {
               <Banknote className="w-5 h-5 text-success" />
             </div>
           </div>
-          <p className="text-2xl font-bold text-text">₦{affiliate.total_earnings.toLocaleString()}</p>
+          <p className="text-2xl font-bold text-text">${affiliate.total_earnings.toLocaleString()}</p>
           <p className="text-sm text-muted">Total Earnings</p>
         </div>
 
@@ -210,7 +234,7 @@ export default function AffiliatePage() {
               <Clock className="w-5 h-5 text-warning" />
             </div>
           </div>
-          <p className="text-2xl font-bold text-text">₦{affiliate.pending_payout.toLocaleString()}</p>
+          <p className="text-2xl font-bold text-text">${affiliate.pending_payout.toLocaleString()}</p>
           <p className="text-sm text-muted">Pending Payout</p>
         </div>
 
@@ -299,16 +323,16 @@ export default function AffiliatePage() {
               <Banknote className="w-6 h-6 text-primary" />
             </div>
             <h4 className="font-semibold text-text mb-1">Get paid</h4>
-            <p className="text-sm text-muted">Earn ₦1,800 every month for every active subscriber. Recurring income.</p>
+            <p className="text-sm text-muted">Earn 20% recurring revenue every month for every active subscriber.</p>
           </div>
         </div>
-        <div className="mt-4 flex items-center gap-2">
+        <div className="mt-4 flex items-center gap-2 flex-wrap">
           <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-primary/10 text-primary text-sm font-medium">
             <Zap className="w-4 h-4" />
-            20% recurring commission = ₦1,800/mo per subscriber
+            20% recurring commission = $3.80 - $39.80/mo per subscriber
           </span>
           <span className="inline-flex items-center px-3 py-1.5 rounded-full bg-success/10 text-success text-sm font-medium">
-            Recurring monthly payouts
+            Global monthly payouts (PayPal, Wise, Bank Wire)
           </span>
         </div>
       </div>
@@ -332,9 +356,9 @@ export default function AffiliatePage() {
               >
                 <div>
                   <p className="text-sm font-medium text-text">
-                    ₦{Number(payout.amount).toLocaleString()}
+                    ${Number(payout.amount).toLocaleString()} ({payout.bank_name})
                   </p>
-                  <p className="text-xs text-muted">{formatDate(payout.created_at)}</p>
+                  <p className="text-xs text-muted">{formatDate(payout.created_at)} • To: {payout.account_name}</p>
                 </div>
                 <span
                   className={`px-2.5 py-1 rounded-full text-xs font-medium ${
@@ -351,52 +375,141 @@ export default function AffiliatePage() {
         {!showPayoutForm ? (
           <button
             onClick={() => setShowPayoutForm(true)}
-            disabled={affiliate.total_earnings < 5000}
+            disabled={affiliate.total_earnings < 50}
             className="flex items-center gap-2 px-5 py-2.5 rounded-lg bg-primary text-white text-sm font-medium hover:bg-primary/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
           >
             <Send className="w-4 h-4" />
             Request Payout
           </button>
         ) : (
-          <div className="space-y-4">
+          <div className="space-y-4 max-w-lg">
             <div>
-              <label className="block text-sm font-medium text-text mb-1.5">Bank Name</label>
-              <input
-                type="text"
-                value={bankName}
-                onChange={(e) => setBankName(e.target.value)}
-                placeholder="e.g. GTBank, Access Bank"
-                className="w-full px-4 py-2.5 rounded-lg border border-border bg-surface2 text-text placeholder:text-muted focus:outline-none focus:ring-2 focus:ring-primary/50 text-sm"
-              />
+              <label className="block text-sm font-medium text-text mb-2">Select Payout Method</label>
+              <div className="grid grid-cols-3 gap-2">
+                <button
+                  type="button"
+                  onClick={() => setPayoutMethod('paypal')}
+                  className={`py-2 px-3 text-xs font-semibold rounded-lg border transition-all ${
+                    payoutMethod === 'paypal'
+                      ? 'border-primary bg-primary/10 text-primary'
+                      : 'border-border bg-surface2 text-muted hover:text-text'
+                  }`}
+                >
+                  PayPal
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setPayoutMethod('wise')}
+                  className={`py-2 px-3 text-xs font-semibold rounded-lg border transition-all ${
+                    payoutMethod === 'wise'
+                      ? 'border-primary bg-primary/10 text-primary'
+                      : 'border-border bg-surface2 text-muted hover:text-text'
+                  }`}
+                >
+                  Wise
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setPayoutMethod('bank_wire')}
+                  className={`py-2 px-3 text-xs font-semibold rounded-lg border transition-all ${
+                    payoutMethod === 'bank_wire'
+                      ? 'border-primary bg-primary/10 text-primary'
+                      : 'border-border bg-surface2 text-muted hover:text-text'
+                  }`}
+                >
+                  Bank Wire / ACH
+                </button>
+              </div>
             </div>
+
+            {payoutMethod === 'paypal' && (
+              <div>
+                <label className="block text-sm font-medium text-text mb-1.5">PayPal Email Address</label>
+                <input
+                  type="email"
+                  value={paypalEmail}
+                  onChange={(e) => setPaypalEmail(e.target.value)}
+                  placeholder="your-paypal@email.com"
+                  className="w-full px-4 py-2.5 rounded-lg border border-border bg-surface2 text-text placeholder:text-muted focus:outline-none focus:ring-2 focus:ring-primary/50 text-sm"
+                />
+              </div>
+            )}
+
+            {payoutMethod === 'wise' && (
+              <div>
+                <label className="block text-sm font-medium text-text mb-1.5">Wise Email or Account Tag</label>
+                <input
+                  type="text"
+                  value={wiseAccount}
+                  onChange={(e) => setWiseAccount(e.target.value)}
+                  placeholder="your-wise@email.com or @handle"
+                  className="w-full px-4 py-2.5 rounded-lg border border-border bg-surface2 text-text placeholder:text-muted focus:outline-none focus:ring-2 focus:ring-primary/50 text-sm"
+                />
+              </div>
+            )}
+
+            {payoutMethod === 'bank_wire' && (
+              <>
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-sm font-medium text-text mb-1.5">Bank Name</label>
+                    <input
+                      type="text"
+                      value={bankName}
+                      onChange={(e) => setBankName(e.target.value)}
+                      placeholder="Chase, Barclays, etc."
+                      className="w-full px-4 py-2.5 rounded-lg border border-border bg-surface2 text-text placeholder:text-muted focus:outline-none focus:ring-2 focus:ring-primary/50 text-sm"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-text mb-1.5">Routing / SWIFT</label>
+                    <input
+                      type="text"
+                      value={swiftCode}
+                      onChange={(e) => setSwiftCode(e.target.value)}
+                      placeholder="Routing number or SWIFT"
+                      className="w-full px-4 py-2.5 rounded-lg border border-border bg-surface2 text-text placeholder:text-muted focus:outline-none focus:ring-2 focus:ring-primary/50 text-sm"
+                    />
+                  </div>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-text mb-1.5">Account / IBAN Number</label>
+                  <input
+                    type="text"
+                    value={accountNumber}
+                    onChange={(e) => setAccountNumber(e.target.value)}
+                    placeholder="Account Number or IBAN"
+                    className="w-full px-4 py-2.5 rounded-lg border border-border bg-surface2 text-text placeholder:text-muted focus:outline-none focus:ring-2 focus:ring-primary/50 text-sm"
+                  />
+                </div>
+              </>
+            )}
+
             <div>
-              <label className="block text-sm font-medium text-text mb-1.5">Account Number</label>
-              <input
-                type="text"
-                value={accountNumber}
-                onChange={(e) => setAccountNumber(e.target.value)}
-                placeholder="0123456789"
-                className="w-full px-4 py-2.5 rounded-lg border border-border bg-surface2 text-text placeholder:text-muted focus:outline-none focus:ring-2 focus:ring-primary/50 text-sm"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-text mb-1.5">Account Name</label>
+              <label className="block text-sm font-medium text-text mb-1.5">Recipient Full Legal Name</label>
               <input
                 type="text"
                 value={accountName}
                 onChange={(e) => setAccountName(e.target.value)}
-                placeholder="John Doe"
+                placeholder="John Doe or LLC Name"
                 className="w-full px-4 py-2.5 rounded-lg border border-border bg-surface2 text-text placeholder:text-muted focus:outline-none focus:ring-2 focus:ring-primary/50 text-sm"
               />
             </div>
-            <div className="flex gap-3">
+
+            <div className="flex gap-3 pt-2">
               <button
                 onClick={handlePayoutSubmit}
-                disabled={payoutLoading || !bankName || !accountNumber || !accountName}
+                disabled={
+                  payoutLoading ||
+                  !accountName ||
+                  (payoutMethod === 'paypal' && !paypalEmail) ||
+                  (payoutMethod === 'wise' && !wiseAccount) ||
+                  (payoutMethod === 'bank_wire' && (!bankName || !accountNumber))
+                }
                 className="flex items-center gap-2 px-5 py-2.5 rounded-lg bg-primary text-white text-sm font-medium hover:bg-primary/90 transition-colors disabled:opacity-50"
               >
                 {payoutLoading ? <Spinner size="sm" /> : <Send className="w-4 h-4" />}
-                Submit Request
+                Submit Payout (${affiliate.total_earnings})
               </button>
               <button
                 onClick={() => setShowPayoutForm(false)}
@@ -408,9 +521,9 @@ export default function AffiliatePage() {
           </div>
         )}
 
-        {affiliate.total_earnings < 5000 && !showPayoutForm && (
+        {affiliate.total_earnings < 50 && !showPayoutForm && (
           <p className="mt-2 text-xs text-muted">
-            Minimum payout is ₦5,000. You need ₦{(5000 - affiliate.total_earnings).toLocaleString()} more.
+            Minimum payout is $50. You need ${(50 - affiliate.total_earnings).toLocaleString()} more to withdraw.
           </p>
         )}
       </div>

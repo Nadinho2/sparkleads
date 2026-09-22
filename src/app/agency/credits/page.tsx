@@ -8,10 +8,10 @@ import { Spinner } from '@/components/ui';
 const isFreeAccess = process.env.NEXT_PUBLIC_FREE_ACCESS === 'true';
 
 const creditPacks = [
-  { id: 'starter', name: 'Starter', credits: 50, price: 2500, currency: 'NGN', description: '50 credits — great for testing', popular: false },
-  { id: 'growth', name: 'Growth', credits: 150, price: 6000, currency: 'NGN', description: '150 credits — best value', popular: true },
-  { id: 'pro', name: 'Pro', credits: 500, price: 15000, currency: 'NGN', description: '500 credits — for power users', popular: false },
-  { id: 'mega', name: 'Mega', credits: 1000, price: 25000, currency: 'NGN', description: '1000 credits — for agencies', popular: false },
+  { id: 'booster', name: 'Starter Booster', credits: 250, price: 9.99, currency: 'USD', description: '250 credits — great for testing campaigns', popular: false },
+  { id: 'growth', name: 'Growth Pack', credits: 1000, price: 25.00, currency: 'USD', description: '1,000 credits — best value for active outbound', popular: true },
+  { id: 'power', name: 'Power Pack', credits: 3000, price: 60.00, currency: 'USD', description: '3,000 credits — for scaling agencies', popular: false },
+  { id: 'agency_mega', name: 'Agency Mega Pack', credits: 10000, price: 150.00, currency: 'USD', description: '10,000 credits — volume discount for power teams', popular: false },
 ];
 
 interface Transaction {
@@ -72,6 +72,20 @@ export default function AgencyCreditsPage() {
           toast.error(data.error || 'Failed to add credits');
         }
       } else {
+        // Try Stripe Checkout first
+        const stripeRes = await fetch('/api/stripe/checkout', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ packId }),
+        });
+        const stripeData = await stripeRes.json();
+
+        if (stripeData.url) {
+          window.location.href = stripeData.url;
+          return;
+        }
+
+        // Fallback to Paystack if Stripe not configured
         const res = await fetch('/api/credits/purchase', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -81,7 +95,7 @@ export default function AgencyCreditsPage() {
         if (data.authorization_url) {
           window.location.href = data.authorization_url;
         } else {
-          toast.error(data.error || 'Failed to initialize payment');
+          toast.error(stripeData.message || data.error || 'Failed to initialize payment');
         }
       }
     } catch (err) {
@@ -248,7 +262,9 @@ export default function AgencyCreditsPage() {
                 )}
                 <h4 className="text-lg font-semibold text-text">{pack.name}</h4>
                 <div className="mt-2">
-                  <span className="text-3xl font-bold text-text">{isFreeAccess ? 'Free' : `₦${pack.price.toLocaleString()}`}</span>
+                  <span className="text-3xl font-bold text-text">
+                    {isFreeAccess ? 'Free' : `$${pack.price.toFixed(2)}`}
+                  </span>
                 </div>
                 <p className="text-2xl font-bold text-primary mt-1">{pack.credits} credits</p>
                 <p className="text-sm text-muted mt-2">{pack.description}</p>

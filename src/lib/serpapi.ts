@@ -1,4 +1,11 @@
 import { getJson } from 'serpapi';
+import dns from 'dns';
+
+try {
+  dns.setServers(['8.8.8.8', '1.1.1.1']);
+} catch {
+  // Silent fail
+}
 
 export interface SerpLead {
   place_id: string;

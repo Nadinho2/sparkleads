@@ -21,7 +21,30 @@ export async function GET(_request: NextRequest, { params }: { params: { id: str
     .single();
 
   if (!client) return NextResponse.json({ error: 'Not found' }, { status: 404 });
-  return NextResponse.json({ client });
+
+  // Load campaigns linked to this client
+  let campaigns: any[] = [];
+  try {
+    const { getCampaigns } = await import('@/lib/outreach-store');
+    const allCampaigns = await getCampaigns(token);
+    campaigns = allCampaigns.filter((c) => c.client_id === params.id);
+  } catch (e) {
+    // Non-fatal
+  }
+
+  // Load proposals matching client name
+  const { data: proposals } = await supabase
+    .from('proposals')
+    .select('id, business_name, services, pricing, status, created_at, proposal_data')
+    .eq('user_token', token)
+    .ilike('business_name', `%${client.name}%`)
+    .order('created_at', { ascending: false });
+
+  return NextResponse.json({
+    client,
+    campaigns,
+    proposals: proposals || [],
+  });
 }
 
 export async function PATCH(request: NextRequest, { params }: { params: { id: string } }) {

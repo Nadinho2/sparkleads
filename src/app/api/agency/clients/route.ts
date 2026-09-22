@@ -27,7 +27,27 @@ export async function GET(request: NextRequest) {
   if (status) query = query.eq('status', status);
 
   const { data: clients } = await query;
-  return NextResponse.json({ clients: clients || [] });
+
+  // Retrieve user campaigns to associate campaign counts
+  let campaignsCountMap: Record<string, number> = {};
+  try {
+    const { getCampaigns } = await import('@/lib/outreach-store');
+    const campaigns = await getCampaigns(token);
+    campaigns.forEach((c) => {
+      if (c.client_id) {
+        campaignsCountMap[c.client_id] = (campaignsCountMap[c.client_id] || 0) + 1;
+      }
+    });
+  } catch (err) {
+    // Non-fatal
+  }
+
+  const enrichedClients = (clients || []).map((c) => ({
+    ...c,
+    campaigns_count: campaignsCountMap[c.id] || 0,
+  }));
+
+  return NextResponse.json({ clients: enrichedClients });
 }
 
 export async function POST(request: NextRequest) {
@@ -53,7 +73,7 @@ export async function POST(request: NextRequest) {
       contact_person: body.contactPerson || null,
       status: body.status || 'prospect',
       monthly_retainer: body.monthlyRetainer || 0,
-      currency: body.currency || 'NGN',
+      currency: body.currency || 'USD',
       notes: body.notes || null,
       assigned_to: body.assignedTo || null,
       lead_id: body.leadId || null,

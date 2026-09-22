@@ -25,11 +25,11 @@ import { useSearchStream } from '@/hooks/useSearchStream';
 import { toast } from 'sonner';
 
 const suggestedSearches = [
-  'restaurants in Lagos Nigeria',
-  'dentists in Abuja Nigeria',
-  'salons in London UK',
-  'gyms in Nairobi Kenya',
-  'hotels in Dubai UAE',
+  'marketing agencies in Austin TX',
+  'roofers in Miami FL',
+  'dentists in London UK',
+  'commercial cleaning in Chicago IL',
+  'software companies in San Francisco',
 ];
 
 export default function FreeTrialPage() {
@@ -179,7 +179,7 @@ export default function FreeTrialPage() {
               Try SparkLeads Free
             </h1>
             <p className="text-muted">
-              Create a free account to get 3 lead searches. No payment required.
+              Create a free account to get 3 lead searches + 50 free credits. No credit card required.
             </p>
           </div>
 
@@ -232,7 +232,7 @@ export default function FreeTrialPage() {
                     href={`/checkout?email=${encodeURIComponent(signupEmail.trim())}`}
                     className="px-3.5 py-2 rounded-lg bg-surface2 border border-amber-500/40 text-amber-300 font-medium hover:bg-surface transition-colors flex items-center gap-1.5"
                   >
-                    Upgrade (₦8,999/mo)
+                    Upgrade ($19/mo)
                   </Link>
                 </div>
               </div>
@@ -515,7 +515,7 @@ export default function FreeTrialPage() {
               href="/checkout"
               className="w-full inline-flex items-center justify-center gap-2 px-6 py-3.5 rounded-xl bg-primary text-white font-semibold hover:bg-primary/90 transition-colors"
             >
-              Get Full Access — ₦8,999/mo
+              Get Full Access — $19/mo
               <ArrowRight className="w-4 h-4" />
             </Link>
 
@@ -549,7 +549,7 @@ export default function FreeTrialPage() {
                 href="/checkout"
                 className="px-5 py-2.5 rounded-lg bg-primary text-white text-sm font-medium hover:bg-primary/90 transition-colors flex items-center gap-2 whitespace-nowrap"
               >
-                Get Full Access — ₦8,999/mo
+                Get Full Access — $19/mo
                 <ArrowRight className="w-4 h-4" />
               </Link>
             </div>

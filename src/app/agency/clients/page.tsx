@@ -20,6 +20,7 @@ interface Client {
   assigned_to: string;
   notes: string;
   created_at: string;
+  campaigns_count?: number;
 }
 
 export default function ClientsPage() {
@@ -31,7 +32,7 @@ export default function ClientsPage() {
   const [form, setForm] = useState({
     name: '', businessType: '', location: '', website: '',
     phone: '', email: '', contactPerson: '', monthlyRetainer: 0,
-    notes: '', status: 'prospect',
+    currency: 'USD', notes: '', status: 'prospect',
   });
   const [saving, setSaving] = useState(false);
 
@@ -56,7 +57,7 @@ export default function ClientsPage() {
       });
       if (res.ok) {
         setShowAdd(false);
-        setForm({ name: '', businessType: '', location: '', website: '', phone: '', email: '', contactPerson: '', monthlyRetainer: 0, notes: '', status: 'prospect' });
+        setForm({ name: '', businessType: '', location: '', website: '', phone: '', email: '', contactPerson: '', monthlyRetainer: 0, currency: 'USD', notes: '', status: 'prospect' });
         loadClients();
       }
     } catch { /* silent */ }
@@ -88,7 +89,7 @@ export default function ClientsPage() {
         <table className="w-full min-w-[700px]">
           <thead>
             <tr className="border-b border-border">
-              {['Name', 'Type', 'Status', 'Retainer', 'Assigned', 'Actions'].map((h) => (
+              {['Name', 'Type', 'Status', 'Retainer', 'Campaigns', 'Assigned', 'Actions'].map((h) => (
                 <th key={h} className="text-left px-4 py-3 text-xs font-medium text-muted uppercase">{h}</th>
               ))}
             </tr>
@@ -106,7 +107,16 @@ export default function ClientsPage() {
                     'bg-red-500/20 text-red-400'
                   }`}>{c.status}</span>
                 </td>
-                <td className="px-4 py-3 text-sm text-muted">{c.monthly_retainer > 0 ? `${c.currency} ${c.monthly_retainer.toLocaleString()}` : '—'}</td>
+                <td className="px-4 py-3 text-sm text-muted">{c.monthly_retainer > 0 ? `${c.currency || '$'} ${c.monthly_retainer.toLocaleString()}` : '—'}</td>
+                <td className="px-4 py-3">
+                  {c.campaigns_count && c.campaigns_count > 0 ? (
+                    <span className="text-xs px-2 py-0.5 rounded-full font-medium bg-primary/10 text-primary">
+                      {c.campaigns_count} active
+                    </span>
+                  ) : (
+                    <span className="text-xs text-muted">0 linked</span>
+                  )}
+                </td>
                 <td className="px-4 py-3 text-sm text-muted">{c.assigned_to || '—'}</td>
                 <td className="px-4 py-3">
                   <button className="text-xs text-primary hover:underline">View</button>
@@ -114,7 +124,7 @@ export default function ClientsPage() {
               </tr>
             ))}
             {clients.length === 0 && (
-              <tr><td colSpan={6} className="px-4 py-10 text-center text-sm text-muted">No clients yet.</td></tr>
+              <tr><td colSpan={7} className="px-4 py-10 text-center text-sm text-muted">No clients yet.</td></tr>
             )}
           </tbody>
         </table>
