@@ -12,18 +12,47 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
-  let body: { recipients?: string[]; subject?: string; body?: string };
+  let body: {
+    recipients?: string[];
+    subject?: string;
+    body?: string;
+    personalizedMessages?: Array<{
+      recipient: string;
+      subject: string;
+      body: string;
+      leadName?: string;
+      company?: string;
+    }>;
+  };
   try {
     body = await request.json();
   } catch {
     return NextResponse.json({ error: 'Invalid request body' }, { status: 400 });
   }
 
-  const { recipients, subject, body: emailBody } = body;
+  const itemsToSend: Array<{
+    recipient: string;
+    subject: string;
+    body: string;
+    leadName?: string;
+    company?: string;
+  }> = [];
 
-  if (!recipients?.length || !subject || !emailBody) {
+  if (body.personalizedMessages && Array.isArray(body.personalizedMessages) && body.personalizedMessages.length > 0) {
+    for (const m of body.personalizedMessages) {
+      if (m.recipient && m.subject && m.body) {
+        itemsToSend.push(m);
+      }
+    }
+  } else if (body.recipients && Array.isArray(body.recipients) && body.subject && body.body) {
+    for (const r of body.recipients) {
+      itemsToSend.push({ recipient: r, subject: body.subject, body: body.body });
+    }
+  }
+
+  if (itemsToSend.length === 0) {
     return NextResponse.json(
-      { error: 'recipients, subject, and body are required' },
+      { error: 'Valid recipients or personalizedMessages required' },
       { status: 400 }
     );
   }
@@ -44,7 +73,11 @@ export async function POST(request: NextRequest) {
   }
 
   // Check and deduct credits upfront
-  const creditResult = await deductCredits(userToken, recipients.length, `Sent ${recipients.length} outreach emails`);
+  const creditResult = await deductCredits(
+    userToken,
+    itemsToSend.length,
+    `Sent ${itemsToSend.length} personalized outreach emails`
+  );
   if (!creditResult.success) {
     return NextResponse.json(
       { error: creditResult.error || 'Insufficient credits' },
@@ -66,32 +99,54 @@ export async function POST(request: NextRequest) {
       let sent = 0;
       let failed = 0;
 
-      for (const recipient of recipients) {
+      for (const item of itemsToSend) {
         try {
           await transporter.sendMail({
             from: `"${settings.sender_name || 'SparkLeads'}" <${settings.sender_email}>`,
-            to: recipient,
-            subject,
-            text: emailBody,
-            html: emailBody.replace(/\n/g, '<br>'),
+            to: item.recipient,
+            subject: item.subject,
+            text: item.body,
+            html: item.body.replace(/\n/g, '<br>'),
             replyTo: settings.sender_email,
           });
 
           sent++;
           controller.enqueue(
-            encoder.encode(`data: ${JSON.stringify({ status: 'sent', email: recipient, sent, failed })}\n\n`)
+            encoder.encode(
+              `data: ${JSON.stringify({
+                status: 'sent',
+                email: item.recipient,
+                leadName: item.leadName || '',
+                company: item.company || '',
+                subject: item.subject,
+                sent,
+                failed,
+                total: itemsToSend.length,
+              })}\n\n`
+            )
           );
         } catch (err) {
           failed++;
-          console.error(`Failed to send to ${recipient}:`, err);
+          console.error(`Failed to send to ${item.recipient}:`, err);
           controller.enqueue(
-            encoder.encode(`data: ${JSON.stringify({ status: 'failed', email: recipient, sent, failed, error: 'Send failed' })}\n\n`)
+            encoder.encode(
+              `data: ${JSON.stringify({
+                status: 'failed',
+                email: item.recipient,
+                leadName: item.leadName || '',
+                company: item.company || '',
+                sent,
+                failed,
+                total: itemsToSend.length,
+                error: 'Send failed',
+              })}\n\n`
+            )
           );
         }
       }
 
       controller.enqueue(
-        encoder.encode(`data: ${JSON.stringify({ status: 'complete', sent, failed })}\n\n`)
+        encoder.encode(`data: ${JSON.stringify({ status: 'complete', sent, failed, total: itemsToSend.length })}\n\n`)
       );
       controller.close();
     },
