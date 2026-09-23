@@ -372,6 +372,64 @@ CREATE POLICY "Service role can manage notes"
 -- ALTER TABLE ai_message_templates ADD COLUMN IF NOT EXISTS portfolio_url TEXT;
 -- ALTER TABLE ai_message_templates ADD COLUMN IF NOT EXISTS case_study_metric TEXT;
 
+-- 13. user_settings
+CREATE TABLE IF NOT EXISTS user_settings (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_token TEXT UNIQUE NOT NULL,
+  agency_name TEXT DEFAULT '',
+  agency_contact TEXT DEFAULT '',
+  agency_title TEXT DEFAULT '',
+  default_currency TEXT DEFAULT 'USD',
+  payment_terms TEXT DEFAULT '',
+  freelancer_type TEXT DEFAULT '',
+  portfolio_url TEXT DEFAULT '',
+  case_study_metric TEXT DEFAULT '',
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- 14. ai_message_templates
+CREATE TABLE IF NOT EXISTS ai_message_templates (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_token TEXT NOT NULL,
+  name TEXT NOT NULL,
+  service_description TEXT NOT NULL,
+  tone TEXT DEFAULT 'friendly',
+  message_type TEXT DEFAULT 'email',
+  sender_name TEXT,
+  portfolio_url TEXT,
+  case_study_metric TEXT,
+  generated_count INTEGER DEFAULT 0,
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- 15. ai_generated_messages
+CREATE TABLE IF NOT EXISTS ai_generated_messages (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_token TEXT NOT NULL,
+  template_id UUID REFERENCES ai_message_templates(id) ON DELETE SET NULL,
+  lead_id UUID,
+  message_type TEXT DEFAULT 'email',
+  subject TEXT,
+  body TEXT NOT NULL,
+  used BOOLEAN DEFAULT FALSE,
+  sent BOOLEAN DEFAULT FALSE,
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- 16. proposals
+CREATE TABLE IF NOT EXISTS proposals (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_token TEXT NOT NULL,
+  business_name TEXT NOT NULL,
+  services JSONB DEFAULT '[]'::jsonb,
+  pricing JSONB DEFAULT '[]'::jsonb,
+  status TEXT DEFAULT 'draft',
+  proposal_data JSONB DEFAULT '{}'::jsonb,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
 -- =============================================================================
 -- AGENCY SYSTEM TABLES
 -- =============================================================================
