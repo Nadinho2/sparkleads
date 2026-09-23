@@ -366,6 +366,11 @@ CREATE POLICY "Service role can manage notes"
 
 -- Add freelancer_type to user_settings (run in Supabase SQL editor)
 -- ALTER TABLE user_settings ADD COLUMN IF NOT EXISTS freelancer_type TEXT DEFAULT '';
+-- ALTER TABLE user_settings ADD COLUMN IF NOT EXISTS portfolio_url TEXT DEFAULT '';
+-- ALTER TABLE user_settings ADD COLUMN IF NOT EXISTS case_study_metric TEXT DEFAULT '';
+-- ALTER TABLE ai_message_templates ADD COLUMN IF NOT EXISTS sender_name TEXT;
+-- ALTER TABLE ai_message_templates ADD COLUMN IF NOT EXISTS portfolio_url TEXT;
+-- ALTER TABLE ai_message_templates ADD COLUMN IF NOT EXISTS case_study_metric TEXT;
 
 -- =============================================================================
 -- AGENCY SYSTEM TABLES

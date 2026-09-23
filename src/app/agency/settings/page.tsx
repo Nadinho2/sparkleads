@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { FREELANCER_TYPES } from '@/lib/freelancer-types';
 import { Spinner } from '@/components/ui';
-import { Mail, LogOut, Shield, Lock, Sparkles, ArrowRight } from 'lucide-react';
+import { Mail, LogOut, Shield, Lock, Sparkles, ArrowRight, Globe, Check } from 'lucide-react';
 import { toast } from 'sonner';
 import Link from 'next/link';
 
@@ -23,6 +23,12 @@ export default function AgencySettingsPage() {
   const [senderMessage, setSenderMessage] = useState('');
   const [testingEmail, setTestingEmail] = useState(false);
 
+  // Portfolio & Proof state
+  const [portfolioUrl, setPortfolioUrl] = useState('');
+  const [caseStudyMetric, setCaseStudyMetric] = useState('');
+  const [savingPortfolio, setSavingPortfolio] = useState(false);
+  const [portfolioSaved, setPortfolioSaved] = useState(false);
+
   useEffect(() => {
     fetch('/api/account/context')
       .then((r) => r.json())
@@ -32,6 +38,10 @@ export default function AgencySettingsPage() {
       });
     const saved = localStorage.getItem('sparkleads_freelancer_type') || '';
     setFreelancerType(saved);
+    const savedPortfolio = localStorage.getItem('sparkleads_portfolio_url') || '';
+    if (savedPortfolio) setPortfolioUrl(savedPortfolio);
+    const savedMetric = localStorage.getItem('sparkleads_case_study_metric') || '';
+    if (savedMetric) setCaseStudyMetric(savedMetric);
 
     // Load email settings
     fetch('/api/settings/email')
@@ -41,6 +51,15 @@ export default function AgencySettingsPage() {
         setSenderEmail(data.senderEmail || '');
         setHasPassword(data.hasPassword || false);
       });
+
+    // Load agency profile & portfolio
+    fetch('/api/settings/agency')
+      .then((r) => r.json())
+      .then((data) => {
+        if (data.portfolioUrl && !savedPortfolio) setPortfolioUrl(data.portfolioUrl);
+        if (data.caseStudyMetric && !savedMetric) setCaseStudyMetric(data.caseStudyMetric);
+      })
+      .catch(() => {});
   }, []);
 
   const saveFreelancerType = async (typeId: string) => {
@@ -97,6 +116,30 @@ export default function AgencySettingsPage() {
       setTestingEmail(false);
     }
   }, []);
+
+  const savePortfolioSettings = useCallback(async () => {
+    setSavingPortfolio(true);
+    setPortfolioSaved(false);
+    localStorage.setItem('sparkleads_portfolio_url', portfolioUrl.trim());
+    localStorage.setItem('sparkleads_case_study_metric', caseStudyMetric.trim());
+    try {
+      await fetch('/api/settings/agency', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          portfolioUrl: portfolioUrl.trim(),
+          caseStudyMetric: caseStudyMetric.trim(),
+        }),
+      });
+      setPortfolioSaved(true);
+      toast.success('Proof & portfolio settings saved');
+      setTimeout(() => setPortfolioSaved(false), 2500);
+    } catch {
+      // LocalStorage is already saved
+    } finally {
+      setSavingPortfolio(false);
+    }
+  }, [portfolioUrl, caseStudyMetric]);
 
   const handleLeaveWorkspace = async () => {
     if (!currentMember) return;
@@ -315,6 +358,75 @@ export default function AgencySettingsPage() {
                 Send Test Email
               </button>
             )}
+          </div>
+        </div>
+      </div>
+
+      {/* Outreach Portfolio & Proof Section */}
+      <div className="p-6 rounded-xl border border-border bg-surface">
+        <div className="flex items-center gap-3 mb-6">
+          <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center">
+            <Globe className="w-5 h-5 text-primary" />
+          </div>
+          <div>
+            <h2 className="text-lg font-semibold text-text">Proof & Portfolio (AI Message Writer)</h2>
+            <p className="text-xs text-muted">
+              Auto-fill your agency portfolio and quantifiable proof into cold emails to maximize reply rates.
+            </p>
+          </div>
+        </div>
+
+        <div className="space-y-4">
+          <div>
+            <label className="block text-sm font-medium text-muted mb-1.5">
+              Agency Portfolio / Work Samples URL <span className="text-xs text-muted/70">(Optional)</span>
+            </label>
+            <div className="relative">
+              <input
+                type="url"
+                value={portfolioUrl}
+                onChange={(e) => setPortfolioUrl(e.target.value)}
+                placeholder="e.g. https://www.ultimaspark.com/agency"
+                className="w-full px-4 py-2.5 rounded-lg border border-border bg-surface2 text-text placeholder:text-muted focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition-colors text-sm"
+              />
+            </div>
+            <p className="text-xs text-muted mt-1">
+              The AI incorporates this as your live proof asset (e.g. <em>&quot;You can see examples of my work here: {portfolioUrl || 'https://...'} &quot;</em>).
+            </p>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-muted mb-1.5">
+              Key Metric / Social Proof <span className="text-xs text-muted/70">(Optional)</span>
+            </label>
+            <input
+              type="text"
+              value={caseStudyMetric}
+              onChange={(e) => setCaseStudyMetric(e.target.value)}
+              placeholder="e.g. Reclaimed 15+ hours/week, eliminated human errors in data handling, and reduced operational overhead"
+              className="w-full px-4 py-2.5 rounded-lg border border-border bg-surface2 text-text placeholder:text-muted focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition-colors text-sm"
+            />
+            <p className="text-xs text-muted mt-1">
+              Gives the AI real business metrics to quote instead of generic sales pitches.
+            </p>
+          </div>
+
+          {portfolioSaved && (
+            <div className="p-3 rounded-lg text-sm bg-success/10 text-success flex items-center gap-2">
+              <Check className="w-4 h-4" />
+              Proof & portfolio settings saved! These will auto-populate in the AI Message Writer.
+            </div>
+          )}
+
+          <div className="flex gap-3">
+            <button
+              onClick={savePortfolioSettings}
+              disabled={savingPortfolio}
+              className="px-4 py-2.5 rounded-lg bg-primary text-white text-sm font-medium hover:bg-primary/90 transition-colors disabled:opacity-50 flex items-center gap-2"
+            >
+              {savingPortfolio ? <Spinner size="sm" /> : <Sparkles className="w-4 h-4" />}
+              Save Proof & Portfolio
+            </button>
           </div>
         </div>
       </div>

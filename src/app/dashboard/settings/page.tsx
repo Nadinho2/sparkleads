@@ -13,6 +13,9 @@ import {
   AlertTriangle,
   X,
   LogOut,
+  Globe,
+  ExternalLink,
+  Sparkles,
 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { Spinner } from '@/components/ui';
@@ -35,14 +38,22 @@ export default function SettingsPage() {
   const [senderMessage, setSenderMessage] = useState('');
   const [freelancerType, setFreelancerType] = useState('');
   const [savingType, setSavingType] = useState(false);
+  const [portfolioUrl, setPortfolioUrl] = useState('');
+  const [caseStudyMetric, setCaseStudyMetric] = useState('');
+  const [savingPortfolio, setSavingPortfolio] = useState(false);
+  const [portfolioSaved, setPortfolioSaved] = useState(false);
 
   useEffect(() => {
     const token = localStorage.getItem('sparkleads_session_id') || '';
     setUserToken(token);
 
-    // Load freelancer type from localStorage first for instant UI
+    // Load freelancer type, portfolio and metrics from localStorage first for instant UI
     const saved = localStorage.getItem('sparkleads_freelancer_type') || '';
     setFreelancerType(saved);
+    const savedPortfolio = localStorage.getItem('sparkleads_portfolio_url') || '';
+    if (savedPortfolio) setPortfolioUrl(savedPortfolio);
+    const savedMetric = localStorage.getItem('sparkleads_case_study_metric') || '';
+    if (savedMetric) setCaseStudyMetric(savedMetric);
 
     fetch('/api/settings/email')
       .then((res) => res.json())
@@ -53,13 +64,21 @@ export default function SettingsPage() {
       })
       .catch(() => {});
 
-    // Load freelancer type from Supabase
+    // Load agency & outreach profile from Supabase
     fetch('/api/settings/agency')
       .then((res) => res.json())
       .then((data) => {
         if (data.freelancerType) {
           setFreelancerType(data.freelancerType);
           localStorage.setItem('sparkleads_freelancer_type', data.freelancerType);
+        }
+        if (data.portfolioUrl) {
+          setPortfolioUrl(data.portfolioUrl);
+          localStorage.setItem('sparkleads_portfolio_url', data.portfolioUrl);
+        }
+        if (data.caseStudyMetric) {
+          setCaseStudyMetric(data.caseStudyMetric);
+          localStorage.setItem('sparkleads_case_study_metric', data.caseStudyMetric);
         }
       })
       .catch(() => {});
@@ -165,6 +184,29 @@ export default function SettingsPage() {
       setTestingEmail(false);
     }
   }, []);
+
+  const savePortfolioSettings = useCallback(async () => {
+    setSavingPortfolio(true);
+    setPortfolioSaved(false);
+    localStorage.setItem('sparkleads_portfolio_url', portfolioUrl.trim());
+    localStorage.setItem('sparkleads_case_study_metric', caseStudyMetric.trim());
+    try {
+      await fetch('/api/settings/agency', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          portfolioUrl: portfolioUrl.trim(),
+          caseStudyMetric: caseStudyMetric.trim(),
+        }),
+      });
+      setPortfolioSaved(true);
+      setTimeout(() => setPortfolioSaved(false), 2500);
+    } catch {
+      // LocalStorage is already saved
+    } finally {
+      setSavingPortfolio(false);
+    }
+  }, [portfolioUrl, caseStudyMetric]);
 
   return (
     <div className="max-w-2xl space-y-8">
@@ -425,6 +467,75 @@ export default function SettingsPage() {
               className="px-4 py-2.5 rounded-lg border border-border text-muted text-sm font-medium hover:text-text transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
             >
               {testingEmail ? <Spinner size="sm" /> : 'Send Test Email to Myself'}
+            </button>
+          </div>
+        </div>
+      </div>
+
+      {/* Outreach Portfolio & Proof Section */}
+      <div className="p-6 rounded-xl border border-border bg-surface">
+        <div className="flex items-center gap-3 mb-6">
+          <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center">
+            <Globe className="w-5 h-5 text-primary" />
+          </div>
+          <div>
+            <h2 className="text-lg font-semibold text-text">Proof & Portfolio (AI Message Writer)</h2>
+            <p className="text-xs text-muted">
+              Auto-fill your portfolio and quantifiable proof into cold emails to maximize reply rates.
+            </p>
+          </div>
+        </div>
+
+        <div className="space-y-4">
+          <div>
+            <label className="block text-sm font-medium text-muted mb-1.5">
+              Portfolio / Work Samples URL <span className="text-xs text-muted/70">(Optional)</span>
+            </label>
+            <div className="relative">
+              <input
+                type="url"
+                value={portfolioUrl}
+                onChange={(e) => setPortfolioUrl(e.target.value)}
+                placeholder="e.g. https://chibzai.lovable.app/ or your live case study link"
+                className="w-full px-4 py-2.5 rounded-lg border border-border bg-surface2 text-text placeholder:text-muted focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition-colors text-sm"
+              />
+            </div>
+            <p className="text-xs text-muted mt-1">
+              The AI incorporates this as your live proof asset (e.g. <em>&quot;You can see examples of my work here: {portfolioUrl || 'https://...'} &quot;</em>).
+            </p>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-muted mb-1.5">
+              Key Metric / Social Proof <span className="text-xs text-muted/70">(Optional)</span>
+            </label>
+            <input
+              type="text"
+              value={caseStudyMetric}
+              onChange={(e) => setCaseStudyMetric(e.target.value)}
+              placeholder="e.g. Reclaimed 15+ hours/week, eliminated costly human errors, and reduced operational overhead"
+              className="w-full px-4 py-2.5 rounded-lg border border-border bg-surface2 text-text placeholder:text-muted focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition-colors text-sm"
+            />
+            <p className="text-xs text-muted mt-1">
+              Gives the AI real business metrics to quote instead of generic sales pitches.
+            </p>
+          </div>
+
+          {portfolioSaved && (
+            <div className="p-3 rounded-lg text-sm bg-success/10 text-success flex items-center gap-2">
+              <Check className="w-4 h-4" />
+              Proof & portfolio settings saved! These will auto-populate in the AI Message Writer.
+            </div>
+          )}
+
+          <div className="flex gap-3">
+            <button
+              onClick={savePortfolioSettings}
+              disabled={savingPortfolio}
+              className="px-4 py-2.5 rounded-lg bg-primary text-white text-sm font-medium hover:bg-primary/90 transition-colors disabled:opacity-50 flex items-center gap-2"
+            >
+              {savingPortfolio ? <Spinner size="sm" /> : <Sparkles className="w-4 h-4" />}
+              Save Proof & Portfolio
             </button>
           </div>
         </div>

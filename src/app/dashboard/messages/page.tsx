@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import {
   Sparkles, Loader2, Copy, ExternalLink, Check, FileDown,
-  MessageSquare, Mail, Wand2, Filter, History,
+  MessageSquare, Mail, Wand2, Filter, History, Globe, User,
 } from 'lucide-react';
 import { useBasePath } from '@/hooks/useBasePath';
 import { toast } from 'sonner';
@@ -39,6 +39,9 @@ interface Template {
   service_description: string;
   tone: string;
   message_type: string;
+  sender_name?: string;
+  portfolio_url?: string;
+  case_study_metric?: string;
   generated_count: number;
 }
 
@@ -55,7 +58,10 @@ export default function AIMessagesPage() {
   // Service setup
   const [serviceDescription, setServiceDescription] = useState('');
   const [tone, setTone] = useState('friendly');
-  const [messageType, setMessageType] = useState('whatsapp');
+  const [messageType, setMessageType] = useState('email');
+  const [senderName, setSenderName] = useState('');
+  const [portfolioUrl, setPortfolioUrl] = useState('');
+  const [caseStudyMetric, setCaseStudyMetric] = useState('');
   const [saveAsTemplate, setSaveAsTemplate] = useState(false);
   const [templateName, setTemplateName] = useState('');
   const [templates, setTemplates] = useState<Template[]>([]);
@@ -123,12 +129,36 @@ export default function AIMessagesPage() {
         localStorage.removeItem('sparkleads_message_lead');
       } catch { /* ignore */ }
     }
+
+    // Pre-fill sender name, portfolio and proof metrics from settings / localStorage
+    const savedPortfolio = localStorage.getItem('sparkleads_portfolio_url') || '';
+    if (savedPortfolio) setPortfolioUrl(savedPortfolio);
+    const savedMetric = localStorage.getItem('sparkleads_case_study_metric') || '';
+    if (savedMetric) setCaseStudyMetric(savedMetric);
+
+    fetch('/api/settings/email')
+      .then((res) => res.json())
+      .then((data) => {
+        if (data.senderName) setSenderName(data.senderName);
+      })
+      .catch(() => {});
+
+    fetch('/api/settings/agency')
+      .then((res) => res.json())
+      .then((data) => {
+        if (data.portfolioUrl && !savedPortfolio) setPortfolioUrl(data.portfolioUrl);
+        if (data.caseStudyMetric && !savedMetric) setCaseStudyMetric(data.caseStudyMetric);
+      })
+      .catch(() => {});
   }, [loadTemplates, loadLeads]);
 
   function loadTemplate(tmpl: Template) {
     setServiceDescription(tmpl.service_description);
     setTone(tmpl.tone);
     setMessageType(tmpl.message_type);
+    if (tmpl.sender_name) setSenderName(tmpl.sender_name);
+    if (tmpl.portfolio_url !== undefined) setPortfolioUrl(tmpl.portfolio_url);
+    if (tmpl.case_study_metric !== undefined) setCaseStudyMetric(tmpl.case_study_metric);
     setSelectedTemplateId(tmpl.id);
   }
 
@@ -198,6 +228,9 @@ export default function AIMessagesPage() {
           serviceDescription: serviceDescription.trim(),
           tone,
           messageType,
+          senderName: senderName.trim() || undefined,
+          portfolioUrl: portfolioUrl.trim() || undefined,
+          caseStudyMetric: caseStudyMetric.trim() || undefined,
           templateId: selectedTemplateId || undefined,
           saveAsTemplate,
           templateName: templateName.trim() || undefined,
@@ -343,6 +376,49 @@ export default function AIMessagesPage() {
                   rows={4}
                   className="w-full px-3 py-2.5 rounded-xl border border-border bg-surface2 text-text text-sm placeholder:text-muted focus:outline-none focus:ring-2 focus:ring-primary/50 resize-none"
                 />
+              </div>
+
+              {/* Sender Proof & Portfolio Integration */}
+              <div className="pt-3 border-t border-border/60 space-y-3">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-semibold text-text flex items-center gap-1.5">
+                    <Globe size={13} className="text-primary" /> Proof & Identity
+                  </span>
+                  <span className="text-[10px] text-primary bg-primary/10 px-1.5 py-0.5 rounded font-medium">Boosts replies</span>
+                </div>
+
+                <div>
+                  <label className="text-[11px] text-muted mb-1 block">Your Name (for email sign-off)</label>
+                  <input
+                    type="text"
+                    value={senderName}
+                    onChange={(e) => setSenderName(e.target.value)}
+                    placeholder="e.g. Chibueze Amuchie"
+                    className="w-full px-3 py-2 rounded-lg border border-border bg-surface2 text-text text-xs placeholder:text-muted focus:outline-none focus:ring-2 focus:ring-primary/50"
+                  />
+                </div>
+
+                <div>
+                  <label className="text-[11px] text-muted mb-1 block">Portfolio / Case Study URL (Optional)</label>
+                  <input
+                    type="url"
+                    value={portfolioUrl}
+                    onChange={(e) => setPortfolioUrl(e.target.value)}
+                    placeholder="e.g. https://chibzai.lovable.app/"
+                    className="w-full px-3 py-2 rounded-lg border border-border bg-surface2 text-text text-xs placeholder:text-muted focus:outline-none focus:ring-2 focus:ring-primary/50"
+                  />
+                </div>
+
+                <div>
+                  <label className="text-[11px] text-muted mb-1 block">Key Metric / Social Proof (Optional)</label>
+                  <input
+                    type="text"
+                    value={caseStudyMetric}
+                    onChange={(e) => setCaseStudyMetric(e.target.value)}
+                    placeholder="e.g. Reclaimed 15+ hrs/week, cut errors by 90%"
+                    className="w-full px-3 py-2 rounded-lg border border-border bg-surface2 text-text text-xs placeholder:text-muted focus:outline-none focus:ring-2 focus:ring-primary/50"
+                  />
+                </div>
               </div>
 
               <div>
